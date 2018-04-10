@@ -1,9 +1,10 @@
+#clean all objects
+rm(list=ls())
 setwd("~/bin/fingerprint_clustering")
 #global variables
 nb_metabolites=9
-#clean all objects
-rm(list=ls())
 
+library(gclus)
 
 #Pseudo-random settings: 
 #set.seed(1)
@@ -38,14 +39,16 @@ nb_clusters=5
 #automaticly ordering by clusters
 dendro = reorder.hclust(dendro, data)
 #plot dendrogram
-plot(dendro, hang=-1, xlab=paste(nb_clusters," groups"), sub="",ylab="Height",main="Chord - Ward (reordered)",labels=cutree(dendro, k=nb_clusters))
+plot(dendro, hang=-1, xlab=paste(nb_clusters," groups"), sub="",ylab="Height",main="Dendrogram of Ward",labels=cutree(dendro, k=nb_clusters))
 #projection of the clusters
 rect.hclust(dendro, k=nb_clusters, border=rainbow(nb_clusters))
 
-clusters=cutree(dendro,nb_clusters)
+clusters= function() {
+  cutree(dendro,nb_clusters)
+}
 #clusters<-as.factor(cutree(dendro3,nb_clusters))
-table(clusters)
+table(clusters())
 
 library(cluster)
-si = silhouette(clusters,distance_matrix)
+si = silhouette(clusters(),distance_matrix)
 plot(si)
