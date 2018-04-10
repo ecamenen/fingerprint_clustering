@@ -1,6 +1,8 @@
 setwd("~/bin/fingerprint_clustering")
 #global variables
 nb_metabolites=9
+#clean all objects
+rm(list=ls())
 
 
 #Pseudo-random settings: 
@@ -13,26 +15,37 @@ set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
 ################################################
 rand_distances=floor(runif(nb_metabolites*nb_metabolites, 1, 12)) #genration of number between 1 and 12
 #conversion into matrix
-distance_matrix = matrix(rand_distances,nb_metabolites, nb_metabolites)
+data = matrix(rand_distances,nb_metabolites, nb_metabolites)
 #conversion into triangular matrix
-distance_matrix[upper.tri(distance_matrix)] = 0
+data[upper.tri(data)] = 0
 #conversion into distance
-distance_matrix=as.dist(distance_matrix)
+distance_matrix=as.dist(data)
 
 #library(vegan)
 #distance_matrix=vegdist(data,"jaccard")
 ################################
 #          Clustering
 ################################
-dendro1=hclust(distance_matrix,method="ward.D2")
-dendro2=hclust(distance_matrix,method="complete")
-dendro3=hclust(distance_matrix,method="average")
-dendro4=hclust(distance_matrix,method="single")
+dendro=hclust(distance_matrix,method="ward.D2")
+#dendro2=hclust(distance_matrix,method="complete")
+#dendro3=hclust(distance_matrix,method="average")
+#dendro4=hclust(distance_matrix,method="single")
 
-par(mfrow=c(2,2)); plot(dendro1);plot(dendro2);plot(dendro3);plot(dendro4);par(mfrow=c(1,1))
-x11();plot(dendro1)
-rect.hclust(spe.chwo, k=k, border=rainbow(k))
+#par(mfrow=c(2,2)); plot(dendro);plot(dendro2);plot(dendro3);plot(dendro4);par(mfrow=c(1,1))
+#x11();
 
-clusters<-as.factor(cutree(dendro3,3))
+nb_clusters=5
+#automaticly ordering by clusters
+dendro = reorder.hclust(dendro, data)
+#plot dendrogram
+plot(dendro, hang=-1, xlab=paste(nb_clusters," groups"), sub="",ylab="Height",main="Chord - Ward (reordered)",labels=cutree(dendro, k=nb_clusters))
+#projection of the clusters
+rect.hclust(dendro, k=nb_clusters, border=rainbow(nb_clusters))
+
+clusters=cutree(dendro,nb_clusters)
+#clusters<-as.factor(cutree(dendro3,nb_clusters))
 table(clusters)
 
+library(cluster)
+si = silhouette(clusters,distance_matrix)
+plot(si)
