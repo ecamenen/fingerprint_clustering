@@ -58,16 +58,26 @@ plot(si)
 ################################
 #          Fusion graph
 ################################
-height_classif=as.matrix(classif$height[1:max_cluster])
-rownames(height_classif)=c(2:(max_cluster+1))
-colnames(height_classif)="Height_classif"
-height_diff=matrix(0, max_cluster, 1)
-for (i in 2:dim(height_classif)[1]){
+
+#Show differences between nodes levels
+height_classif=as.matrix(classif$height)
+height_diff=matrix(0, length(height_classif), 1)
+for (i in 2:(length(height_classif))){
   height_diff[i,]=height_classif[i,]-height_classif[i-1,]
 }
-matrix_height=cbind(matr_fus,height_diff)
-colnames(matrix_height)=c("node height","difference")
-matrix_height
+#matrix_height=cbind(height_classif,height_diff)
+#colnames(matrix_height)=c("node height","difference")
+#rownames(matrix_height)=c((length(height_classif)+1):2)
+#matrix_height
 
+rownames(height_diff)=c((length(height_classif)+1):2)
+d=data.frame(height_diff)
+height_diff[order(-d$data), , drop = FALSE]
+d[order(-d), , drop = FALSE]
+
+#(optimal_clusters=which.max(height_diff))
+#max(height_diff)
+
+#Plot fusion graph
 plot(classif$height, nrow(data):2, type="S",main="Fusion levels - Ward",ylab="Number of clusters", xlab="Node height", col="grey")
 text(classif$height, nrow(data):2, nrow(data):2, col="red", cex=0.8)
