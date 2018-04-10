@@ -3,9 +3,11 @@ rm(list=ls())
 setwd("~/bin/fingerprint_clustering")
 #global variables
 nb_metabolites=9
-
+max_cluster=5
+#max_cluster=nb_metabolites/1.5
+  
 library(gclus)
-
+dist
 #Pseudo-random settings: 
 #set.seed(1)
 #milisec * PID
@@ -27,7 +29,7 @@ distance_matrix=as.dist(data)
 ################################
 #          Clustering
 ################################
-dendro=hclust(distance_matrix,method="ward.D2")
+classif=hclust(distance_matrix,method="ward.D2")
 #dendro2=hclust(distance_matrix,method="complete")
 #dendro3=hclust(distance_matrix,method="average")
 #dendro4=hclust(distance_matrix,method="single")
@@ -37,14 +39,14 @@ dendro=hclust(distance_matrix,method="ward.D2")
 
 nb_clusters=5
 #automaticly ordering by clusters
-dendro = reorder.hclust(dendro, data)
+classif = reorder.hclust(classif, data)
 #plot dendrogram
-plot(dendro, hang=-1, xlab=paste(nb_clusters," groups"), sub="",ylab="Height",main="Dendrogram of Ward",labels=cutree(dendro, k=nb_clusters))
+plot(classif, hang=-1, xlab=paste(nb_clusters," groups"), sub="",ylab="Height",main="Dendrogram of Ward",labels=cutree(classif, k=nb_clusters))
 #projection of the clusters
-rect.hclust(dendro, k=nb_clusters, border=rainbow(nb_clusters))
+rect.hclust(classif, k=nb_clusters, border=rainbow(nb_clusters))
 
 clusters= function() {
-  cutree(dendro,nb_clusters)
+  cutree(classif,nb_clusters)
 }
 #clusters<-as.factor(cutree(dendro3,nb_clusters))
 table(clusters())
@@ -52,3 +54,20 @@ table(clusters())
 library(cluster)
 si = silhouette(clusters(),distance_matrix)
 plot(si)
+
+################################
+#          Fusion graph
+################################
+height_classif=as.matrix(classif$height[1:max_cluster])
+rownames(height_classif)=c(2:(max_cluster+1))
+colnames(height_classif)="Height_classif"
+height_diff=matrix(0, max_cluster, 1)
+for (i in 2:dim(height_classif)[1]){
+  height_diff[i,]=height_classif[i,]-height_classif[i-1,]
+}
+matrix_height=cbind(matr_fus,height_diff)
+colnames(matrix_height)=c("node height","difference")
+matrix_height
+
+plot(classif$height, nrow(data):2, type="S",main="Fusion levels - Ward",ylab="Number of clusters", xlab="Node height", col="grey")
+text(classif$height, nrow(data):2, nrow(data):2, col="red", cex=0.8)
