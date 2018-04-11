@@ -122,17 +122,24 @@ for (i in 1:(nrow(data)-1)){
   element1=classif$merge[i,1]
   element2=classif$merge[i,2]
   if( element1 < 0 && element2 < 0){
+    group_number=group_number+1
+    group_name=paste("G",group_number,sep="")
     ordered_singletons=sort(c(abs(element1),abs(element2)))
     group_content=setGrpContent(ordered_singletons[1],ordered_singletons[2])
-    #group_number=group_number+1
-    #group_name=paste("G",group_number,sep="")
-    #assign(group_name,group_content)
-    group_correspondance[i]=group_content
+    assign(group_name,group_content)
+    group_correspondance[i]=group_name
   }else if( element1 < 0 && element2 > 0){
     #group_name=paste("G",element2,sep="")
     #group_content=setGrpContent(group_correspondance[i],abs(element1))
-    group_correspondance[i]=setGrpContent(group_correspondance[i],abs(element1))
+    "group_name=group_correspondance[element2]
+    group_content=setGrpContent(get(group_name),abs(element1))
+    assign(group_name,group_content)
+    group_correspondance[i]=group_name"
   }else if( element1 > 0 && element2 > 0){
-    group_content=setGrpContent(group_correspondance[element1],group_correspondance[element2])
-  }
+    "group_number=group_number+1
+    ordered_singletons=sort(c(abs(element1),abs(element2)))
+    group_correspondance[i]=setGrpContent(group_correspondance[ordered_singletons[1]],group_correspondance[ordered_singletons[2]])
+  "}
 }
+
+group_correspondance
