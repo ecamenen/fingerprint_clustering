@@ -2,13 +2,13 @@
 rm(list=ls())
 setwd("~/bin/fingerprint_clustering")
 #global variables
+font_size=2
 nb_metabolites=9
 max_cluster=5
 #max_cluster=nb_metabolites/1.5
 #choix du niveau de coupure
 
 library(gclus)
-dist
 #Pseudo-random settings: 
 #set.seed(1)
 #milisec * PID
@@ -17,7 +17,7 @@ set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
 ################################################
 #     Data test: Random distance matrix   
 ################################################
-rand_distances=floor(runif(nb_metabolites*nb_metabolites, 1, 12)) #genration of number between 1 and 12
+rand_distances=ceiling(runif(nb_metabolites*nb_metabolites, 0, 11)) #genration of number between 1 and 12
 #conversion into matrix
 data = matrix(rand_distances,nb_metabolites, nb_metabolites)
 #conversion into triangular matrix
@@ -38,14 +38,17 @@ classif=hclust(distance_matrix,method="ward.D2")
 #par(mfrow=c(2,2)); plot(dendro);plot(dendro2);plot(dendro3);plot(dendro4);par(mfrow=c(1,1))
 #x11();
 
-nb_clusters=5
+
 #automaticly ordering by clusters
 classif = reorder.hclust(classif, data)
 #plot dendrogram
-plot(classif, hang=-1, xlab="Metabolites", sub=paste(nb_clusters," groups"),ylab="Distance before each fusion",main="Dendrogram of Ward")
+plot(classif, hang=-1, lwd=font_size,xlab="Metabolites", sub="",ylab="Distance before each fusion",main="Dendrogram of Ward",font.lab=font_size,axes=F)
+axis(2, seq(0,ceiling(max(classif$height))),lwd=font_size,font.axis=font_size,cex.axis=0.8)
+abline(h=c(classif$height), lty=3, col="grey")
 #projection of the clusters
+nb_clusters=5
 rect.hclust(classif, k=nb_clusters, border=rainbow(nb_clusters))
-#abline(h=c(classif$height), lty=3, col="grey")
+
 
 clusters= function() {
   cutree(classif,nb_clusters)
@@ -90,17 +93,36 @@ for (i in 2:(length(height_classif))){
 
 rownames(height_diff)=c((length(height_classif)+1):2)
 d=data.frame(height_diff)
-height_diff[order(-d$data), , drop = FALSE]
 d[order(-d), , drop = FALSE]
 
 #(optimal_clusters=which.max(height_diff))
 #max(height_diff)
 max(classif$height)
 
-font_size=2
+label_text=round(height_diff,digits=2)
 
 #Plot fusion graph
-plot(classif$height, nrow(data):2, type="S",main="Distance before each fusion",lwd=font_size,xlim=c(0,max(classif$height)),ylim=c(2,nrow(data)),font.lab=2,ylab="Number of clusters", xlab="Node height", col="grey", axes=F)
-axis(2, seq(2,nrow(data)),lwd=2,font.axis=font_size)
-axis(1, seq(0:max(classif$height)),lwd=2,font.axis=font_size)
-text(classif$height, nrow(data):2, nrow(data):2, col="red", cex=0.8)
+#plot_fusion = function() {
+  plot(classif$height, nrow(data):2, type="S",main="Distance before each fusion",lwd=font_size,xlim=c(0,max(classif$height)+1),ylim=c(2,nrow(data)),font.lab=2,ylab="Number of clusters", xlab="Node height", col="grey", axes=F)
+  axis(2, seq(2,nrow(data)),lwd=2,font.axis=font_size)
+  axis(1, seq(0:max(classif$height)),lwd=2,font.axis=font_size)
+  text(x=classif$height[-1], y=(nrow(data)-1):2, adj=c(-0.5,-0.5),labels=round(height_diff[-1],digits=2), col="red", cex=0.8)
+#}
+
+plot_fusion()
+groupe_number=1
+group_name=paste("G",groupe_number,sep="")
+group_content=paste("{",paste(seq(asb(i):abs(j)),collapse=","),"}",sep="")
+for (i in 1:(nrow(data)-1)){
+  group_number=0
+  element1=classif$merge[i,1]
+  element2=classif$merge[i,2]
+  if( element1 < 0 && element2 < 0){
+    group_content=paste("(",abs(i),",",abs(j),")",sep="")
+    group_number=group_number+1
+    group_name=paste("G",groupe_number,sep="")
+    assign(name,group_content)
+  }else if( element1 < 0 && element2 > 0){
+    get(group_name)
+  }
+}
