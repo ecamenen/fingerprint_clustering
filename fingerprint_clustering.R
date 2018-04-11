@@ -102,47 +102,56 @@ max(classif$height)
 label_text=round(height_diff,digits=2)
 
 #Plot fusion graph
-#plot_fusion = function() {
+plot_fusion = function() {
   plot(classif$height, nrow(data):2, type="S",main="Distance before each fusion",lwd=font_size,xlim=c(0,max(classif$height)+1),ylim=c(2,nrow(data)),font.lab=2,ylab="Number of clusters", xlab="Node height", col="grey", axes=F)
   axis(2, seq(2,nrow(data)),lwd=2,font.axis=font_size)
   axis(1, seq(0:max(classif$height)),lwd=2,font.axis=font_size)
-  text(x=classif$height[-1], y=(nrow(data)-1):2, adj=c(-0.5,-0.5),labels=paste(round(height_diff[-1],digits=2), group_correspondance[-(nrow(data)-1),2], sep=":"), col="red", cex=0.8)
-#}
-
-setGrpContent=function(x,y){
-  return (paste("(",x,",",y,")",sep=""))
+  result=matrix(0,nrow=(nrow(data)-1),ncol=2) #inialize an array for the result
+  result=getGroupContent()
+  text(x=classif$height[-1], y=(nrow(data)-1):2, labels=paste(round(height_diff[-1],digits=2), result[-(nrow(data)-1),2], sep="\n"), pos=3,col="red", cex=0.8)
+  #catch_printing=identify(x=classif$height[-1], y=(nrow(data)-1):2,labels=paste(round(height_diff[-1],digits=2), result[-(nrow(data)-1),2], sep="\n"),col="red", cex=0.8,plot=T)
 }
 
-getGrpNumber=function(x){
-  strsplit(group_correspondance[x,1],"G")[[1]][2] 
-}
-plot_fusion()
 
-group_content=paste("{",paste(seq(asb(i):abs(j)),collapse=","),"}",sep="")
 
-group_correspondance=matrix(0,nrow=(nrow(data)-1),ncol=2) #inialize an array for the result
-group_number=0
-for (i in 1:(nrow(data)-1)){
-  element1=classif$merge[i,1]
-  element2=classif$merge[i,2]
-  if( element1 < 0 && element2 < 0){
-    group_number=group_number+1
-    group_name=paste("G",group_number,sep="") #ex. G1 for the first
-    ordered_singletons=sort(c(abs(element1),abs(element2))) #if element1=-2 and element2=-1, reorder them
-    group_content=setGrpContent(ordered_singletons[1],ordered_singletons[2]) #ex. (1,2)
-  }else if( element1 < 0 && element2 > 0){
-    group_name=group_correspondance[element2,1]
-    group_content=setGrpContent(get(group_name),abs(element1))
-  }else if( element1 > 0 && element2 > 0){
-    #the first group is printedfirst
-    ordered_singletons=sort(c(getGrpNumber(element1),getGrpNumber(element2)))
-    group_name=paste("G",ordered_singletons[1],sep="")
-    group_content=setGrpContent(get(group_name),get(paste("G",ordered_singletons[2],sep="")))
+
+getGroupContent=function(){
+  
+  result=matrix(0,nrow=(nrow(data)-1),ncol=2)
+  
+  setGrpContent=function(x,y){
+    return (paste("(",x,",",y,")",sep=""))
   }
-  assign(group_name,group_content) #create a variable named "group_name" with the content of "group_content"
-  group_correspondance[i,1]=group_name
-  group_correspondance[i,2]=group_content
-  #print(group_content)
+  
+  getGrpNumber=function(x){
+    strsplit(result[x,1],"G")[[1]][2] 
+  }
+  
+  
+  group_number=0
+  for (i in 1:(nrow(data)-1)){
+    element1=classif$merge[i,1]
+    element2=classif$merge[i,2]
+    if( element1 < 0 && element2 < 0){
+      group_number=group_number+1
+      group_name=paste("G",group_number,sep="") #ex. G1 for the first
+      ordered_singletons=sort(c(abs(element1),abs(element2))) #if element1=-2 and element2=-1, reorder them
+      group_content=setGrpContent(ordered_singletons[1],ordered_singletons[2]) #ex. (1,2)
+    }else if( element1 < 0 && element2 > 0){
+      group_name=result[element2,1]
+      group_content=setGrpContent(get(group_name),abs(element1))
+    }else if( element1 > 0 && element2 > 0){
+      #the first group is printedfirst
+      ordered_singletons=sort(c(getGrpNumber(element1),getGrpNumber(element2)))
+      group_name=paste("G",ordered_singletons[1],sep="")
+      group_content=setGrpContent(get(group_name),get(paste("G",ordered_singletons[2],sep="")))
+    }
+    assign(group_name,group_content) #create a variable named "group_name" with the content of "group_content"
+    result[i,1]=group_name
+    result[i,2]=group_content
+    #print(group_content)
+  }
+  return (result)
 }
 
-group_correspondance
+plot_fusion()
