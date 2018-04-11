@@ -109,20 +109,30 @@ label_text=round(height_diff,digits=2)
   text(x=classif$height[-1], y=(nrow(data)-1):2, adj=c(-0.5,-0.5),labels=round(height_diff[-1],digits=2), col="red", cex=0.8)
 #}
 
+setGrpContent=function(x,y){
+  return (paste("(",x,",",y,")",sep=""))
+}
 plot_fusion()
-groupe_number=1
-group_name=paste("G",groupe_number,sep="")
+
 group_content=paste("{",paste(seq(asb(i):abs(j)),collapse=","),"}",sep="")
+
+group_correspondance=c(1:(nrow(data)-1))
+group_number=0
 for (i in 1:(nrow(data)-1)){
-  group_number=0
   element1=classif$merge[i,1]
   element2=classif$merge[i,2]
   if( element1 < 0 && element2 < 0){
-    group_content=paste("(",abs(i),",",abs(j),")",sep="")
-    group_number=group_number+1
-    group_name=paste("G",groupe_number,sep="")
-    assign(name,group_content)
+    ordered_singletons=sort(c(abs(element1),abs(element2)))
+    group_content=setGrpContent(ordered_singletons[1],ordered_singletons[2])
+    #group_number=group_number+1
+    #group_name=paste("G",group_number,sep="")
+    #assign(group_name,group_content)
+    group_correspondance[i]=group_content
   }else if( element1 < 0 && element2 > 0){
-    get(group_name)
+    #group_name=paste("G",element2,sep="")
+    #group_content=setGrpContent(group_correspondance[i],abs(element1))
+    group_correspondance[i]=setGrpContent(group_correspondance[i],abs(element1))
+  }else if( element1 > 0 && element2 > 0){
+    group_content=setGrpContent(group_correspondance[element1],group_correspondance[element2])
   }
 }
