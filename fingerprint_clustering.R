@@ -106,7 +106,7 @@ label_text=round(height_diff,digits=2)
   plot(classif$height, nrow(data):2, type="S",main="Distance before each fusion",lwd=font_size,xlim=c(0,max(classif$height)+1),ylim=c(2,nrow(data)),font.lab=2,ylab="Number of clusters", xlab="Node height", col="grey", axes=F)
   axis(2, seq(2,nrow(data)),lwd=2,font.axis=font_size)
   axis(1, seq(0:max(classif$height)),lwd=2,font.axis=font_size)
-  text(x=classif$height[-1], y=(nrow(data)-1):2, adj=c(-0.5,-0.5),labels=round(height_diff[-1],digits=2), col="red", cex=0.8)
+  text(x=classif$height[-1], y=(nrow(data)-1):2, adj=c(-0.5,-0.5),labels=paste(round(height_diff[-1],digits=2), group_correspondance[-(nrow(data)-1),2], sep=":"), col="red", cex=0.8)
 #}
 
 setGrpContent=function(x,y){
@@ -130,28 +130,19 @@ for (i in 1:(nrow(data)-1)){
     group_name=paste("G",group_number,sep="") #ex. G1 for the first
     ordered_singletons=sort(c(abs(element1),abs(element2))) #if element1=-2 and element2=-1, reorder them
     group_content=setGrpContent(ordered_singletons[1],ordered_singletons[2]) #ex. (1,2)
-    print(group_content)
-    assign(group_name,group_content) #create a variable named "group_name" with the content of "group_content"
-    group_correspondance[i,1]=group_name
-    group_correspondance[i,2]=group_content
   }else if( element1 < 0 && element2 > 0){
-    #group_name=paste("G",element2,sep="")
-    #group_content=setGrpContent(group_correspondance[i],abs(element1))
     group_name=group_correspondance[element2,1]
     group_content=setGrpContent(get(group_name),abs(element1))
-    print(group_content)
-    assign(group_name,group_content)
-    group_correspondance[i,1]=group_name
-    group_correspondance[i,2]=group_content
   }else if( element1 > 0 && element2 > 0){
+    #the first group is printedfirst
     ordered_singletons=sort(c(getGrpNumber(element1),getGrpNumber(element2)))
     group_name=paste("G",ordered_singletons[1],sep="")
     group_content=setGrpContent(get(group_name),get(paste("G",ordered_singletons[2],sep="")))
-    print(group_content)
-    assign(group_name,group_content)
-    group_correspondance[i,1]=group_name
-    group_correspondance[i,2]=group_content
-    }
+  }
+  assign(group_name,group_content) #create a variable named "group_name" with the content of "group_content"
+  group_correspondance[i,1]=group_name
+  group_correspondance[i,2]=group_content
+  #print(group_content)
 }
 
-#group_correspondance
+group_correspondance
