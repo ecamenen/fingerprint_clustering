@@ -20,6 +20,9 @@ set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
 rand_distances=ceiling(runif(nb_metabolites*nb_metabolites, 0, 11)) #genration of number between 1 and 12
 #conversion into matrix
 data = matrix(rand_distances,nb_metabolites, nb_metabolites)
+labels=paste("met",seq(1:nb_metabolites))
+rownames(data)=labels
+colnames(data)=labels
 #conversion into triangular matrix
 data[upper.tri(data)] = 0
 #conversion into distance
@@ -39,15 +42,23 @@ classif=hclust(distance_matrix,method="ward.D2")
 #x11();
 
 
+
 #automaticly ordering by clusters
 classif = reorder.hclust(classif, data)
-#plot dendrogram
-plot(classif, hang=-1, lwd=font_size,xlab="Metabolites", sub="",ylab="Distance before each fusion",main="Dendrogram of Ward",font.lab=font_size,axes=F)
-axis(2, seq(0,ceiling(max(classif$height))),lwd=font_size,font.axis=font_size,cex.axis=0.8)
-abline(h=c(classif$height), lty=3, col="grey")
-#projection of the clusters
-nb_clusters=5
-rect.hclust(classif, k=nb_clusters, border=rainbow(nb_clusters))
+
+margin=par(mar=c(5, 4, 4, 2) + 1.1)
+
+plotDendrogram=function(nb_clusters){
+  par(margin);x11()
+  plot(classif, hang=-1, cex.main=2, cex.lab=1.5,lwd=font_size,xlab="Metabolites", sub="",ylab="Distance before each fusion",main="Dendrogram of Ward",font.lab=font_size,axes=F)
+  axis(2, seq(0,ceiling(max(classif$height))),lwd=font_size,font.axis=font_size,cex.axis=0.8)
+  abline(h=c(classif$height), lty=3, col="grey")
+  #projection of the clusters
+  rect.hclust(classif, k=nb_clusters, border=rainbow(nb_clusters))
+}
+
+
+plotDendrogram(3)
 
 
 clusters= function() {
@@ -99,22 +110,6 @@ d[order(-d), , drop = FALSE]
 #max(height_diff)
 max(classif$height)
 
-label_text=round(height_diff,digits=2)
-
-#Plot fusion graph
-plot_fusion = function() {
-  plot(classif$height, nrow(data):2, type="S",main="Distance before each fusion",lwd=font_size,xlim=c(0,max(classif$height)+1),ylim=c(2,nrow(data)),font.lab=2,ylab="Number of clusters", xlab="Node height", col="grey", axes=F)
-  axis(2, seq(2,nrow(data)),lwd=2,font.axis=font_size)
-  axis(1, seq(0:max(classif$height)),lwd=2,font.axis=font_size)
-  result=matrix(0,nrow=(nrow(data)-1),ncol=2) #inialize an array for the result
-  result=getGroupContent()
-  text(x=classif$height[-1], y=(nrow(data)-1):2, labels=paste(round(height_diff[-1],digits=2), result[-(nrow(data)-1),2], sep="\n"), pos=3,col="red", cex=0.8)
-  #catch_printing=identify(x=classif$height[-1], y=(nrow(data)-1):2,labels=paste(round(height_diff[-1],digits=2), result[-(nrow(data)-1),2], sep="\n"),col="red", cex=0.8,plot=T)
-}
-
-
-
-
 getGroupContent=function(){
   
   result=matrix(0,nrow=(nrow(data)-1),ncol=2)
@@ -126,7 +121,6 @@ getGroupContent=function(){
   getGrpNumber=function(x){
     strsplit(result[x,1],"G")[[1]][2] 
   }
-  
   
   group_number=0
   for (i in 1:(nrow(data)-1)){
@@ -151,7 +145,27 @@ getGroupContent=function(){
     result[i,2]=group_content
     #print(group_content)
   }
+  
   return (result)
 }
 
+#Plot fusion graph
+plot_fusion = function() {
+  par(margin);x11()
+  plot(classif$height, nrow(data):2, type="S",main="Distance before each fusion level",cex.main=2,cex.lab=1.5,lwd=font_size,xlim=c(0,max(classif$height)+1),ylim=c(2,nrow(data)),font.lab=2,ylab="Number of clusters", xlab="Node height", sub="(in red, difference in height with the previous fusion level)",col="grey", axes=F)
+  axis(2, seq(2,nrow(data)),lwd=2,font.axis=font_size)
+  axis(1, seq(0:max(classif$height)),lwd=2,font.axis=font_size)
+  result=matrix(0,nrow=(nrow(data)-1),ncol=2) #inialize an array for the result
+  result=getGroupContent()
+  text(x=classif$height[-1], y=(nrow(data)-1):2, labels=round(height_diff[-1],2), pos=3,col="red", cex=0.8)
+  #catch_printing=identify(x=classif$height[-1], y=(nrow(data)-1):2,labels=paste(round(height_diff[-1],digits=2), result[-(nrow(data)-1),2], sep="\n"),col="red", cex=0.8,plot=T)
+}
+
 plot_fusion()
+
+coph_matrix=cophenetic(classif)
+cor_coph=cor(distance_matrix,coph_matrix)
+print(paste("% of explained variance:",round(cor_coph^2,3)))
+plot(distance_matrix, coph_matrix, xlab="Distance between metabolites",ylab="Cophenetic distance", asp=1, main=c(paste("Cophenetic correlation ",round(cor_coph,3)), paste("% of explained variance:",round(cor_coph^2,3))))
+abline(0,1,col="grey")
+lines(lowess(distance_matrix, coph_matrix), col="red")
