@@ -112,34 +112,46 @@ label_text=round(height_diff,digits=2)
 setGrpContent=function(x,y){
   return (paste("(",x,",",y,")",sep=""))
 }
+
+getGrpNumber=function(x){
+  strsplit(group_correspondance[x,1],"G")[[1]][2] 
+}
 plot_fusion()
 
 group_content=paste("{",paste(seq(asb(i):abs(j)),collapse=","),"}",sep="")
 
-group_correspondance=c(1:(nrow(data)-1))
+group_correspondance=matrix(0,nrow=(nrow(data)-1),ncol=2) #inialize an array for the result
 group_number=0
 for (i in 1:(nrow(data)-1)){
   element1=classif$merge[i,1]
   element2=classif$merge[i,2]
   if( element1 < 0 && element2 < 0){
     group_number=group_number+1
-    group_name=paste("G",group_number,sep="")
-    ordered_singletons=sort(c(abs(element1),abs(element2)))
-    group_content=setGrpContent(ordered_singletons[1],ordered_singletons[2])
-    assign(group_name,group_content)
-    group_correspondance[i]=group_name
+    group_name=paste("G",group_number,sep="") #ex. G1 for the first
+    ordered_singletons=sort(c(abs(element1),abs(element2))) #if element1=-2 and element2=-1, reorder them
+    group_content=setGrpContent(ordered_singletons[1],ordered_singletons[2]) #ex. (1,2)
+    print(group_content)
+    assign(group_name,group_content) #create a variable named "group_name" with the content of "group_content"
+    group_correspondance[i,1]=group_name
+    group_correspondance[i,2]=group_content
   }else if( element1 < 0 && element2 > 0){
     #group_name=paste("G",element2,sep="")
     #group_content=setGrpContent(group_correspondance[i],abs(element1))
-    "group_name=group_correspondance[element2]
+    group_name=group_correspondance[element2,1]
     group_content=setGrpContent(get(group_name),abs(element1))
+    print(group_content)
     assign(group_name,group_content)
-    group_correspondance[i]=group_name"
+    group_correspondance[i,1]=group_name
+    group_correspondance[i,2]=group_content
   }else if( element1 > 0 && element2 > 0){
-    "group_number=group_number+1
-    ordered_singletons=sort(c(abs(element1),abs(element2)))
-    group_correspondance[i]=setGrpContent(group_correspondance[ordered_singletons[1]],group_correspondance[ordered_singletons[2]])
-  "}
+    ordered_singletons=sort(c(getGrpNumber(element1),getGrpNumber(element2)))
+    group_name=paste("G",ordered_singletons[1],sep="")
+    group_content=setGrpContent(get(group_name),get(paste("G",ordered_singletons[2],sep="")))
+    print(group_content)
+    assign(group_name,group_content)
+    group_correspondance[i,1]=group_name
+    group_correspondance[i,2]=group_content
+    }
 }
 
-group_correspondance
+#group_correspondance
