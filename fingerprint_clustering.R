@@ -178,10 +178,10 @@ plotDendrogram=function(nb_clusters){
   abline(h=seq(0.0,max(classif$height),0.1), lty=3, col="grey")
   #abline(h=c(classif$height), lty=3, col="grey")
   #projection of the clusters
-  rect.hclust(classif, k=optimal_nb_clusters, border=rainbow(optimal_nb_clusters))
+  rect.hclust(classif, k=nb_clusters, border=rainbow(nb_clusters))
 }
 
-plotDendrogram(optimal_nb_clusters)
+plotDendrogram(as.numeric(optimal_nb_clusters))
 
 "
 $mrrge # negative values: singleton fusion; positive values: cluster fusion
@@ -204,5 +204,5 @@ $mrrge # negative values: singleton fusion; positive values: cluster fusion
 ################################
 
 
-si=silhouette(getClusters(7),distance_matrix)
+si=silhouette(getClusters(optimal_nb_clusters),distance_matrix)
 plot(si)
