@@ -205,7 +205,7 @@ plotAllSilhouette=function(){
   
   k.best <- which.max(asw)
   # The plot is produced by function plot.silhouette {cluster}
-  plot(1:nrow(data), asw, type="S", xlim=c(2,nrow(data)/3),ylim=c(0,max(asw)+0.1),col="grey",main="Silhouette-optimal number of clusters, Ward",xlab="Number of groups", ylab="Average silhouette width", axes=F)
+  plot(1:nrow(data), asw, type="b", xlim=c(2,nrow(data)/3),ylim=c(0,max(asw)+0.1),col="grey",main="Silhouette-optimal number of clusters, Ward",xlab="Number of groups", ylab="Average silhouette width", axes=F)
   text(k.best,max(asw),paste("optimum",k.best,sep="\n \n"),col="red")
   axis(1, seq(2,nrow(data)/3),lwd=font_size,font.axis=font_size,cex.axis=0.8)
   axis(2, seq(0.0,(max(asw)+0.1),0.1),lwd=font_size,font.axis=font_size,cex.axis=0.8)
@@ -227,3 +227,28 @@ plotSmallClusterSilhouette=function(){
 
 plotAllSilhouette()
 plotSmallClusterSilhouette()
+
+################################
+#          Inertie inter-
+################################
+
+getInertieInter <- function(classif,k) {
+  sum_inertia <- 0;
+  element <- length(classif$label)-1 ; imax <- k-1;
+  for (i in 1:imax) {
+    sum_inertia <- sum_inertia+classif$height[element];
+    element <- element-1;
+  };
+  inertia <- 1000*sum_inertia/sum(classif$height) ; inertia <- round(inertia)/10;
+  return(inertia)
+}
+
+
+inertia=vector(mode="numeric",nrow(data)/4)
+for (k in 2:(nrow(data)/4)){
+  inertia[k-1] = getInertieInter(classif,k)
+}
+
+plot(inertia,pch=19,type="b",ylim=c(0,(max(inertia)+5)),cex.lab=1.2,col="grey",axes=F,xlab="Nb. of cluster", ylab="Inertia inter-cluster")
+axis(1, seq(2,(nrow(data)/4)),lwd=font_size,font.axis=font_size,cex.axis=0.8)
+axis(2, seq(0,max(inertia)+5,10),lwd=font_size,font.axis=font_size,cex.axis=0.8)
