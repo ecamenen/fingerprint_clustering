@@ -5,10 +5,12 @@ setwd("~/bin/fingerprint_clustering")
 #global variables
 font_size=2
 nb_metabolites=9
-max_cluster=5
+max_cluster=8
 margin=par(mar=c(5, 4, 4, 2) + 1.1)
+interval=1
 #max_cluster=nb_metabolites/1.5
 #choix du niveau de coupure
+def=par()
 
 library(gclus)
 library(cluster)
@@ -23,12 +25,17 @@ set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
 ################################################
 rand_distances=round(runif(nb_metabolites*nb_metabolites, 0, 1),2) #genration of number between 1 and 12
 #conversion into matrix
-data = matrix(rand_distances,nb_metabolites, nb_metabolites)
+data_test = matrix(rand_distances,nb_metabolites, nb_metabolites)
 labels=paste("met",seq(1:nb_metabolites))
-rownames(data)=labels
-colnames(data)=labels
+rownames(data_test)=labels
+colnames(data_test)=labels
 #conversion into triangular matrix
-data[upper.tri(data)] = 0
+#data_test[upper.tri(data_test)] = 0
+
+
+data=read.table("matrix.txt",header=F,sep="\t",dec=".",row.names=1)
+colnames(data)=rownames(data)
+
 #conversion into distance
 distance_matrix=as.dist(data)
 #plotcolors(dmat.color(distance_matrix))
@@ -55,10 +62,10 @@ coph_matrix=cophenetic(classif)
 cor_coph=cor(distance_matrix,coph_matrix)
 #print(paste("% of explained variance:",round(cor_coph^2,3)))
 plotCohenetic=function(){
-  plot(distance_matrix, coph_matrix, pch=19,cex=0.5,axes=F, cex.lab=1.2,cex.main=1.1,font.lab=font_size,xlim=c(0,max(distance_matrix)), ylim=c(0,max(coph_matrix)),xlab="Distance between metabolites",ylab="Cophenetic distance", asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
-  axis(2, seq(0.0,max(coph_matrix),0.2),lwd=2,font.axis=font_size,cex.axis=0.8)
-  axis(1, seq(0,max(distance_matrix),0.2),lwd=2,font.axis=font_size,cex.axis=0.8)
-  lines(lowess(distance_matrix, coph_matrix), col="red",lwd=font_size)
+  plot(distance_matrix, coph_matrix, pch=19,col="red",cex=0.5,axes=F, cex.lab=1.2,cex.main=1.1,font.lab=font_size,xlim=c(0,max(distance_matrix)), ylim=c(0,max(coph_matrix)),xlab="Distance between metabolites",ylab="Cophenetic distance", asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
+  axis(2, seq(0.0,max(coph_matrix),interval),lwd=2,font.axis=font_size,cex.axis=0.8)
+  axis(1, seq(0,max(distance_matrix),interval),lwd=2,font.axis=font_size,cex.axis=0.8)
+  #lines(lowess(distance_matrix, coph_matrix), col="red",lwd=font_size)
   abline(0,1,col="grey",lwd=font_size,lty=2)
 }
 
@@ -109,6 +116,7 @@ getClusterSizes=function(){
   return(cluster_sizes)
 }
 cluster_sizes=getClusterSizes()
+print(cluster_size)
 
 ################################
 #          Fusion levels
@@ -156,9 +164,10 @@ getGroupContent=function(){
 #Plot fusion graph
 plot_fusion_levels = function() {
   par(margin);#x11()
-  plot(classif$height, nrow(data):2, type="S",main="Distance before each fusion level",cex.main=2,cex.lab=1.5,lwd=font_size,xlim=c(0,max(classif$height)+0.2),ylim=c(2,nrow(data)),font.lab=2,ylab="Number of clusters", xlab="Node height", sub="(in red, difference in height with the previous fusion level)",col="grey", axes=F)
-  axis(2, seq(2,nrow(data)),lwd=2,font.axis=font_size)
-  axis(1, seq(0,max(classif$height)+0.2,by=0.2),lwd=2,font.axis=font_size)
+  subset_height=classif$height[(nrow(data)-max_cluster):(nrow(data)-1)]
+  plot(classif$height, nrow(data):2, type="S",main="Distance before each fusion level",cex.main=2,cex.lab=1.5,lwd=font_size,xlim=c(min(subset_height),max(subset_height)),ylim=c(2,max_cluster),font.lab=2,ylab="Number of clusters", xlab="Node height", sub="(in red, difference in height with the previous fusion level)",col="grey", axes=F)
+  axis(2, seq(2,max_cluster),lwd=2,font.axis=font_size)
+  axis(1,seq(round(min(subset_height)),round(max(subset_height))),lwd=2,font.axis=font_size)
   result=matrix(0,nrow=(nrow(data)-1),ncol=2) #inialize an array for the result
   result=getGroupContent()
   text(x=classif$height[-1], y=(nrow(data)-1):2, labels=round(height_diff[-1],3), pos=3,col="red", cex=0.8)
@@ -173,9 +182,9 @@ plot_fusion_levels()
 
 plotDendrogram=function(nb_clusters){
   par(margin);#x11()
-  plot(classif, ylim=c(0,max(classif$height)),xlim=c(-10,nrow(data)),hang=-1, cex.main=2, cex.lab=1.5,lwd=font_size,xlab="Metabolites", sub="",ylab="Distance before each fusion",main="Dendrogram",font.lab=font_size,axes=F)
-  axis(2, seq(0.0,max(classif$height),0.2),lwd=font_size,font.axis=font_size,cex.axis=0.8)
-  abline(h=seq(0.0,max(classif$height),0.1), lty=3, col="grey")
+  plot(classif, ylim=c(0,max(classif$height)),xlim=c(0,nrow(data)),hang=-1, cex.main=2, cex.lab=1.5,lwd=font_size,xlab="Metabolites", sub="",ylab="Distance before each fusion",main="Dendrogram",font.lab=font_size,axes=F)
+  axis(2, seq(0,max(classif$height)),lwd=font_size,font.axis=font_size,cex.axis=0.8)
+  #abline(h=seq(0.0,max(classif$height),0.1), lty=3, col="grey")
   #abline(h=c(classif$height), lty=3, col="grey")
   #projection of the clusters
   rect.hclust(classif, k=nb_clusters, border=rainbow(nb_clusters))
@@ -183,26 +192,38 @@ plotDendrogram=function(nb_clusters){
 
 plotDendrogram(as.numeric(optimal_nb_clusters))
 
-"
-$mrrge # negative values: singleton fusion; positive values: cluster fusion
-[,1] [,2] 
-[1,]   -1   -3 # P1 = {1,3} #fusion of singleton 1 and 3
-[2,]   -2    1 # P2 = {1,3,2} 
-[3,]   -4    2 # P3 = {1,3,2,4} 
-[4,]   -5    3 # P4 = {1,3,2,4,5} 
-[5,]   -6   -7 # P5 = {6,7} 
-[6,]   -8    5 # P6 = {6,7,8} 
-[7,]   -9  -10 # P7 = {9,10} 
-[8,]  -11    7 # P8 = {9,10,11} 
-[9,]  -12    8 # P9 = {9,10,11,12} 
-[10,]  -13    9 # P10 = {9,10,11,12,13} 
-[11,]    6   10 # P11 = {6,7,8,9,10,11,12,13} #fusion of cluster at line 6 and the one at line 10
-[12,]    4   11 # P12 = {1,3,2,4,5,6,7,8,9,10,11,12,13} "
-
 ################################
 #          Silhouette
 ################################
 
+plotAllSilhouette=function(){
+  asw <- numeric(nrow(data))
+  for (k in 2:(nrow(data)-1)) {
+    sil <- silhouette(cutree(classif, k=k), distance_matrix)
+    asw[k] <- summary(sil)$avg.width
+  }
+  
+  k.best <- which.max(asw)
+  # The plot is produced by function plot.silhouette {cluster}
+  plot(1:nrow(data), asw, type="S", xlim=c(2,nrow(data)/3),ylim=c(0,max(asw)+0.1),col="grey",main="Silhouette-optimal number of clusters, Ward",xlab="Number of groups", ylab="Average silhouette width", axes=F)
+  text(k.best,max(asw),paste("optimum",k.best,sep="\n \n"),col="red")
+  axis(1, seq(2,nrow(data)/3),lwd=font_size,font.axis=font_size,cex.axis=0.8)
+  axis(2, seq(0.0,(max(asw)+0.1),0.1),lwd=font_size,font.axis=font_size,cex.axis=0.8)
+  points(k.best, max(asw), pch=21, col="red", cex=1)
+  cat("","Silhouette-optimal number of clusters k =", k.best, "\n","with an average silhouette width of", round(max(asw),4), "\n")
+  abline(v=k.best,lty=2,col="red")
+}
 
-si=silhouette(getClusters(optimal_nb_clusters),distance_matrix)
-plot(si)
+plotSmallClusterSilhouette=function(){
+  par(mfrow=c(2,2))
+  for (k in 3:6) {
+    sil <- silhouette(cutree(classif, k=k), distance_matrix)
+    silo <- sortSilhouette(sil)
+    rownames(silo) <- row.names(data)[attr(silo,"iOrd")]
+    plot(silo, main=paste("Silhouette plot for",k ,"groups"),cex.names=0.8, col=silo[,1]+1, nmax.lab=100)
+  }
+  par(mfrow=c(1,1))
+}
+
+plotAllSilhouette()
+plotSmallClusterSilhouette()
