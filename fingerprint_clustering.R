@@ -190,15 +190,15 @@ plotDendrogram=function(nb_clusters){
   rect.hclust(classif, k=nb_clusters, border=rainbow(nb_clusters))
 }
 
-plotDendrogram(as.numeric(optimal_nb_clusters))
+x11();plotDendrogram(as.numeric(optimal_nb_clusters))
 
 ################################
 #          Silhouette
 ################################
 
-plotAllSilhouette=function(){
-  asw <- numeric(nrow(data))
-  for (k in 2:(nrow(data)-1)) {
+plotAllSilhouette=function(max_cluster){
+  asw <- numeric(max_cluster)
+  for (k in 2:(max_cluster-1)) {
     sil <- silhouette(cutree(classif, k=k), distance_matrix)
     asw[k] <- summary(sil)$avg.width
   }
@@ -214,9 +214,9 @@ plotAllSilhouette=function(){
   abline(v=k.best,lty=2,col="red")
 }
 
-plotSmallClusterSilhouette=function(){
+plotSmallClusterSilhouette=function(max_cluster){
   par(mfrow=c(2,2))
-  for (k in 3:6) {
+  for (k in 3:max_cluster) {
     sil <- silhouette(cutree(classif, k=k), distance_matrix)
     silo <- sortSilhouette(sil)
     rownames(silo) <- row.names(data)[attr(silo,"iOrd")]
@@ -225,30 +225,37 @@ plotSmallClusterSilhouette=function(){
   par(mfrow=c(1,1))
 }
 
-plotAllSilhouette()
-plotSmallClusterSilhouette()
+plotAllSilhouette(max_cluster)
+plotSmallClusterSilhouette(max_cluster)
 
 ################################
 #          Inertie inter-
 ################################
 
-getInertieInter <- function(classif,k) {
+getInertieInter=function(classif,k) {
   sum_inertia <- 0;
-  element <- length(classif$label)-1 ; imax <- k-1;
+  element=length(classif$label)-1 ; imax <- k-1
   for (i in 1:imax) {
-    sum_inertia <- sum_inertia+classif$height[element];
-    element <- element-1;
-  };
-  inertia <- 1000*sum_inertia/sum(classif$height) ; inertia <- round(inertia)/10;
+    sum_inertia=sum_inertia+classif$height[element]
+    element=element-1
+  }
+  inertia=1000*sum_inertia/sum(classif$height) ; inertia=round(inertia)/10
   return(inertia)
 }
 
-
-inertia=vector(mode="numeric",nrow(data)/4)
-for (k in 2:(nrow(data)/4)){
-  inertia[k-1] = getInertieInter(classif,k)
+plotInertiaInter=function(max_cluster){
+  inertia=vector(mode="numeric",max_cluster-1)
+  for (k in 2:max_cluster){
+    inertia[k-1] = getInertieInter(classif,k)
+  }
+  k.best=which.max(inertia)
+  plot(inertia,pch=19,type="b",ylim=c(0,(max(inertia)+5)),cex.lab=1.2,col="grey",axes=F,xlab="Nb. of cluster", ylab="Inertia inter-cluster")
+  axis(1, seq(2,(nrow(data)/4)),lwd=font_size,font.axis=font_size,cex.axis=0.8)
+  axis(2, seq(0,max(inertia)+5,10),lwd=font_size,font.axis=font_size,cex.axis=0.8)
+  text(k.best,max(inertia),paste("optimum",k.best,sep="\n \n"),col="red")
+  points(k.best, max(inertia), pch=21, col="red", cex=1)
+  abline(v=k.best,lty=2,col="red")
+  cat("","Silhouette-optimal number of clusters k =", k.best, "\n","with an inertia of", round(max(inertia),4), "\n")
 }
 
-plot(inertia,pch=19,type="b",ylim=c(0,(max(inertia)+5)),cex.lab=1.2,col="grey",axes=F,xlab="Nb. of cluster", ylab="Inertia inter-cluster")
-axis(1, seq(2,(nrow(data)/4)),lwd=font_size,font.axis=font_size,cex.axis=0.8)
-axis(2, seq(0,max(inertia)+5,10),lwd=font_size,font.axis=font_size,cex.axis=0.8)
+plotInertiaInter(max_cluster)
