@@ -8,7 +8,7 @@ nb_metabolites=9
 max_cluster=6
 margin=par(mar=c(5, 4, 4, 2) + 1.1)
 interval=1
-typeClassif=2
+typeClassif=3
 #max_cluster=nb_metabolites/1.5
 #choix du niveau de coupure
 def=par()
@@ -46,6 +46,7 @@ distance_matrix=as.dist(data)
 ################################
 #          Clustering
 ################################
+
 if (typeClassif==1){
   classif=pam(data,3,diss=F,stand=F)
 }else if (typeClassif==2){
@@ -80,6 +81,105 @@ plotCohenetic=function(){
 
 if(typeClassif>2) plotCohenetic()
 
+################################
+#          Inertie inter-
+################################
+
+getCumulatedInertieInter = function(classif, nb_cluster) {
+  sum_inertia = 0
+  element = length(classif$label) - 1
+  imax = nb_cluster - 1
+  for (i in 1:imax) {
+    sum_inertia = sum_inertia + classif$height[element]
+    element = element-1
+  }
+  inertia = 100 * sum_inertia / sum(classif$height)
+  inertia = round(inertia,2)
+  return(inertia)
+}
+
+getCumulatedInertiaInterPerCluster=function(max_cluster){
+  inertia=vector(mode="numeric",max_cluster)
+  for (k in 2:(max_cluster+1)){
+    inertia[k-1] = getCumulatedInertieInter(classif,k)
+  }
+  return (inertia)
+}
+
+plotCumulatedInertiaInter=function(max_cluster){
+  inertia=getCumulatedInertiaInterPerCluster(max_cluster)
+  k.best=which.max(inertia)
+  plot(inertia,type="b",ylim=c(0,(max(inertia)+5)),cex.lab=1.2,col="grey",axes=F,xlab="Nb. of cluster", ylab="Cumulated inertia inter-cluster")
+  axis(1, seq(2,max_cluster),lwd=font_size,font.axis=font_size,cex.axis=0.8)
+  axis(2, seq(0,max(inertia)+5,10),lwd=font_size,font.axis=font_size,cex.axis=0.8)
+  text(k.best,max(inertia),paste("",round(max(inertia),4),sep="\n \n"),col="red",pos=2)
+  points(k.best, max(inertia), pch=21, col="red", cex=1)
+  abline(v=k.best,lty=2,col="red")
+  cat("","Silhouette-optimal number of clusters k =", k.best, "\n","with a cumulated inter-inertia of", round(max(inertia),4), "\n")
+}
+
+plotCumulatedInertiaInter(max_cluster)
+
+################################
+#          Height difference
+################################
+
+#Show differences between nodes levels (distance between clusters)
+getHeightDifference=function(){
+  height_classif=as.matrix(classif$height)
+  height_diff=matrix(0, length(height_classif), 1)
+  for (i in 2:(length(height_classif))){
+    height_diff[i,]=height_classif[i,]-height_classif[i-1,]
+  }
+  rownames(height_diff)=c((length(height_classif)+1):2)
+  return(height_diff)
+}
+
+height_diff=getHeightDifference()
+
+#matrix_height=cbind(height_classif,height_diff)
+#colnames(matrix_height)=c("node height","difference")
+
+getRankedHeight=function(){
+  ranked_height_diff=data.frame(getHeightDifference())
+  ranked_height_diff=ranked_height_diff[order(-ranked_height_diff), , drop = FALSE]
+  rownames(ranked_height_diff)
+  return(ranked_height_diff)
+}
+
+printTableInertia=function(){
+  ranked_height_diff=getRankedHeight()
+  matrix_output1=cbind(classif$height,getHeightDifference())
+  for(i in 1:ncol(matrix_output1)) {matrix_output1[,i] = rev(matrix_output1[,i])}
+  matrix_output1=cbind(matrix_output1,getCumulatedInertiaInterPerCluster(nrow(data)-1))
+  rownames(matrix_output1)=seq(2,(nrow(data)))
+  colnames(matrix_output1)=c("Branch height", "Differences","Cumulated inertia")
+  matrix_output1=round(matrix_output1,2)
+  print (matrix_output1)
+}
+
+printTableInertia()
+
+optimal_nb_clusters=as.numeric(rownames(getRankedHeight())[1])
+#optimal_nb_clusters=nrow(data)-(which.max(getHeightDifference()[-(nrow(data)-1)])-1)
+
+getClusters= function(nb_clusters) {
+  cutree(classif,nb_clusters)
+}
+
+clusters=getClusters(optimal_nb_clusters)
+#clusters<-as.factor(cutree(dendro3,nb_clusters))
+
+getClusterSizes=function(){
+  cluster_sizes=table(clusters)
+  cluster_sizes=data.frame(cluster_sizes)[,2]
+  names(cluster_sizes)=paste("G",seq(1:optimal_nb_clusters),sep="")
+  cluster_sizes=data.frame(cluster_sizes)
+  names(cluster_sizes)="Effectif"
+  return(cluster_sizes)
+}
+cluster_sizes=getClusterSizes()
+print(cluster_sizes)
 
 ################################
 #          Fusion levels
@@ -138,104 +238,6 @@ plot_fusion_levels = function() {
 }
 
 plot_fusion_levels()
-
-################################
-#          Inertie inter-
-################################
-
-getCumulatedInertieInter = function(classif, nb_cluster) {
-  sum_inertia = 0
-  element = length(classif$label) - 1
-  imax = nb_cluster - 1
-  for (i in 1:imax) {
-    sum_inertia = sum_inertia + classif$height[element]
-    element = element-1
-  }
-  inertia = 100 * sum_inertia / sum(classif$height)
-  inertia = round(inertia,2)
-  return(inertia)
-}
-
-getCumulatedInertiaInterPerCluster=function(max_cluster){
-  inertia=vector(mode="numeric",max_cluster)
-  for (k in 2:(max_cluster+1)){
-    inertia[k-1] = getCumulatedInertieInter(classif,k)
-  }
-  return (inertia)
-}
-
-plotCumulatedInertiaInter=function(max_cluster){
-  inertia=getCumulatedInertiaInterPerCluster(max_cluster)
-  k.best=which.max(inertia)
-  plot(inertia,type="b",ylim=c(0,(max(inertia)+5)),cex.lab=1.2,col="grey",axes=F,xlab="Nb. of cluster", ylab="Cumulated inertia inter-cluster")
-  axis(1, seq(2,max_cluster),lwd=font_size,font.axis=font_size,cex.axis=0.8)
-  axis(2, seq(0,max(inertia)+5,10),lwd=font_size,font.axis=font_size,cex.axis=0.8)
-  text(k.best,max(inertia),paste("",round(max(inertia),4),sep="\n \n"),col="red",pos=2)
-  points(k.best, max(inertia), pch=21, col="red", cex=1)
-  abline(v=k.best,lty=2,col="red")
-  cat("","Silhouette-optimal number of clusters k =", k.best, "\n","with a cumulated inter-inertia of", round(max(inertia),4), "\n")
-}
-
-plotCumulatedInertiaInter(max_cluster)
-
-################################
-#          Height difference
-################################
-
-#Show differences between nodes levels (distance between clusters)
-getHeightDifference=function(){
-  height_classif=as.matrix(classif$height)
-  height_diff=matrix(0, length(height_classif), 1)
-  for (i in 2:(length(height_classif))){
-    height_diff[i,]=height_classif[i,]-height_classif[i-1,]
-  }
-  rownames(height_diff)=c((length(height_classif)+1):2)
-  return(height_diff)
-}
-
-#matrix_height=cbind(height_classif,height_diff)
-#colnames(matrix_height)=c("node height","difference")
-
-getRankedHeight=function(){
-  ranked_height_diff=data.frame(getHeightDifference())
-  ranked_height_diff=ranked_height_diff[order(-ranked_height_diff), , drop = FALSE]
-  rownames(ranked_height_diff)
-  return(ranked_height_diff)
-}
-
-printTableInertia=function(){
-  ranked_height_diff=getRankedHeight()
-  matrix_output1=cbind(classif$height,getHeightDifference())
-  for(i in 1:ncol(matrix_output1)) {matrix_output1[,i] = rev(matrix_output1[,i])}
-  matrix_output1=cbind(matrix_output1,getCumulatedInertiaInterPerCluster(nrow(data)-1))
-  rownames(matrix_output1)=seq(2,(nrow(data)))
-  colnames(matrix_output1)=c("Branch height", "Differences","Cumulated inertia")
-  matrix_output1=round(matrix_output1,2)
-  print (matrix_output1)
-}
-
-printTableInertia()
-
-optimal_nb_clusters=as.numeric(rownames(ranked_height_diff)[1])
-#optimal_nb_clusters=nrow(data)-(which.max(getHeightDifference()[-(nrow(data)-1)])-1)
-
-getClusters= function(nb_clusters) {
-  cutree(classif,nb_clusters)
-}
-
-clusters=getClusters(optimal_nb_clusters)
-#clusters<-as.factor(cutree(dendro3,nb_clusters))
-
-getClusterSizes=function(){
-  cluster_sizes=table(clusters)
-  cluster_sizes=data.frame(cluster_sizes)[,2]
-  names(cluster_sizes)=paste("G",seq(1:optimal_nb_clusters),sep="")
-  cluster_sizes=data.frame(cluster_sizes)
-  names(cluster_sizes)="Effectif"
-  return(cluster_sizes)
-}
-cluster_sizes=getClusterSizes()
-print(cluster_sizes)
 
 ################################
 #          COR
