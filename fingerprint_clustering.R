@@ -5,10 +5,12 @@ setwd("~/bin/fingerprint_clustering")
 #global variables
 font_size=2
 nb_metabolites=9
-max_cluster=5
+max_cluster=6
 margin=par(mar=c(5, 4, 4, 2) + 1.1)
+interval=1
 #max_cluster=nb_metabolites/1.5
 #choix du niveau de coupure
+def=par()
 
 library(gclus)
 library(cluster)
@@ -23,12 +25,17 @@ set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
 ################################################
 rand_distances=round(runif(nb_metabolites*nb_metabolites, 0, 1),2) #genration of number between 1 and 12
 #conversion into matrix
-data = matrix(rand_distances,nb_metabolites, nb_metabolites)
+data_test = matrix(rand_distances,nb_metabolites, nb_metabolites)
 labels=paste("met",seq(1:nb_metabolites))
-rownames(data)=labels
-colnames(data)=labels
+rownames(data_test)=labels
+colnames(data_test)=labels
 #conversion into triangular matrix
-data[upper.tri(data)] = 0
+#data_test[upper.tri(data_test)] = 0
+
+
+data=read.table("matrix.txt",header=F,sep="\t",dec=".",row.names=1)
+colnames(data)=rownames(data)
+
 #conversion into distance
 distance_matrix=as.dist(data)
 #plotcolors(dmat.color(distance_matrix))
@@ -55,10 +62,10 @@ coph_matrix=cophenetic(classif)
 cor_coph=cor(distance_matrix,coph_matrix)
 #print(paste("% of explained variance:",round(cor_coph^2,3)))
 plotCohenetic=function(){
-  plot(distance_matrix, coph_matrix, pch=19,cex=0.5,axes=F, cex.lab=1.2,cex.main=1.1,font.lab=font_size,xlim=c(0,max(distance_matrix)), ylim=c(0,max(coph_matrix)),xlab="Distance between metabolites",ylab="Cophenetic distance", asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
-  axis(2, seq(0.0,max(coph_matrix),0.2),lwd=2,font.axis=font_size,cex.axis=0.8)
-  axis(1, seq(0,max(distance_matrix),0.2),lwd=2,font.axis=font_size,cex.axis=0.8)
-  lines(lowess(distance_matrix, coph_matrix), col="red",lwd=font_size)
+  plot(distance_matrix, coph_matrix, pch=19,col="red",cex=0.5,axes=F, cex.lab=1.2,cex.main=1.1,font.lab=font_size,xlim=c(0,max(distance_matrix)), ylim=c(0,max(coph_matrix)),xlab="Distance between metabolites",ylab="Cophenetic distance", asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
+  axis(2, seq(0.0,max(coph_matrix),interval),lwd=2,font.axis=font_size,cex.axis=0.8)
+  axis(1, seq(0,max(distance_matrix),interval),lwd=2,font.axis=font_size,cex.axis=0.8)
+  #lines(lowess(distance_matrix, coph_matrix), col="red",lwd=font_size)
   abline(0,1,col="grey",lwd=font_size,lty=2)
 }
 
@@ -90,7 +97,7 @@ getRankedHeight=function(){
 }
 ranked_height_diff=getRankedHeight()
 
-optimal_nb_clusters=rownames(ranked_height_diff)[1]
+optimal_nb_clusters=as.numeric(rownames(ranked_height_diff)[1])
 #optimal_nb_clusters=nrow(data)-(which.max(getHeightDifference()[-(nrow(data)-1)])-1)
 
 getClusters= function(nb_clusters) {
@@ -109,6 +116,7 @@ getClusterSizes=function(){
   return(cluster_sizes)
 }
 cluster_sizes=getClusterSizes()
+print(cluster_size)
 
 ################################
 #          Fusion levels
@@ -156,9 +164,10 @@ getGroupContent=function(){
 #Plot fusion graph
 plot_fusion_levels = function() {
   par(margin);#x11()
-  plot(classif$height, nrow(data):2, type="S",main="Distance before each fusion level",cex.main=2,cex.lab=1.5,lwd=font_size,xlim=c(0,max(classif$height)+0.2),ylim=c(2,nrow(data)),font.lab=2,ylab="Number of clusters", xlab="Node height", sub="(in red, difference in height with the previous fusion level)",col="grey", axes=F)
-  axis(2, seq(2,nrow(data)),lwd=2,font.axis=font_size)
-  axis(1, seq(0,max(classif$height)+0.2,by=0.2),lwd=2,font.axis=font_size)
+  subset_height=classif$height[(nrow(data)-max_cluster):(nrow(data)-1)]
+  plot(classif$height, nrow(data):2, type="S",main="Distance before each fusion level",cex.main=2,cex.lab=1.5,lwd=font_size,xlim=c(min(subset_height),max(subset_height)),ylim=c(2,max_cluster),font.lab=2,ylab="Number of clusters", xlab="Node height", sub="(in red, difference in height with the previous fusion level)",col="grey", axes=F)
+  axis(2, seq(2,max_cluster),lwd=2,font.axis=font_size)
+  axis(1,seq(round(min(subset_height)),round(max(subset_height))),lwd=2,font.axis=font_size)
   result=matrix(0,nrow=(nrow(data)-1),ncol=2) #inialize an array for the result
   result=getGroupContent()
   text(x=classif$height[-1], y=(nrow(data)-1):2, labels=round(height_diff[-1],3), pos=3,col="red", cex=0.8)
@@ -173,36 +182,233 @@ plot_fusion_levels()
 
 plotDendrogram=function(nb_clusters){
   par(margin);#x11()
-  plot(classif, ylim=c(0,max(classif$height)),xlim=c(-10,nrow(data)),hang=-1, cex.main=2, cex.lab=1.5,lwd=font_size,xlab="Metabolites", sub="",ylab="Distance before each fusion",main="Dendrogram",font.lab=font_size,axes=F)
-  axis(2, seq(0.0,max(classif$height),0.2),lwd=font_size,font.axis=font_size,cex.axis=0.8)
-  abline(h=seq(0.0,max(classif$height),0.1), lty=3, col="grey")
+  plot(classif, ylim=c(0,max(classif$height)),xlim=c(0,nrow(data)),hang=-1, cex.main=2, cex.lab=1.5,lwd=font_size,xlab="Metabolites", sub="",ylab="Distance before each fusion",main="Dendrogram",font.lab=font_size,axes=F)
+  axis(2, seq(0,max(classif$height)),lwd=font_size,font.axis=font_size,cex.axis=0.8)
+  #abline(h=seq(0.0,max(classif$height),0.1), lty=3, col="grey")
   #abline(h=c(classif$height), lty=3, col="grey")
   #projection of the clusters
-  rect.hclust(classif, k=optimal_nb_clusters, border=rainbow(optimal_nb_clusters))
+  rect.hclust(classif, k=nb_clusters, border=rainbow(nb_clusters))
 }
 
-plotDendrogram(optimal_nb_clusters)
-
-"
-$mrrge # negative values: singleton fusion; positive values: cluster fusion
-[,1] [,2] 
-[1,]   -1   -3 # P1 = {1,3} #fusion of singleton 1 and 3
-[2,]   -2    1 # P2 = {1,3,2} 
-[3,]   -4    2 # P3 = {1,3,2,4} 
-[4,]   -5    3 # P4 = {1,3,2,4,5} 
-[5,]   -6   -7 # P5 = {6,7} 
-[6,]   -8    5 # P6 = {6,7,8} 
-[7,]   -9  -10 # P7 = {9,10} 
-[8,]  -11    7 # P8 = {9,10,11} 
-[9,]  -12    8 # P9 = {9,10,11,12} 
-[10,]  -13    9 # P10 = {9,10,11,12,13} 
-[11,]    6   10 # P11 = {6,7,8,9,10,11,12,13} #fusion of cluster at line 6 and the one at line 10
-[12,]    4   11 # P12 = {1,3,2,4,5,6,7,8,9,10,11,12,13} "
+x11();plotDendrogram(as.numeric(optimal_nb_clusters))
 
 ################################
 #          Silhouette
 ################################
 
+plotAllSilhouette=function(max_cluster){
+  asw <- numeric(max_cluster-1)
+  for (k in 2:(max_cluster-1)) {
+    sil <- silhouette(cutree(classif, k=k), distance_matrix)
+    asw[k] <- summary(sil)$avg.width
+  }
+  
+  k.best <- which.max(asw)
+  # The plot is produced by function plot.silhouette {cluster}
+  plot(1:(max_cluster-1), asw, type="b", xlim=c(2,(max_cluster-1)),ylim=c(0,max(asw)+0.1),col="grey",main="Silhouette-optimal number of clusters, Ward",xlab="Number of groups", ylab="Average silhouette width", axes=F)
+  text(k.best,max(asw),paste("optimum",k.best,sep=":"),col="red", pos=2)
+  axis(1, seq(2,(max_cluster-1)),lwd=font_size,font.axis=font_size,cex.axis=0.8)
+  axis(2, seq(0.0,(max(asw)+0.1),0.1),lwd=font_size,font.axis=font_size,cex.axis=0.8)
+  points(k.best, max(asw), pch=21, col="red", cex=1)
+  cat("","Silhouette-optimal number of clusters k =", k.best, "\n","with an average silhouette width of", round(max(asw),4), "\n")
+  abline(v=k.best,lty=2,col="red")
+}
 
-si=silhouette(getClusters(7),distance_matrix)
-plot(si)
+plotSmallClusterSilhouette=function(max_cluster){
+  par(mfrow=c(2,2))
+  for (k in 3:max_cluster) {
+    sil <- silhouette(cutree(classif, k=k), distance_matrix)
+    silo <- sortSilhouette(sil)
+    rownames(silo) <- row.names(data)[attr(silo,"iOrd")]
+    plot(silo, main=paste("Silhouette plot for",k ,"groups"),cex.names=0.8, col=silo[,1]+1, nmax.lab=100)
+  }
+  par(mfrow=c(1,1))
+}
+
+plotAllSilhouette(max_cluster)
+plotSmallClusterSilhouette(max_cluster)
+
+################################
+#          Inertie inter-
+################################
+
+getInertieInter=function(classif,k) {
+  sum_inertia <- 0;
+  element=length(classif$label)-1 ; imax <- k-1
+  for (i in 1:imax) {
+    sum_inertia=sum_inertia+classif$height[element]
+    element=element-1
+  }
+  inertia=1000*sum_inertia/sum(classif$height) ; inertia=round(inertia)/10
+  return(inertia)
+}
+
+plotInertiaInter=function(max_cluster){
+  inertia=vector(mode="numeric",max_cluster-1)
+  for (k in 2:max_cluster){
+    inertia[k-1] = getInertieInter(classif,k)
+  }
+  k.best=which.max(inertia)
+  plot(inertia,type="b",ylim=c(0,(max(inertia)+5)),cex.lab=1.2,col="grey",axes=F,xlab="Nb. of cluster", ylab="Inertia inter-cluster")
+  axis(1, seq(2,(nrow(data)/4)),lwd=font_size,font.axis=font_size,cex.axis=0.8)
+  axis(2, seq(0,max(inertia)+5,10),lwd=font_size,font.axis=font_size,cex.axis=0.8)
+  text(k.best,max(inertia),paste("optimum",k.best,sep="\n \n"),col="red")
+  points(k.best, max(inertia), pch=21, col="red", cex=1)
+  abline(v=k.best,lty=2,col="red")
+  cat("","Silhouette-optimal number of clusters k =", k.best, "\n","with an inertia of", round(max(inertia),4), "\n")
+}
+
+plotInertiaInter(max_cluster)
+
+
+################################
+#          COR
+################################
+centreduire <- function(T) {
+  N <- nrow(T) ; T1 <- scale(T);
+  return(T1*sqrt(N/(N-1)))
+  }
+
+# Calcule les cdg  centres reduits des classes.
+# Paramatres :	table des donnees,
+#		hierarchie,
+#		nombre de classes
+# Sortie : les coordonnees des centres de gravite des classes
+cdgcl <- function(T1,H,k) {
+  T <- centreduire(T1);
+  N <- nrow(T) ; M <- ncol(T);
+  C <- cutree(H,k);
+  cdg <- matrix(data=0,nrow=k,ncol=M);
+  for (i in 1:N) {
+    cli <- C[i];
+    for (j in 1:M) cdg[cli,j] <- cdg[cli,j] + T[i,j];
+  };
+  for (i in 1:k)
+    for (j in 1:M) cdg[i,j] <- cdg[i,j]/length(C[C==i]);
+    cdgframe <- as.data.frame(cdg);
+    names(cdgframe) <- names(T1);
+    return(cdgframe)}
+
+# Contribution relative des variables a l'eloignement des classes
+# Parametres :	table des donnees,
+#		classement hierarchique,
+#		nombre de classes
+# Sortie : les contributions relatives (isouvent notees COR)
+
+ctrcl <- function(T,H,k) {
+  N <- nrow(T) ; M <- ncol(T);
+  cdg <- cdgcl(T,H,k);
+  ctr <- cdg;
+  for (i in 1:k) {
+    s2 <- sum(cdg[i,]^2);
+    for (j in 1:M) ctr[i,j] <- cdg[i,j]*abs(cdg[i,j])/s2;
+  };
+  ctr <- round(1000*ctr);
+  return(ctr/10)}
+
+correlation_var=ctrcl(data,classif,optimal_nb_clusters)
+correlation_var
+
+################################
+#            RHO2
+################################
+
+# Distance**2 des classes au centre du nuage
+# Parametres :	table des donnees,
+#		classement hierarchique,
+#		nombre de classes
+# Sortie : les carres des distances (souvent notes RHO2)
+rho2 <- function(T1,H,k) {
+  T <- centreduire(T1);
+  N <- nrow(T) ; M <- ncol(T);
+  C <- cutree(H,k);
+  cdg <- matrix(data=0,nrow=k,ncol=M);
+  for (i in 1:N) {
+    cli <- C[i];
+    for (j in 1:M) cdg[cli,j] <- cdg[cli,j] + T[i,j];
+  };
+  for (i in 1:k)
+    for (j in 1:M) cdg[i,j] <- cdg[i,j]/length(C[C==i]);
+    r <- vector(mode="numeric",k);
+    for (i in 1:k) r[i] <- sum(cdg[i,]^2);
+    return(r)}
+
+excentricity=matrix(0,max_cluster-1,max_cluster-1)
+rownames(excentricity)=seq(2,max_cluster)
+colnames(excentricity)=paste("G",seq(1,max_cluster-1),sep="")
+for (k in 2:max_cluster){
+  res=rho2(data,classif,k);print(res)
+  for(i in 1:length(res)){
+    excentricity[k-1,i]=round(res[i],2)
+  }
+}
+#excentricity[excentricity==0] <-" "
+excentricity[excentricity==0] <-NA
+excentricity
+
+################################
+#            CTR
+################################
+
+# Contribution relative des classes a inertie du nuage
+# Parametres :	table des donn?es,
+#		classfication hierarchique,
+#		nombre de classes
+# Sortie : les contributions (souvent notees CTR)
+ctrng <- function(T1,H,k) {
+  T <- centreduire(T1);
+  N <- nrow(T) ; M <- ncol(T);
+  C <- cutree(H,k);
+  ctr <- matrix(0,nrow=k,ncol=M);
+  for (i in 1:N) {
+    cli <- C[i];
+    for (j in 1:M) ctr[cli,j] <- ctr[cli,j] + T[i,j];
+  };
+  for (i in 1:k)
+    for (j in 1:M) ctr[i,j] <- ctr[i,j]^2/(N*length(C[C==i]));
+    ctrframe <- as.data.frame(ctr);
+    names(ctrframe) <- names(T1);
+    return(round(1000*ctrframe)/10)}
+
+relative_ctr = ctrng(data,classif,optimal_nb_clusters)
+relative_ctr
+
+################################
+#            CTR
+################################
+
+# Pouvoir discriminant des variables
+# Parametres :	table des donnees,
+#		tableau hierarchique,
+#		nombre de classes
+# Sortie : les carres des distances 
+
+pdis <- function(T1,H,k) {
+  T <- centreduire(T1);
+  N <- nrow(T) ; M <- ncol(T);
+  C <- cutree(H,k);
+  ctr <- matrix(data=0,nrow=k,ncol=M);
+  for (i in 1:N) {
+    cli <- C[i];
+    for (j in 1:M) ctr[cli,j] <- ctr[cli,j] + T[i,j];
+  };
+  r <- vector(mode="numeric",M);
+  for (i in 1:k)
+    for (j in 1:M) ctr[i,j] <- ctr[i,j]^2/(N*length(C[C==i]));
+    for (i in 1:M) r[i] <- sum(ctr[,i]) ;
+    return(round(1000*r)/10)}
+
+pvdiscriminant=matrix(0,max_cluster-1,nrow(data))
+colnames(pvdiscriminant)=colnames(data)
+rownames(pvdiscriminant)=seq(1,max_cluster-1)
+
+for (k in 2:max_cluster){
+  res=pdis(data,classif,k)
+  for(i in 1:length(res)){
+    pvdiscriminant[k-1,i]=round(res[i],2)
+  }
+}
+#Traitement pour que ça soit beau
+names(pvdiscriminant)=colnames(data)
+df=sort(pvdiscriminant)
+
