@@ -97,7 +97,7 @@ getRankedHeight=function(){
 }
 ranked_height_diff=getRankedHeight()
 
-optimal_nb_clusters=rownames(ranked_height_diff)[1]
+optimal_nb_clusters=as.numeric(rownames(ranked_height_diff)[1])
 #optimal_nb_clusters=nrow(data)-(which.max(getHeightDifference()[-(nrow(data)-1)])-1)
 
 getClusters= function(nb_clusters) {
@@ -333,16 +333,82 @@ rho2 <- function(T1,H,k) {
     for (i in 1:k) r[i] <- sum(cdg[i,]^2);
     return(r)}
 
-results=matrix(0,max_cluster-1,max_cluster-1)
-rownames(results)=seq(2,max_cluster)
-colnames(results)=paste("G",seq(1,max_cluster-1),sep="")
+excentricity=matrix(0,max_cluster-1,max_cluster-1)
+rownames(excentricity)=seq(2,max_cluster)
+colnames(excentricity)=paste("G",seq(1,max_cluster-1),sep="")
 for (k in 2:max_cluster){
   res=rho2(data,classif,k);print(res)
   for(i in 1:length(res)){
-    results[k-1,i]=round(res[i],2)
+    excentricity[k-1,i]=round(res[i],2)
   }
 }
-#results[results==0] <-" "
-results[results==0] <-NA
-results
+#excentricity[excentricity==0] <-" "
+excentricity[excentricity==0] <-NA
+excentricity
+
+################################
+#            CTR
+################################
+
+# Contribution relative des classes a inertie du nuage
+# Parametres :	table des donn?es,
+#		classfication hierarchique,
+#		nombre de classes
+# Sortie : les contributions (souvent notees CTR)
+ctrng <- function(T1,H,k) {
+  T <- centreduire(T1);
+  N <- nrow(T) ; M <- ncol(T);
+  C <- cutree(H,k);
+  ctr <- matrix(0,nrow=k,ncol=M);
+  for (i in 1:N) {
+    cli <- C[i];
+    for (j in 1:M) ctr[cli,j] <- ctr[cli,j] + T[i,j];
+  };
+  for (i in 1:k)
+    for (j in 1:M) ctr[i,j] <- ctr[i,j]^2/(N*length(C[C==i]));
+    ctrframe <- as.data.frame(ctr);
+    names(ctrframe) <- names(T1);
+    return(round(1000*ctrframe)/10)}
+
+relative_ctr = ctrng(data,classif,optimal_nb_clusters)
+relative_ctr
+
+################################
+#            CTR
+################################
+
+# Pouvoir discriminant des variables
+# Parametres :	table des donnees,
+#		tableau hierarchique,
+#		nombre de classes
+# Sortie : les carres des distances 
+
+pdis <- function(T1,H,k) {
+  T <- centreduire(T1);
+  N <- nrow(T) ; M <- ncol(T);
+  C <- cutree(H,k);
+  ctr <- matrix(data=0,nrow=k,ncol=M);
+  for (i in 1:N) {
+    cli <- C[i];
+    for (j in 1:M) ctr[cli,j] <- ctr[cli,j] + T[i,j];
+  };
+  r <- vector(mode="numeric",M);
+  for (i in 1:k)
+    for (j in 1:M) ctr[i,j] <- ctr[i,j]^2/(N*length(C[C==i]));
+    for (i in 1:M) r[i] <- sum(ctr[,i]) ;
+    return(round(1000*r)/10)}
+
+pvdiscriminant=matrix(0,max_cluster-1,nrow(data))
+colnames(pvdiscriminant)=colnames(data)
+rownames(pvdiscriminant)=seq(1,max_cluster-1)
+
+for (k in 2:max_cluster){
+  res=pdis(data,classif,k)
+  for(i in 1:length(res)){
+    pvdiscriminant[k-1,i]=round(res[i],2)
+  }
+}
+#Traitement pour que ça soit beau
+names(pvdiscriminant)=colnames(data)
+df=sort(pvdiscriminant)
 
