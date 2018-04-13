@@ -197,7 +197,7 @@ x11();plotDendrogram(as.numeric(optimal_nb_clusters))
 ################################
 
 plotAllSilhouette=function(max_cluster){
-  asw <- numeric(max_cluster)
+  asw <- numeric(max_cluster-1)
   for (k in 2:(max_cluster-1)) {
     sil <- silhouette(cutree(classif, k=k), distance_matrix)
     asw[k] <- summary(sil)$avg.width
@@ -205,9 +205,9 @@ plotAllSilhouette=function(max_cluster){
   
   k.best <- which.max(asw)
   # The plot is produced by function plot.silhouette {cluster}
-  plot(1:nrow(data), asw, type="b", xlim=c(2,nrow(data)/3),ylim=c(0,max(asw)+0.1),col="grey",main="Silhouette-optimal number of clusters, Ward",xlab="Number of groups", ylab="Average silhouette width", axes=F)
-  text(k.best,max(asw),paste("optimum",k.best,sep="\n \n"),col="red")
-  axis(1, seq(2,nrow(data)/3),lwd=font_size,font.axis=font_size,cex.axis=0.8)
+  plot(1:(max_cluster-1), asw, type="b", xlim=c(2,(max_cluster-1)),ylim=c(0,max(asw)+0.1),col="grey",main="Silhouette-optimal number of clusters, Ward",xlab="Number of groups", ylab="Average silhouette width", axes=F)
+  text(k.best,max(asw),paste("optimum",k.best,sep=":"),col="red", pos=2)
+  axis(1, seq(2,(max_cluster-1)),lwd=font_size,font.axis=font_size,cex.axis=0.8)
   axis(2, seq(0.0,(max(asw)+0.1),0.1),lwd=font_size,font.axis=font_size,cex.axis=0.8)
   points(k.best, max(asw), pch=21, col="red", cex=1)
   cat("","Silhouette-optimal number of clusters k =", k.best, "\n","with an average silhouette width of", round(max(asw),4), "\n")
@@ -249,7 +249,7 @@ plotInertiaInter=function(max_cluster){
     inertia[k-1] = getInertieInter(classif,k)
   }
   k.best=which.max(inertia)
-  plot(inertia,pch=19,type="b",ylim=c(0,(max(inertia)+5)),cex.lab=1.2,col="grey",axes=F,xlab="Nb. of cluster", ylab="Inertia inter-cluster")
+  plot(inertia,type="b",ylim=c(0,(max(inertia)+5)),cex.lab=1.2,col="grey",axes=F,xlab="Nb. of cluster", ylab="Inertia inter-cluster")
   axis(1, seq(2,(nrow(data)/4)),lwd=font_size,font.axis=font_size,cex.axis=0.8)
   axis(2, seq(0,max(inertia)+5,10),lwd=font_size,font.axis=font_size,cex.axis=0.8)
   text(k.best,max(inertia),paste("optimum",k.best,sep="\n \n"),col="red")
@@ -259,3 +259,56 @@ plotInertiaInter=function(max_cluster){
 }
 
 plotInertiaInter(max_cluster)
+
+
+################################
+#          COR
+################################
+centreduire <- function(T) {
+  N <- nrow(T) ; T1 <- scale(T);
+  return(T1*sqrt(N/(N-1)))
+  }
+
+# Calcule les cdg  centres reduits des classes.
+# Paramatres :	table des donnees,
+#		hierarchie,
+#		nombre de classes
+# Sortie : les coordonnees des centres de gravite des classes
+cdgcl <- function(T1,H,k) {
+  T <- centreduire(T1);
+  N <- nrow(T) ; M <- ncol(T);
+  C <- cutree(H,k);
+  cdg <- matrix(data=0,nrow=k,ncol=M);
+  for (i in 1:N) {
+    cli <- C[i];
+    for (j in 1:M) cdg[cli,j] <- cdg[cli,j] + T[i,j];
+  };
+  for (i in 1:k)
+    for (j in 1:M) cdg[i,j] <- cdg[i,j]/length(C[C==i]);
+    cdgframe <- as.data.frame(cdg);
+    names(cdgframe) <- names(T1);
+    return(cdgframe)}
+
+# Contribution relative des variables a l'eloignement des classes
+# Parametres :	table des donnees,
+#		classement hierarchique,
+#		nombre de classes
+# Sortie : les contributions relatives (isouvent notees COR)
+
+ctrcl <- function(T,H,k) {
+  N <- nrow(T) ; M <- ncol(T);
+  cdg <- cdgcl(T,H,k);
+  ctr <- cdg;
+  for (i in 1:k) {
+    s2 <- sum(cdg[i,]^2);
+    for (j in 1:M) ctr[i,j] <- cdg[i,j]*abs(cdg[i,j])/s2;
+  };
+  ctr <- round(1000*ctr);
+  return(ctr/10)}
+
+correlation_var=ctrcl(data,classif,optimal_nb_clusters)
+correlation_var
+
+################################
+#          CTR
+################################
