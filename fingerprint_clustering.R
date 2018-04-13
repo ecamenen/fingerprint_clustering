@@ -5,7 +5,7 @@ setwd("~/bin/fingerprint_clustering")
 #global variables
 font_size=2
 nb_metabolites=9
-max_cluster=8
+max_cluster=6
 margin=par(mar=c(5, 4, 4, 2) + 1.1)
 interval=1
 #max_cluster=nb_metabolites/1.5
@@ -310,5 +310,39 @@ correlation_var=ctrcl(data,classif,optimal_nb_clusters)
 correlation_var
 
 ################################
-#          CTR
+#            RHO2
 ################################
+
+# Distance**2 des classes au centre du nuage
+# Parametres :	table des donnees,
+#		classement hierarchique,
+#		nombre de classes
+# Sortie : les carres des distances (souvent notes RHO2)
+rho2 <- function(T1,H,k) {
+  T <- centreduire(T1);
+  N <- nrow(T) ; M <- ncol(T);
+  C <- cutree(H,k);
+  cdg <- matrix(data=0,nrow=k,ncol=M);
+  for (i in 1:N) {
+    cli <- C[i];
+    for (j in 1:M) cdg[cli,j] <- cdg[cli,j] + T[i,j];
+  };
+  for (i in 1:k)
+    for (j in 1:M) cdg[i,j] <- cdg[i,j]/length(C[C==i]);
+    r <- vector(mode="numeric",k);
+    for (i in 1:k) r[i] <- sum(cdg[i,]^2);
+    return(r)}
+
+results=matrix(0,max_cluster-1,max_cluster-1)
+rownames(results)=seq(2,max_cluster)
+colnames(results)=paste("G",seq(1,max_cluster-1),sep="")
+for (k in 2:max_cluster){
+  res=rho2(data,classif,k);print(res)
+  for(i in 1:length(res)){
+    results[k-1,i]=round(res[i],2)
+  }
+}
+#results[results==0] <-" "
+results[results==0] <-NA
+results
+
