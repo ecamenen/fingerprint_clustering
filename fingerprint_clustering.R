@@ -11,7 +11,7 @@ interval=1
 typeClassif=3
 #max_cluster=nb_metabolites/1.5
 #choix du niveau de coupure
-def=par()
+default_graph_par=par()
 
 library(gclus)
 library(cluster)
@@ -107,6 +107,7 @@ getCumulatedInertiaInterPerCluster=function(max_cluster){
 }
 
 plotCumulatedInertiaInter=function(max_cluster){
+  x11()
   inertia=getCumulatedInertiaInterPerCluster(max_cluster)
   k.best=which.max(inertia)
   plot(inertia,type="b",ylim=c(0,(max(inertia)+5)),cex.lab=1.2,col="grey",axes=F,xlab="Nb. of cluster", ylab="Cumulated inertia inter-cluster")
@@ -226,7 +227,7 @@ getGroupContent=function(){
 
 #Plot fusion graph
 plot_fusion_levels = function() {
-  par(margin);#x11()
+  par(margin);x11()
   subset_height=classif$height[(nrow(data)-max_cluster):(nrow(data)-1)]
   plot(classif$height, nrow(data):2, type="b",main="Distance between each clustering event (=fusion)",cex.main=2,cex.lab=1.5,lwd=font_size,xlim=c(min(subset_height),max(subset_height)),ylim=c(2,max_cluster),font.lab=2,ylab="Number of clusters", xlab="Node height", sub="(in red, difference in height with the previous fusion level)",col="grey", axes=F)
   axis(2, seq(2,max_cluster),lwd=2,font.axis=font_size)
@@ -393,7 +394,7 @@ for (k in 2:max_cluster){
 ################################
 
 plotDendrogram=function(nb_clusters){
-  par(margin);#x11()
+  par(margin);x11()
   plot(classif, ylim=c(0,max(classif$height)),xlim=c(0,nrow(data)),hang=-1, cex.main=2, cex.lab=1.5,lwd=font_size,xlab="Metabolites", sub="",ylab="Distance before each fusion",main="Dendrogram",font.lab=font_size,axes=F)
   axis(2, seq(0,max(classif$height)),lwd=font_size,font.axis=font_size,cex.axis=0.8)
   #abline(h=seq(0.0,max(classif$height),0.1), lty=3, col="grey")
@@ -402,16 +403,21 @@ plotDendrogram=function(nb_clusters){
   rect.hclust(classif, k=nb_clusters, border=rainbow(nb_clusters))
 }
 
-x11();plotDendrogram(as.numeric(optimal_nb_clusters))
+plotDendrogram(as.numeric(optimal_nb_clusters))
 
 ################################
 #          Silhouette
 ################################
+cutTree=function(classif,k){
+  if(typeClassif>2) cutree(classif, k=k)
+  else if (typeClassif==1) pam(data,k,diss=F,stand=F)
+}
 
 plotAllSilhouette=function(max_cluster){
+  x11()
   asw <- numeric(max_cluster-1)
   for (k in 2:(max_cluster-1)) {
-    sil <- silhouette(cutree(classif, k=k), distance_matrix)
+    sil <- silhouette(cutTree(classif, k=k), distance_matrix)
     asw[k] <- summary(sil)$avg.width
   }
   
@@ -427,22 +433,33 @@ plotAllSilhouette=function(max_cluster){
 }
 
 plotSmallClusterSilhouette=function(max_cluster){
+  x11()
   par(mfrow=c(2,2))
-  for (k in 3:max_cluster) {
-    sil <- silhouette(cutree(classif, k=k), distance_matrix)
+  for (k in 2:4) {
+    sil <- silhouette(cutTree(classif, k=k), distance_matrix)
     silo <- sortSilhouette(sil)
     rownames(silo) <- row.names(data)[attr(silo,"iOrd")]
     plot(silo, main=paste("Silhouette plot for",k ,"groups"),cex.names=0.8, col=silo[,1]+1, nmax.lab=100)
   }
-  par(mfrow=c(1,1))
+  par(default_graph_par)
 }
 
-plotAllSilhouette(40)
+plotAllSilhouette(20)
 plotSmallClusterSilhouette(max_cluster)
 
-plot(data[,1],data[,2],type="p",pch="+",xlab="X1", ylab="X2",col=c("lightcoral","skyblue","greenyellow")[classif$clustering])
-points(classif$medoids[,1],classif$medoids[,2], cex=1.5,pch=16,col=c("red","blue","green")[1:3])
-s.label(data,boxes=F,clabel=0.8,neig = F,add.plot = T)
-points(data[,1],data[,2],col=c("lightcoral","skyblue","greenyellow")[classif$clustering])
 
-classif$cluster[order(-classif$cluster,decreasing=T)]
+acp=dudi.pca(data,scannf=F)
+x11()
+par(mar=c(0,0,0,0))
+s.class(acp$li,as.factor(clusters),grid=F,col=rainbow(optimal_nb_clusters))
+s.label(acp$li,add.plot = T,boxes=F)
+legend(box.lty=0,text.font=2,"top",bg="white",cex=1.2,legend=paste("Cumulated inertia: ",round((acp$eig[1]+acp$eig[2])/sum(acp$eig),4)*100,"%",sep=""))
+par(default_graph_par)
+
+#heatmap.2(as.matrix(distance_matrix),distfun = function(x) dist(x,method = 'euclidean'),hclustfun = function(x) hclust(x,method = 'complete'),key=FALSE, density.info="none",lhei = c(0.05,0.95) ,cexRow=2,cexCol=2,margins=c(20,26),trace="none",srtCol=45,dendrogram="row")
+#plot(data[,1],data[,2],type="p",pch="+",xlab="Axis 1", ylab="Axis 2",col=rainbow(optimal_nb_clusters)[clusters])
+#points(classif$medoids[,1],classif$medoids[,2], cex=1.5,pch=16,col=c("red","blue","green")[1:3])
+#s.label(data,boxes=F,clabel=0.8,neig = F,add.plot = T)
+#points(data[,1],data[,2],col=c("lightcoral","skyblue","greenyellow")[classif$clustering])
+
+#classif$cluster[order(-classif$cluster,decreasing=T)]
