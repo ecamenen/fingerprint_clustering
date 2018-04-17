@@ -298,6 +298,36 @@ correlation_var=ctrcl(as.data.frame(data),classif2,3)
 correlation_var
 
 ################################
+#            PDIS
+################################
+pdis <- function(T1,H,k) {
+  T <- centreduire(T1);
+  N <- nrow(T) ; M <- ncol(T);
+  C <- cutree(H,k);
+  ctr <- matrix(data=0,nrow=k,ncol=M);
+  for (i in 1:N) {
+    cli <- C[i];
+    for (j in 1:M) ctr[cli,j] <- ctr[cli,j] + T[i,j];
+  };
+  r <- vector(mode="numeric",M);
+  for (i in 1:k)
+    for (j in 1:M) ctr[i,j] <- ctr[i,j]^2/(N*length(C[C==i]));
+    for (i in 1:M) r[i] <- sum(ctr[,i]) ;
+    return(round(1000*r)/10)
+}
+
+pdis_classif=matrix(0,max_cluster-1,ncol(data))
+colnames(pdis_classif)=colnames(data)
+rownames(pdis_classif)=seq(2,max_cluster)
+
+for (k in 2:max_cluster){
+  res = pdis(data,classif,k)
+  for(i in 1:length(res)){
+    pdis_classif[k-1,i]=round(res[i],2)
+  }
+}
+
+################################
 #            RHO2
 ################################
 
@@ -434,7 +464,7 @@ plotAllSilhouette=function(max_cluster){
   x11()
   k.best <- which.max(asw)
   # The plot is produced by function plot.silhouette {cluster}
-  plot(1:(max_cluster-1), asw, type="b", lwd=2,cex=1.2,xlim=c(2,(max_cluster-1)),cex.main=2, cex.lab=1.5,ylim=c(0,max(asw)+0.1),col="grey",main="Silhouette plot for k groups",xlab="Number of groups", ylab="Average silhouette width", axes=F)
+  plot(1:(max_cluster-1), asw, type="b", lwd=2,cex=1.2,font.lab=3,xlim=c(2,(max_cluster-1)),cex.main=2, cex.lab=1.5,ylim=c(0,max(asw)+0.1),col="grey",main="Silhouette plot for k groups",xlab="Number of groups", ylab="Average silhouette width", axes=F)
   text(k.best,max(asw),round(max(asw),3),col="red", pos=4,cex=1.2)
   axis(1, seq(2,(max_cluster-1)),lwd=font_size,font.axis=font_size)
   axis(2, seq(0.0,(max(asw)+0.1),0.1),lwd=font_size,font.axis=font_size)
