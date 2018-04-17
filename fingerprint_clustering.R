@@ -30,10 +30,12 @@ data_test = matrix(rand_distances,nb_metabolites, nb_metabolites)
 labels=paste("met",seq(1:nb_metabolites))
 rownames(data_test)=labels
 colnames(data_test)=labels
-#data[cbind(1:nrow(data),1:nrow(data))] = 0
+data_test[cbind(1:nrow(data_test),1:nrow(data_test))] = 0
 #conversion into symmetric matrix
 data_test[lower.tri(data_test)] = t(data_test)[lower.tri(data_test)]
+#write(data_test,"data_test.tsv",ncolumns=nb_metabolites,sep="\t")
 
+#data=read.table("data_test.tsv",header=F,sep="\t",dec=".")
 data=read.table("matrix.txt",header=F,sep="\t",dec=".",row.names=1)
 colnames(data)=rownames(data)
 
@@ -229,16 +231,17 @@ getGroupContent=function(){
 #Plot fusion graph
 plot_fusion_levels = function() {
   par(margin);x11()
-  k.best=length(classif$height)-which.max(height_diff[-1])+1
-  height.best=which.max(height_diff[-1])+1
   subset_height=classif$height[(nrow(data)-max_cluster):(nrow(data)-1)]
-  plot(classif$height, nrow(data):2, type="b",xlab="Distance between each fusion",cex.main=2,cex.lab=1.5,lwd=font_size,xlim=c(min(subset_height),max(subset_height)),ylim=c(2,max_cluster),font.lab=2,ylab="Number of clusters", main="Fusion levels plot", sub="(in red, difference in height with the previous fusion level)",col="grey", axes=F)
-  axis(2, seq(2,max_cluster),lwd=2,font.axis=font_size)
-  axis(1,seq(round(min(subset_height)),round(max(subset_height))),lwd=2,font.axis=font_size)
+  k.best=length(subset_height)-which.max(height_diff[-1])+1
+  height.best=which.max(height_diff[-1])+1
+  plot(2:max_cluster, rev(subset_height[-1]), font.lab=3,type="b",ylab="Distance inter-group",cex.main=2,cex.lab=1.5,lwd=font_size,ylim=c(min(subset_height),max(subset_height)),xlim=c(2,max_cluster),xlab="Number of groups", main="Fusion levels plot",col="grey", axes=F)
+  legend("top",legend="(in red, distance difference with the previous fusion level)",bty="n")
+  axis(1, seq(2,max_cluster),lwd=2)
+  axis(2,seq(round(min(subset_height)),round(max(subset_height))),lwd=2)
   result=matrix(0,nrow=(nrow(data)-1),ncol=2) #inialize an array for the result
   result=getGroupContent()
-  text(x=classif$height[-1], y=(nrow(data)-1):2,labels=round(height_diff[-1],3), cex=1.2,pos=2,col="red")
-  points(classif$height[height.best], k.best, pch=19, col="red", cex=1.8)
+  text(y=rev(subset_height[-1]), x=2:max_cluster,labels=rev(round(height_diff[-1],2))[c(1:max_cluster-1)], cex=1.2,pos=4,col="red")
+  points(k.best, classif$height[height.best], pch=19, col="red", cex=1.8)
   #abline(h=k.best,lty=2,col="red",lwd=2)
   #catch_printing=identify(x=classif$height[-1], y=(nrow(data)-1):2,labels=paste(round(height_diff[-1],digits=2), result[-(nrow(data)-1),2], sep="\n"),col="red", cex=0.8,plot=T)
 
@@ -402,7 +405,7 @@ for (k in 2:max_cluster){
 
 plotDendrogram=function(nb_clusters){
   par(margin);x11()
-  plot(classif, ylim=c(0,max(classif$height)),xlim=c(0,nrow(data)),hang=-1, cex.main=2, cex.lab=1.5,lwd=font_size,xlab="Metabolites", sub="",ylab="Distance between each fusion",main="Dendrogram",font.lab=font_size,axes=F)
+  plot(classif, ylim=c(0,max(classif$height)),xlim=c(0,nrow(data)),hang=-1, cex.main=2, cex.lab=1.5,lwd=font_size,xlab="Metabolites", sub="",ylab="Distance inter-group",main="Dendrogram",font.lab=font_size,axes=F)
   axis(2, seq(0,max(classif$height)),lwd=font_size,font.axis=font_size,cex.axis=0.8)
   #abline(h=seq(0.0,max(classif$height),0.1), lty=3, col="grey")
   abline(h=c(classif$height), lty=3, lwd=2, col="grey")
