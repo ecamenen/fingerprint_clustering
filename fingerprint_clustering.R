@@ -278,19 +278,31 @@ centreduire <- function(T) {
   return(T1*sqrt(N/(N-1))) 
 } 
 
-pdis <- function(T1,H,k) {
-  T <- centreduire(T1);
-  N <- nrow(T) ; M <- ncol(T);
-  C <- cutree(H,k);
-  ctr <- matrix(data=0,nrow=k,ncol=M);
+#Partitionner la classification
+#Sortie: partitionnement contenant k clusters
+cutTree=function(classif,k){
+  if(typeClassif>2) cutree(classif, k=k)
+  else if (typeClassif==1) pam(data,k,diss=F,stand=F)
+  else if (typeClassif==2) (kmeans(data,centers=k,nstart=100))$cluster
+}
+
+# Pouvoir discriminant des variables
+# Parametres :	table des donnees,	classification hierarchique,
+#		nombre de classes
+# Sortie : les carres des distances (PDIS)
+pdis = function(T1,H,k) {
+  T = centreduire(T1)
+  N = nrow(T) ; M = ncol(T)
+  C = cutTree(H,k)
+  ctr = matrix(0,nrow=k,ncol=M)
   for (i in 1:N) {
-    cli <- C[i];
-    for (j in 1:M) ctr[cli,j] <- ctr[cli,j] + T[i,j];
-  };
-  r <- vector(mode="numeric",M);
+    cli = C[i]
+    for (j in 1:M) ctr[cli,j] = ctr[cli,j] + T[i,j]
+  }
+  r = vector(mode="numeric",M)
   for (i in 1:k)
-    for (j in 1:M) ctr[i,j] <- ctr[i,j]^2/(N*length(C[C==i]));
-    for (i in 1:M) r[i] <- sum(ctr[,i]) ;
+    for (j in 1:M) ctr[i,j] = ctr[i,j]^2/(N*length(C[C==i]))
+    for (i in 1:M) r[i] = sum(ctr[,i])
     return(round(1000*r)/10)
 }
 
@@ -325,7 +337,7 @@ writeTsv(pdis_classif,"discriminant_power.tsv")
 rho2 <- function(T1,H,k) {
   T <- centreduire(T1);
   N <- nrow(T) ; M <- ncol(T);
-  C <- cutree(H,k);
+  C <- cutTree(H,k);
   cdg <- matrix(data=0,nrow=k,ncol=M);
   for (i in 1:N) {
     cli <- C[i];
@@ -364,7 +376,7 @@ writeTsv(excentricity,"excentricity.tsv")
 ctrng <- function(T1,H,k) {
   T <- centreduire(T1)
   N <- nrow(T) ; M <- ncol(T)
-  C <- cutree(H,k)
+  C <- cutTree(H,k)
   ctr <- matrix(0,nrow=k,ncol=M)
   for (i in 1:N) {
     cli <- C[i]
@@ -401,12 +413,6 @@ if(typeClassif>2) plotDendrogram(as.numeric(optimal_nb_clusters))
 ################################
 #          Silhouette
 ################################
-cutTree=function(classif,k){
-  if(typeClassif>2) cutree(classif, k=k)
-  else if (typeClassif==1) pam(data,k,diss=F,stand=F)
-  else if (typeClassif==2) (kmeans(data,centers=k,nstart=100))$cluster
-}
-
 
 plotAllSilhouette=function(max_cluster){
   
