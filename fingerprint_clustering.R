@@ -14,8 +14,9 @@ typeClassif=3
 #choix du niveau de coupure
 default_graph_par=par()
 
-library(gclus)
 library(cluster)
+library(gclus)
+library(ade4)
 
 #Pseudo-random settings: 
 #set.seed(1)
@@ -67,6 +68,8 @@ if (typeClassif==1){
 #automaticly ordering by clusters
 if(typeClassif>2) classif = reorder.hclust(classif, data)
 
+colPers = colorRampPalette(c(rgb(0.6,0.1,0.5,1), rgb(1,0,0,1), rgb(0.9,0.6,0,1), rgb(0.1,0.6,0.3,1), rgb(0.1,0.6,0.5,1), rgb(0,0,1,1)), alpha = TRUE)
+
 ################################
 #          Cophenetic
 ################################
@@ -75,12 +78,14 @@ plotCohenetic=function(){
   coph_matrix=cophenetic(classif)
   cor_coph=cor(distance_matrix,coph_matrix)
   #print(paste("% of explained variance:",round(cor_coph^2,3)))
-  x11()
+  #x11()
+  pdf("shepard_graph.pdf")
   plot(distance_matrix, coph_matrix, pch=19,col="red",cex=1,axes=F, cex.lab=1.5,cex.main=2,font.lab=font_size,xlim=c(0,max(distance_matrix)), ylim=c(0,max(coph_matrix)),xlab="Distance between metabolites",ylab="Cophenetic distance", asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
   axis(2, seq(0.0,max(coph_matrix),interval),lwd=2,font.axis=font_size,cex.axis=0.8)
   axis(1, seq(0,max(distance_matrix),interval),lwd=2,font.axis=font_size,cex.axis=0.8)
   #lines(lowess(distance_matrix, coph_matrix), col="red",lwd=font_size)
   abline(0,1,col="grey",lwd=font_size,lty=2)
+  dev.off()
 }
 
 if(typeClassif>2) plotCohenetic()
@@ -129,9 +134,10 @@ getCumulatedInertiaInterPerCluster=function(max_cluster){
 }
 
 plotCumulatedInertiaInter=function(max_cluster){
-  x11()
+  #x11()
   inertia=getCumulatedInertiaInterPerCluster(max_cluster)
   k.best=which.max(inertia)
+  pdf("cumulated_between.pdf")
   plot(inertia,type="b",ylim=c(0,(max(inertia)+5)),cex.lab=1.2,col="grey",axes=F,xlab="Nb. of cluster", ylab="Cumulated inertia inter-cluster")
   axis(1, seq(2,max_cluster),lwd=font_size,font.axis=font_size,cex.axis=0.8)
   axis(2, seq(0,max(inertia)+5,10),lwd=font_size,font.axis=font_size,cex.axis=0.8)
@@ -139,6 +145,7 @@ plotCumulatedInertiaInter=function(max_cluster){
   points(k.best, max(inertia), pch=21, col="red", cex=1)
   abline(v=k.best,lty=2,col="red")
   cat("","Between-inertia optimal number of clusters k =", k.best, "\n","with a cumulated inter-inertia of", round(max(inertia),4), "\n")
+  dev.off()
 }
 
 if(typeClassif>1) plotCumulatedInertiaInter(max_cluster)
@@ -178,10 +185,19 @@ printTableInertia=function(){
   rownames(matrix_output1)=seq(2,max_cluster)
   colnames(matrix_output1)=c("Branch height", "Differences","Cumulated inertia")
   matrix_output1=round(matrix_output1,2)
-  print (matrix_output1)
+  return (matrix_output1)
 }
 
-printTableInertia()
+writeTsv=function(x,f){
+  print(x)
+  x[is.na(x)] <-""
+  output=rbind(c("",colnames(x)), cbind(rownames(x),x))
+  write(t(output),file=f,ncolumns=ncol(output),sep="\t")
+}
+
+summary_between=printTableInertia()
+writeTsv(summary_between,"summary_between.tsv")
+
 
 optimal_nb_clusters=as.numeric(rownames(getRankedHeight())[1])
 #optimal_nb_clusters=nrow(data)-(which.max(getHeightDifference()[-(nrow(data)-1)])-1)
@@ -203,7 +219,7 @@ getClusterSizes=function(){
   return(cluster_sizes)
 }
 cluster_sizes=getClusterSizes()
-print(cluster_sizes)
+writeTsv(cluster_sizes,"cluster_sizes.tsv")
 
 ################################
 #          Fusion levels
@@ -317,12 +333,6 @@ for (k in 2:max_cluster){
   }
 }
 
-writeTsv=function(x,f){
-  x[is.na(x)] <-""
-  output=rbind(c("",colnames(x)), cbind(rownames(x),x))
-  write(t(output),file=f,ncolumns=ncol(output),sep="\t")
-}
-
 writeTsv(pdis_classif,"discriminant_power.tsv")
 
 ################################
@@ -359,9 +369,7 @@ for (k in 2:max_cluster){
     excentricity[k-1,i]=round(res[i],2)
   }
 }
-#excentricity[excentricity==0] <-" "
 excentricity[excentricity==0] <-NA
-excentricity
 
 writeTsv(excentricity,"excentricity.tsv")
 ################################
@@ -390,25 +398,7 @@ ctrng <- function(T1,H,k) {
 }
 
 relative_ctr = ctrng(data,classif,3)
-relative_ctr
-
 writeTsv(relative_ctr,"relative_ctr.tsv")
-
-################################
-#          Dendrogram
-################################
-
-plotDendrogram=function(nb_clusters){
-  par(margin);x11()
-  plot(classif, ylim=c(0,max(classif$height)),xlim=c(0,nrow(data)),hang=-1, cex.main=2, cex.lab=1.5,lwd=font_size,xlab="Metabolites", sub="",ylab="Distance inter-group",main="Dendrogram",font.lab=font_size,axes=F)
-  axis(2, seq(0,max(classif$height)),lwd=font_size,font.axis=font_size,cex.axis=0.8)
-  #abline(h=seq(0.0,max(classif$height),0.1), lty=3, col="grey")
-  abline(h=c(classif$height), lty=3, lwd=2, col="grey")
-  #projection of the clusters
-  #rect.hclust(classif, k=nb_clusters, border=rainbow(nb_clusters))
-}
-
-if(typeClassif>2) plotDendrogram(as.numeric(optimal_nb_clusters))
 
 ################################
 #          Silhouette
@@ -432,6 +422,7 @@ plotAllSilhouette=function(max_cluster){
   points(k.best, max(asw), pch=19, col="red", cex=1.5)
   cat("","Silhouette-optimal number of clusters k =", k.best, "\n","with an average silhouette width of", round(max(asw),4), "\n")
   abline(v=k.best,lty=2,col="red",lwd=2)
+  return (k.best)
 }
 
 plotSmallClusterSilhouette=function(max_cluster){
@@ -446,16 +437,48 @@ plotSmallClusterSilhouette=function(max_cluster){
   par(default_graph_par)
 }
 
-plotAllSilhouette(max_cluster+1)
+optimal_nb_clusters=plotAllSilhouette(max_cluster+1)
 plotSmallClusterSilhouette(max_cluster)
 
-library(ade4)
+################################
+#          Dendrogram
+################################
+
+plotDendrogram=function(nb_clusters){
+  par(margin);#x11()
+  pdf("dendrogram.pdf")
+  plot(classif, ylim=c(0,max(classif$height)),xlim=c(0,nrow(data)),hang=-1, cex.main=2, cex.lab=1.5,lwd=font_size,xlab="Metabolites", sub="",ylab="Distance inter-group",main="Dendrogram",font.lab=font_size,axes=F)
+  axis(2, seq(0,max(classif$height)),lwd=font_size,font.axis=font_size,cex.axis=0.8)
+  #abline(h=seq(0.0,max(classif$height),0.1), lty=3, col="grey")
+  #abline(h=c(classif$height), lty=3, lwd=2, col="grey")
+  #projection of the clusters
+  rect.hclust(classif, k=nb_clusters, border=colPers(nb_clusters))
+  dev.off()
+}
+
+if(typeClassif>2) plotDendrogram(as.numeric(optimal_nb_clusters))
+
+################################
+#            PCA
+################################
+
 acp=dudi.pca(data,scannf=F)
-x11()
+#x11()
+
+pdf("pca.pdf")
 par(mar=c(0,0,0,0))
-s.class(acp$li,as.factor(clusters),grid=F,col=rainbow(optimal_nb_clusters))
-s.label(acp$li,add.plot = T,boxes=F)
-legend(box.lty=0,text.font=2,"top",bg="white",cex=1.2,legend=paste("Cumulated inertia: ",round((acp$eig[1]+acp$eig[2])/sum(acp$eig),4)*100,"%",sep=""))
+clusters=getClusters(optimal_nb_clusters)
+title=paste("Cumulated inertia: ",round((acp$eig[1]+acp$eig[2])/sum(acp$eig),4)*100,"%",sep="")
+#s.class(addaxes=F,acp$li,sub=title,possub="topright",csub=1.5,as.factor(getClusters(optimal_nb_clusters)),grid=F,col=colPers(optimal_nb_clusters))
+s.class(addaxes=F,acp$li,ylim=c(min(acp$li[,2])-3,max(acp$li[,2])+3),xlim=c(min(acp$li[,1])-3,max(acp$li[,1])+3),sub=title,possub="topright",csub=1.5,as.factor(clusters),grid=F,col=colPers(optimal_nb_clusters))
+abline(h=0,v=0,lty=2,lwd=2,col="grey")
+for (i in 1:optimal_nb_clusters){
+  clusters[clusters==i] = colPers(optimal_nb_clusters)[i]
+}
+text(x=acp$li[,1],y=acp$li[,2],labels=rownames(acp$li),col=clusters,cex=0.5)
+#s.label(acp$li,add.plot = T,boxes=F,clabel=0.8,col="red")
+dev.off()
+
 
 #heatmap.2(as.matrix(distance_matrix),distfun = function(x) dist(x,method = 'euclidean'),hclustfun = function(x) hclust(x,method = 'complete'),key=FALSE, density.info="none",lhei = c(0.05,0.95) ,cexRow=2,cexCol=2,margins=c(20,26),trace="none",srtCol=45,dendrogram="row")
 #plot(data[,1],data[,2],type="p",pch="+",xlab="Axis 1", ylab="Axis 2",col=rainbow(optimal_nb_clusters)[clusters])
