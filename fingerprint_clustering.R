@@ -138,7 +138,7 @@ plotCumulatedInertiaInter=function(max_cluster){
   text(k.best,max(inertia),paste("",round(max(inertia),4),sep="\n \n"),col="red",pos=2)
   points(k.best, max(inertia), pch=21, col="red", cex=1)
   abline(v=k.best,lty=2,col="red")
-  cat("","Silhouette-optimal number of clusters k =", k.best, "\n","with a cumulated inter-inertia of", round(max(inertia),4), "\n")
+  cat("","Between-inertia optimal number of clusters k =", k.best, "\n","with a cumulated inter-inertia of", round(max(inertia),4), "\n")
 }
 
 if(typeClassif>1) plotCumulatedInertiaInter(max_cluster)
@@ -249,8 +249,9 @@ getGroupContent=function(){
 
 #Plot fusion graph
 plot_fusion_levels = function() {
-  par(margin);x11()
+  par(margin);#x11()
   subset_height=getInertiaInter(classif,max_cluster)
+  pdf("fusion_levels.pdf")
   plot(2:max_cluster, rev(subset_height[-1]), font.lab=3,type="b",ylab="Distance inter-group",cex.main=2,cex.lab=1.5,lwd=font_size,ylim=c(min(subset_height),max(subset_height)),xlim=c(2,max_cluster),xlab="Number of groups", main="Fusion levels plot",col="grey", axes=F)
   legend("top",legend="(in red, distance difference with the previous fusion level)",bty="n")
   axis(1, seq(2,max_cluster),lwd=2)
@@ -264,61 +265,19 @@ plot_fusion_levels = function() {
   points(optimal_nb_clusters, subset_height[max_cluster+2-optimal_nb_clusters], pch=19, col="red", cex=1.8)
   abline(v=optimal_nb_clusters,col="red",lty=2,lwd=2)
   #catch_printing=identify(x=classif$height[-1], y=(nrow(data)-1):2,labels=paste(round(height_diff[-1],digits=2), result[-(nrow(data)-1),2], sep="\n"),col="red", cex=0.8,plot=T)
+  dev.off()
   }
 
 if(typeClassif>1) plot_fusion_levels()
 
 ################################
-#          COR
-################################
-centreduire <- function(T) {
-  N <- nrow(T) ; T1 <- scale(T);
-  return(T1*sqrt(N/(N-1)))
-  }
-
-# Calcule les cdg  centres reduits des classes.
-# Paramatres :	table des donnees,
-#		hierarchie,
-#		nombre de classes
-# Sortie : les coordonnees des centres de gravite des classes
-cdgcl <- function(T1,H,k) {
-  T <- centreduire(T1);
-  N <- nrow(T) ; M <- ncol(T);
-  C <- cutree(H,k);
-  cdg <- matrix(0,nrow=k,ncol=M);
-  for (i in 1:N) {
-    cli <- C[i];
-    for (j in 1:M) cdg[cli,j] <- cdg[cli,j] + T[i,j];
-  };
-  for (i in 1:k)
-    for (j in 1:M) cdg[i,j] <- cdg[i,j]/length(C[C==i]);
-    cdgframe <- as.data.frame(cdg);
-    names(cdgframe) <- names(T1);
-    return(cdgframe)}
-
-# Contribution relative des variables a l'eloignement des classes
-# Parametres :	table des donnees,
-#		classement hierarchique,
-#		nombre de classes
-# Sortie : les contributions relatives (isouvent notees COR)
-
-ctrcl <- function(T,H,k) {
-  N <- nrow(T) ; M <- ncol(T);
-  cdg <- cdgcl(T,H,k);
-  ctr <- cdg;
-  for (i in 1:k) {
-    s2 <- sum(cdg[i,]^2);
-    for (j in 1:M) ctr[i,j] <- cdg[i,j]*abs(cdg[i,j])/s2;
-  };
-  ctr <- round(1000*ctr);
-  return(ctr/10)}
-
-correlation_var=ctrcl(as.data.frame(data),classif2,3)
-correlation_var
-
-################################
 #            PDIS
 ################################
+centreduire <- function(T) { 
+  N <- nrow(T) ; T1 <- scale(T); 
+  return(T1*sqrt(N/(N-1))) 
+} 
+
 pdis <- function(T1,H,k) {
   T <- centreduire(T1);
   N <- nrow(T) ; M <- ncol(T);
@@ -346,6 +305,14 @@ for (k in 2:max_cluster){
   }
 }
 
+writeTsv=function(x,f){
+  x[is.na(x)] <-""
+  output=rbind(c("",colnames(x)), cbind(rownames(x),x))
+  write(t(output),file=f,ncolumns=ncol(output),sep="\t")
+}
+
+writeTsv(pdis_classif,"discriminant_power.tsv")
+
 ################################
 #            RHO2
 ################################
@@ -371,9 +338,9 @@ rho2 <- function(T1,H,k) {
     return(r)
 }
 
-excentricity=matrix(0,max_cluster-1,max_cluster-1)
+excentricity=matrix(0,max_cluster-1,max_cluster)
 rownames(excentricity)=seq(2,max_cluster)
-colnames(excentricity)=paste("G",seq(1,max_cluster-1),sep="")
+colnames(excentricity)=paste("G",seq(1,max_cluster),sep="")
 for (k in 2:max_cluster){
   res=rho2(data,classif,k);print(res)
   for(i in 1:length(res)){
@@ -384,6 +351,7 @@ for (k in 2:max_cluster){
 excentricity[excentricity==0] <-NA
 excentricity
 
+writeTsv(excentricity,"excentricity.tsv")
 ################################
 #            CTR
 ################################
@@ -412,43 +380,7 @@ ctrng <- function(T1,H,k) {
 relative_ctr = ctrng(data,classif,3)
 relative_ctr
 
-################################
-#            CTR
-################################
-
-# Pouvoir discriminant des variables
-# Parametres :	table des donnees,
-#		tableau hierarchique,
-#		nombre de classes
-# Sortie : les carres des distances 
-
-pdis <- function(T1,H,k) {
-  T <- centreduire(T1)
-  N <- nrow(T) ; M <- ncol(T)
-  C <- cutree(H,k)
-  ctr <- matrix(data=0,nrow=k,ncol=M)
-  for (i in 1:N) {
-    cli <- C[i]
-    for (j in 1:M) ctr[cli,j] <- ctr[cli,j] + T[i,j]
-  }
-  r <- vector(mode="numeric",M)
-  for (i in 1:k)
-    for (j in 1:M) ctr[i,j] <- ctr[i,j]^2/(N*length(C[C==i]))
-    for (i in 1:M) r[i] <- sum(ctr[,i]) 
-    return(round(1000*r)/10)
-}
-
-pvdiscriminant=matrix(0,max_cluster-1,nrow(data))
-colnames(pvdiscriminant)=colnames(data)
-rownames(pvdiscriminant)=seq(1,max_cluster-1)
-
-for (k in 2:max_cluster){
-  res=pdis(data,classif,k)
-  for(i in 1:length(res)){
-    pvdiscriminant[k-1,i]=round(res[i],2)
-  }
-}
-
+writeTsv(relative_ctr,"relative_ctr.tsv")
 
 ################################
 #          Dendrogram
@@ -464,7 +396,7 @@ plotDendrogram=function(nb_clusters){
   #rect.hclust(classif, k=nb_clusters, border=rainbow(nb_clusters))
 }
 
-plotDendrogram(as.numeric(optimal_nb_clusters))
+if(typeClassif>2) plotDendrogram(as.numeric(optimal_nb_clusters))
 
 ################################
 #          Silhouette
@@ -472,7 +404,7 @@ plotDendrogram(as.numeric(optimal_nb_clusters))
 cutTree=function(classif,k){
   if(typeClassif>2) cutree(classif, k=k)
   else if (typeClassif==1) pam(data,k,diss=F,stand=F)
-  else if (typeClassif==2) kmeans(data,centers=k,nstart=100)
+  else if (typeClassif==2) (kmeans(data,centers=k,nstart=100))$cluster
 }
 
 
@@ -518,7 +450,6 @@ par(mar=c(0,0,0,0))
 s.class(acp$li,as.factor(clusters),grid=F,col=rainbow(optimal_nb_clusters))
 s.label(acp$li,add.plot = T,boxes=F)
 legend(box.lty=0,text.font=2,"top",bg="white",cex=1.2,legend=paste("Cumulated inertia: ",round((acp$eig[1]+acp$eig[2])/sum(acp$eig),4)*100,"%",sep=""))
-par(default_graph_par)
 
 #heatmap.2(as.matrix(distance_matrix),distfun = function(x) dist(x,method = 'euclidean'),hclustfun = function(x) hclust(x,method = 'complete'),key=FALSE, density.info="none",lhei = c(0.05,0.95) ,cexRow=2,cexCol=2,margins=c(20,26),trace="none",srtCol=45,dendrogram="row")
 #plot(data[,1],data[,2],type="p",pch="+",xlab="Axis 1", ylab="Axis 2",col=rainbow(optimal_nb_clusters)[clusters])
