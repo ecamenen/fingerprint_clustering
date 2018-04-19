@@ -42,7 +42,8 @@ data=read.table("matrix.txt",header=F,sep="\t",dec=".",row.names=1)
 colnames(data)=rownames(data)
 
 #conversion into distance
-distance_matrix=as.dist(data)
+distance_matrix=dist(data,method = "euclidian")
+#distance_matrix=as.dist(data)
 #plotcolors(dmat.color(distance_matrix))
 
 #library(vegan)
@@ -60,7 +61,9 @@ if (typeClassif==1){
 }else if (typeClassif==4){
   classif=hclust(distance_matrix,method="complete")
 }else if (typeClassif==5){
-  classif=hclust(distance_matrix,method="median")
+  classif=hclust(distance_matrix,method="average")
+}else if (typeClassif==6){
+classif=hclust(distance_matrix,method="mcquitty")
 }
 
 #par(mfrow=c(2,2)); plot(dendro);plot(dendro2);plot(dendro3);plot(dendro4);par(mfrow=c(1,1))
@@ -204,7 +207,7 @@ optimal_nb_clusters=as.numeric(rownames(getRankedHeight())[1])
 getClusters = function(nb_clusters) {
   if(typeClassif> 2) cutree(classif,nb_clusters)
   else if (typeClassif ==2) (kmeans(data,centers=nb_clusters,nstart=100))$cluster
-  else if (pam(data,nb_cluster,diss=F,stand=F))$clustering
+  else if (typeClassif ==1) (pam(data,nb_cluster,diss=F,stand=F))$clustering
 }
 
 clusters=getClusters(optimal_nb_clusters)
@@ -404,9 +407,9 @@ writeTsv(relative_ctr,"relative_ctr.tsv")
 #          Silhouette
 ################################
 
-plotAllSilhouette=function(max_cluster){
+plotAllSilhouette = function(max_cluster){
   
-  asw <- numeric(max_cluster-1)
+  asw = numeric(max_cluster-1)
   for (k in 2:(max_cluster-1)) {
     if(typeClassif > 1){
       si = silhouette(cutTree(classif, k=k), distance_matrix)
@@ -417,8 +420,8 @@ plotAllSilhouette=function(max_cluster){
     print(asw[k])
   }
   
-  #x11()
-  k.best <- which.max(asw)
+  x11()
+  k.best = which.max(asw)
   plot(1:(max_cluster-1), asw, type="b", lwd=2,cex=1.2,font.lab=3,xlim=c(2,(max_cluster-1)),cex.main=2, cex.lab=1.5,ylim=c(0,max(asw)+0.1),col="grey",main="Silhouette plot for k groups",xlab="Number of groups", ylab="Average silhouette width", axes=F)
   text(k.best,max(asw),round(max(asw),3),col="red", pos=4,cex=1.2)
   axis(1, seq(2,(max_cluster-1)),lwd=font_size,font.axis=font_size)
@@ -429,23 +432,24 @@ plotAllSilhouette=function(max_cluster){
   return (k.best)
 }
 
-plotSmallClusterSilhouette=function(max_cluster){
-  #x11()
+plotSmallClusterSilhouette = function(max_cluster){
+  x11()
   par(mfrow=c(2,2))
   for (k in 2:4) {
     if(typeClassif > 1){
-      sil = silhouette(cutTree(classif, k=k), distance_matrix)
+      sil = silhouette(cutTree(classif, k=k), distance_matrix,max.strlen=20,main="")
     }else{
-      classif=pam(data,k,diss=F,stand=F)
-      sil = silhouette(classif$clustering, classif$diss)
+      classif=  pam(data,k,diss=F,stand=F)
+      sil = silhouette(classif$clustering, classif$diss,max.strlen=20,main="")
     }
-    silo <- sortSilhouette(sil)
-    rownames(silo) <- row.names(data)[attr(silo,"iOrd")]
+    silo = sortSilhouette(sil)
+    rownames(silo) = row.names(data)[attr(silo,"iOrd")]
     plot(silo, main=paste("Silhouette plot for",k ,"groups"),cex.names=0.8, col=silo[,1]+1, nmax.lab=100)
   }
+  par(mfrow=c(1,1))
 }
 
-optimal_nb_clusters=plotAllSilhouette(max_cluster+1)
+optimal_nb_clusters = plotAllSilhouette(max_cluster+1)
 plotSmallClusterSilhouette(max_cluster)
 
 ################################
@@ -453,15 +457,15 @@ plotSmallClusterSilhouette(max_cluster)
 ################################
 
 plotDendrogram=function(nb_clusters){
-  par(margin);#x11()
-  pdf("dendrogram.pdf")
+  par(margin);x11()
+  #pdf("dendrogram.pdf")
   plot(classif, ylim=c(0,max(classif$height)),xlim=c(0,nrow(data)),hang=-1, cex.main=2, cex.lab=1.5,lwd=font_size,xlab="Metabolites", sub="",ylab="Distance inter-group",main="Dendrogram",font.lab=font_size,axes=F)
   axis(2, seq(0,max(classif$height)),lwd=font_size,font.axis=font_size,cex.axis=0.8)
   #abline(h=seq(0.0,max(classif$height),0.1), lty=3, col="grey")
   #abline(h=c(classif$height), lty=3, lwd=2, col="grey")
   #projection of the clusters
   rect.hclust(classif, k=nb_clusters, border=colPers(nb_clusters))
-  dev.off()
+  #dev.off()
 }
 
 if(typeClassif>2) plotDendrogram(as.numeric(optimal_nb_clusters))
@@ -470,22 +474,25 @@ if(typeClassif>2) plotDendrogram(as.numeric(optimal_nb_clusters))
 #            PCA
 ################################
 
-acp=dudi.pca(data,scannf=F)
-#x11()
-
-pdf("pca.pdf")
-par(mar=c(0,0,0,0))
-clusters=getClusters(optimal_nb_clusters)
-title=paste("Cumulated inertia: ",round((acp$eig[1]+acp$eig[2])/sum(acp$eig),4)*100,"%",sep="")
-#s.class(addaxes=F,acp$li,sub=title,possub="topright",csub=1.5,as.factor(getClusters(optimal_nb_clusters)),grid=F,col=colPers(optimal_nb_clusters))
-s.class(addaxes=F,acp$li,ylim=c(min(acp$li[,2])-3,max(acp$li[,2])+3),xlim=c(min(acp$li[,1])-3,max(acp$li[,1])+3),sub=title,possub="topright",csub=1.5,as.factor(clusters),grid=F,col=colPers(optimal_nb_clusters))
-abline(h=0,v=0,lty=2,lwd=2,col="grey")
-for (i in 1:optimal_nb_clusters){
-  clusters[clusters==i] = colPers(optimal_nb_clusters)[i]
+plotAcp=function(optimal_nb_clusters){
+  acp=dudi.pca(data,scannf=F)
+  x11()
+  #pdf("pca.pdf")
+  #par(mar=c(0,0,0,0))
+  clusters=getClusters(optimal_nb_clusters)
+  title=paste("Cumulated inertia: ",round((acp$eig[1]+acp$eig[2])/sum(acp$eig),4)*100,"%",sep="")
+  #s.class(addaxes=F,acp$li,sub=title,possub="topright",csub=1.5,as.factor(getClusters(optimal_nb_clusters)),grid=F,col=colPers(optimal_nb_clusters))
+  s.class(addaxes=F,acp$li,ylim=c(min(acp$li[,2])-3,max(acp$li[,2])+3),xlim=c(min(acp$li[,1])-3,max(acp$li[,1])+3),sub=title,possub="topright",csub=1.5,as.factor(clusters),grid=F,col=colPers(optimal_nb_clusters))
+  abline(h=0,v=0,lty=2,lwd=2,col="grey")
+  for (i in 1:optimal_nb_clusters){
+    clusters[clusters==i] = colPers(optimal_nb_clusters)[i]
+  }
+  text(x=acp$li[,1],y=acp$li[,2],labels=rownames(acp$li),col=clusters,cex=0.5)
+  #s.label(acp$li,add.plot = T,boxes=F,clabel=0.8,col="red")
+  #dev.off()
 }
-text(x=acp$li[,1],y=acp$li[,2],labels=rownames(acp$li),col=clusters,cex=0.5)
-#s.label(acp$li,add.plot = T,boxes=F,clabel=0.8,col="red")
-dev.off()
+
+plotAcp(optimal_nb_clusters)
 
 
 #heatmap.2(as.matrix(distance_matrix),distfun = function(x) dist(x,method = 'euclidean'),hclustfun = function(x) hclust(x,method = 'complete'),key=FALSE, density.info="none",lhei = c(0.05,0.95) ,cexRow=2,cexCol=2,margins=c(20,26),trace="none",srtCol=45,dendrogram="row")
