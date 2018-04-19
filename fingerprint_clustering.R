@@ -9,7 +9,7 @@ nb_metabolites=9
 max_cluster=6
 margin=par(mar=c(5, 4, 4, 2) + 1.1)
 interval=1
-typeClassif=3
+typeClassif=1
 #max_cluster=nb_metabolites/1.5
 #choix du niveau de coupure
 default_graph_par=par()
@@ -70,6 +70,14 @@ if(typeClassif>2) classif = reorder.hclust(classif, data)
 
 colPers = colorRampPalette(c(rgb(0.6,0.1,0.5,1), rgb(1,0,0,1), rgb(0.9,0.6,0,1), rgb(0.1,0.6,0.3,1), rgb(0.1,0.6,0.5,1), rgb(0,0,1,1)), alpha = TRUE)
 
+writeTsv=function(x,f){
+  x[is.na(x)] <-""
+  print(x)
+  output=rbind(c("",colnames(x)), cbind(rownames(x),x))
+  output[is.na(output)] <-""
+  write(t(output),file=f,ncolumns=ncol(output),sep="\t")
+  #write.table(x, f, na = "",col.names = colnames(x),row.names = rownames(x),append = F,sep = "\t")
+}
 ################################
 #          Cophenetic
 ################################
@@ -164,7 +172,6 @@ getHeightDifference=function(){
   rownames(height_diff)=c((length(height_classif)+1):2)
   return(height_diff[-1])
 }
-
 height_diff=getHeightDifference()
 
 #matrix_height=cbind(height_classif,height_diff)
@@ -187,14 +194,6 @@ printTableInertia=function(){
   matrix_output1=round(matrix_output1,2)
   return (matrix_output1)
 }
-
-writeTsv=function(x,f){
-  print(x)
-  x[is.na(x)] <-""
-  output=rbind(c("",colnames(x)), cbind(rownames(x),x))
-  write(t(output),file=f,ncolumns=ncol(output),sep="\t")
-}
-
 summary_between=printTableInertia()
 writeTsv(summary_between,"summary_between.tsv")
 
@@ -202,9 +201,10 @@ writeTsv(summary_between,"summary_between.tsv")
 optimal_nb_clusters=as.numeric(rownames(getRankedHeight())[1])
 #optimal_nb_clusters=nrow(data)-(which.max(getHeightDifference()[-(nrow(data)-1)])-1)
 
-getClusters= function(nb_clusters) {
+getClusters = function(nb_clusters) {
   if(typeClassif> 2) cutree(classif,nb_clusters)
   else if (typeClassif ==2) (kmeans(data,centers=nb_clusters,nstart=100))$cluster
+  else if (pam(data,nb_cluster,diss=F,stand=F))$clustering
 }
 
 clusters=getClusters(optimal_nb_clusters)
@@ -298,7 +298,7 @@ centreduire <- function(T) {
 #Sortie: partitionnement contenant k clusters
 cutTree=function(classif,k){
   if(typeClassif>2) cutree(classif, k=k)
-  else if (typeClassif==1) pam(data,k,diss=F,stand=F)
+  else if (typeClassif==1) (pam(data,k,diss=F,stand=F))$clustering
   else if (typeClassif==2) (kmeans(data,centers=k,nstart=100))$cluster
 }
 
@@ -408,13 +408,17 @@ plotAllSilhouette=function(max_cluster){
   
   asw <- numeric(max_cluster-1)
   for (k in 2:(max_cluster-1)) {
-    si = silhouette(cutTree(classif, k=k), distance_matrix)
-    asw[k] <- summary(si)$avg.width
+    if(typeClassif > 1){
+      si = silhouette(cutTree(classif, k=k), distance_matrix)
+      asw[k] = summary(si)$avg.width
+    }else{
+      asw[k] = (pam(data,k,diss=F,stand=F))$silinfo$avg.width
+    }
+    print(asw[k])
   }
   
-  x11()
+  #x11()
   k.best <- which.max(asw)
-  # The plot is produced by function plot.silhouette {cluster}
   plot(1:(max_cluster-1), asw, type="b", lwd=2,cex=1.2,font.lab=3,xlim=c(2,(max_cluster-1)),cex.main=2, cex.lab=1.5,ylim=c(0,max(asw)+0.1),col="grey",main="Silhouette plot for k groups",xlab="Number of groups", ylab="Average silhouette width", axes=F)
   text(k.best,max(asw),round(max(asw),3),col="red", pos=4,cex=1.2)
   axis(1, seq(2,(max_cluster-1)),lwd=font_size,font.axis=font_size)
@@ -426,15 +430,19 @@ plotAllSilhouette=function(max_cluster){
 }
 
 plotSmallClusterSilhouette=function(max_cluster){
-  x11()
+  #x11()
   par(mfrow=c(2,2))
   for (k in 2:4) {
-    sil <- silhouette(cutTree(classif, k=k), distance_matrix)
+    if(typeClassif > 1){
+      sil = silhouette(cutTree(classif, k=k), distance_matrix)
+    }else{
+      classif=pam(data,k,diss=F,stand=F)
+      sil = silhouette(classif$clustering, classif$diss)
+    }
     silo <- sortSilhouette(sil)
     rownames(silo) <- row.names(data)[attr(silo,"iOrd")]
     plot(silo, main=paste("Silhouette plot for",k ,"groups"),cex.names=0.8, col=silo[,1]+1, nmax.lab=100)
   }
-  par(default_graph_par)
 }
 
 optimal_nb_clusters=plotAllSilhouette(max_cluster+1)
