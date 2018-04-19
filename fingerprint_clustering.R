@@ -26,54 +26,72 @@ set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
 ################################################
 #     Data test: random distance matrix   
 ################################################
-rand_distances=ceiling(runif(nb_metabolites*nb_metabolites, 0, 11)) #generation of number between 1 and 11
-#conversion into matrix
-data_test = matrix(rand_distances,nb_metabolites, nb_metabolites)
-labels=paste("met",seq(1:nb_metabolites))
-rownames(data_test)=labels
-colnames(data_test)=labels
-data_test[cbind(1:nrow(data_test),1:nrow(data_test))] = 0
-#conversion into symmetric matrix
-data_test[lower.tri(data_test)] = t(data_test)[lower.tri(data_test)]
-#write(data_test,"data_test.tsv",ncolumns=nb_metabolites,sep="\t")
 
+setRandomDataSet = function(){
+  rand_distances=ceiling(runif(nb_metabolites*nb_metabolites, 0, 11)) #generation of number between 1 and 11
+  #conversion into matrix
+  data_test = matrix(rand_distances,nb_metabolites, nb_metabolites)
+  labels=paste("met",seq(1:nb_metabolites))
+  rownames(data_test)=labels
+  colnames(data_test)=labels
+  data_test[cbind(1:nrow(data_test),1:nrow(data_test))] = 0
+  #conversion into symmetric matrix
+  data_test[lower.tri(data_test)] = t(data_test)[lower.tri(data_test)]
+  #write(data_test,"data_test.tsv",ncolumns=nb_metabolites,sep="\t")r
+  return (data_test)
+}
+
+data_test=setRandomDataSet()
+  
 #data=read.table("data_test.tsv",header=F,sep="\t",dec=".")
 data=read.table("matrix.txt",header=F,sep="\t",dec=".",row.names=1)
 colnames(data)=rownames(data)
 
 #conversion into distance
-distance_matrix=dist(data,method = "euclidian")
-#distance_matrix=as.dist(data)
-#plotcolors(dmat.color(distance_matrix))
 
+#distance_matrix=as.dist(data)
+#plotcolors(dmat.color(1/distance_matrix,colors=rev(heat.colors(11))),na.color="red",rlabels=rownames(data),clabels=colnames(data),border=0)
+distance_matrix=dist(data_test,method = "euclidian")
 #library(vegan)
 #distance_matrix=vegdist(data,"jaccard")
 ################################
 #          Clustering
 ################################
 
-if (typeClassif==1){
-  classif=pam(data,nb_cluster,diss=F,stand=F)
-}else if (typeClassif==2){
-  classif=kmeans(data,centers=nb_cluster,nstart=100)
-}else if (typeClassif==3){
-  classif=hclust(distance_matrix,method="ward.D2")
-}else if (typeClassif==4){
-  classif=hclust(distance_matrix,method="complete")
-}else if (typeClassif==5){
-  classif=hclust(distance_matrix,method="average")
-}else if (typeClassif==6){
-classif=hclust(distance_matrix,method="mcquitty")
+#Input: t: type of classification
+# d: data (or distance matrix for hierarchic)
+#Ouput: classification (hierarchic [t > 2] or partionning)
+getClassif = function(d,t){
+  #dis: distance matrix
+  dis = dist(d,method = "euclidian")
+  if (t==1){
+    return (pam(d,2,diss=F,stand=F))
+  }else if (t==2){
+    return (kmeans(d,centers=2,nstart=100))
+  }else if(typeClassif>2){ 
+    if (t==3){
+      #cah: classification hierarchic ascending
+      cah = hclust(dis,method="ward.D2")
+    }else if (t==4){
+      cah = hclust(dis,method="complete")
+    }else if (t==5){
+      cah = hclust(dis,method="average")
+    }else if (t==6){
+      cah = hclust(dis,method="mcquitty")
+    }
+  #automaticly ordering by clusters
+  return(reorder.hclust(cah, d))
+  }
+  #TODO: exit if 0 < t < 6
 }
 
-#par(mfrow=c(2,2)); plot(dendro);plot(dendro2);plot(dendro3);plot(dendro4);par(mfrow=c(1,1))
+classif = getClassif(data,typeClassif)
 
-#automaticly ordering by clusters
-if(typeClassif>2) classif = reorder.hclust(classif, data)
-
+#reds = colorRampPalette(c(rgb(1,0,0,0,1),rgb(0,0,0,0)), alpha = TRUE)
+#rgb(0.5,0.2,0.2,1)
 colPers = colorRampPalette(c(rgb(0.6,0.1,0.5,1), rgb(1,0,0,1), rgb(0.9,0.6,0,1), rgb(0.1,0.6,0.3,1), rgb(0.1,0.6,0.5,1), rgb(0,0,1,1)), alpha = TRUE)
 
-writeTsv=function(x,f){
+writeTsv = function(x,f){
   x[is.na(x)] <-""
   print(x)
   output=rbind(c("",colnames(x)), cbind(rownames(x),x))
@@ -434,23 +452,32 @@ plotAllSilhouette = function(max_cluster){
 
 plotSmallClusterSilhouette = function(max_cluster){
   x11()
-  par(mfrow=c(2,2))
+  par(mfrow=c(2,2),mar=c(5, 10, 4, 2))
+  par(mar=c(5, 10, 2, 2))
   for (k in 2:4) {
     if(typeClassif > 1){
-      sil = silhouette(cutTree(classif, k=k), distance_matrix,max.strlen=20,main="")
+      sil = silhouette(cutTree(classif, k=k),distance_matrix)
     }else{
       classif=  pam(data,k,diss=F,stand=F)
       sil = silhouette(classif$clustering, classif$diss,max.strlen=20,main="")
     }
     silo = sortSilhouette(sil)
     rownames(silo) = row.names(data)[attr(silo,"iOrd")]
-    plot(silo, main=paste("Silhouette plot for",k ,"groups"),cex.names=0.8, col=silo[,1]+1, nmax.lab=100)
+    clusters=silo[,1]
+    for (i in 1:4){
+      clusters[clusters==i] = colPers(k)[i]
+    }
+    plot(silo, max.strlen=20, main=" ",cex.names=0.8, col=clusters, nmax.lab=100)
   }
-  par(mfrow=c(1,1))
+  par(mfrow=c(1,1),mar=c(5, 4, 4, 2) + 0.1 )
 }
 
 optimal_nb_clusters = plotAllSilhouette(max_cluster+1)
 plotSmallClusterSilhouette(max_cluster)
+
+matrix=as.matrix(distance_matrix)
+matrix=matrix[as.numeric(names(silo[,1])),as.numeric(names(silo[,1]))]
+plotcolors(dmat.color(as.dist(matrix),colors=rev(heat.colors(11))),na.color="red",rlabels=rownames(data),clabels=colnames(data),border=0)
 
 ################################
 #          Dendrogram
@@ -487,12 +514,12 @@ plotAcp=function(optimal_nb_clusters){
   for (i in 1:optimal_nb_clusters){
     clusters[clusters==i] = colPers(optimal_nb_clusters)[i]
   }
-  text(x=acp$li[,1],y=acp$li[,2],labels=rownames(acp$li),col=clusters,cex=0.5)
+  text(x=acp$li[,1],y=acp$li[,2],labels=rownames(acp$li),col=clusters,cex=1)
   #s.label(acp$li,add.plot = T,boxes=F,clabel=0.8,col="red")
   #dev.off()
 }
 
-plotAcp(optimal_nb_clusters)
+plotAcp(2)
 
 
 #heatmap.2(as.matrix(distance_matrix),distfun = function(x) dist(x,method = 'euclidean'),hclustfun = function(x) hclust(x,method = 'complete'),key=FALSE, density.info="none",lhei = c(0.05,0.95) ,cexRow=2,cexCol=2,margins=c(20,26),trace="none",srtCol=45,dendrogram="row")
