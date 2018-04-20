@@ -51,7 +51,7 @@ colnames(data)=rownames(data)
 
 #distance_matrix=as.dist(data)
 #plotcolors(dmat.color(1/distance_matrix,colors=rev(heat.colors(11))),na.color="red",rlabels=rownames(data),clabels=colnames(data),border=0)
-distance_matrix=dist(data_test,method = "euclidian")
+distance_matrix=dist(data,method = "euclidian")
 #library(vegan)
 #distance_matrix=vegdist(data,"jaccard")
 ################################
@@ -418,7 +418,7 @@ ctrng <- function(T1,H,k) {
     return(round(1000*ctrframe)/10)
 }
 
-relative_ctr = ctrng(data,classif,3)
+relative_ctr = ctrng(data,classif,optimal_nb_clusters)
 writeTsv(relative_ctr,"relative_ctr.tsv")
 
 ################################
@@ -475,15 +475,23 @@ plotSmallClusterSilhouette = function(max_cluster){
 optimal_nb_clusters = plotAllSilhouette(max_cluster+1)
 plotSmallClusterSilhouette(max_cluster)
 
-matrix=as.matrix(distance_matrix)
-matrix=matrix[as.numeric(names(silo[,1])),as.numeric(names(silo[,1]))]
-plotcolors(dmat.color(as.dist(matrix),colors=rev(heat.colors(11))),na.color="red",rlabels=rownames(data),clabels=colnames(data),border=0)
+#Plot a heatMap
+#Input: s: an ordonned silhouette object
+heatMap = function(s){
+  matrix=as.matrix(distance_matrix)
+  matrix=matrix[attr(s,"iOrd"),attr(s,"iOrd")]
+  rownames(matrix) = rownames(data)[attr(s,"iOrd")]
+  plotcolors(dmat.color(as.dist(matrix),colors=heat.colors(1000)),na.color="red",rlabels=rownames(data)[attr(silo,"iOrd")],clabels=rownames(data)[attr(silo,"iOrd")],border=0)
+}
 
+heatMap(silo)
 ################################
 #          Dendrogram
 ################################
 
-plotDendrogram=function(nb_clusters){
+#cah
+#Input: n, nb of clusters
+plotDendrogram=function(n){
   par(margin);x11()
   #pdf("dendrogram.pdf")
   plot(classif, ylim=c(0,max(classif$height)),xlim=c(0,nrow(data)),hang=-1, cex.main=2, cex.lab=1.5,lwd=font_size,xlab="Metabolites", sub="",ylab="Distance inter-group",main="Dendrogram",font.lab=font_size,axes=F)
@@ -491,7 +499,7 @@ plotDendrogram=function(nb_clusters){
   #abline(h=seq(0.0,max(classif$height),0.1), lty=3, col="grey")
   #abline(h=c(classif$height), lty=3, lwd=2, col="grey")
   #projection of the clusters
-  rect.hclust(classif, k=nb_clusters, border=colPers(nb_clusters))
+  rect.hclust(classif, k=n, border=colPers(n))
   #dev.off()
 }
 
