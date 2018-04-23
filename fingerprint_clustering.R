@@ -29,27 +29,27 @@ set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
 #Output: a random distance matrix (symetric, with a diagonal of 0)
 setRandomDataSet = function(){
   #generation of number between 1 and 11
-  rand_distances=ceiling(runif(nb_metabolites*nb_metabolites, 0, 11)) 
+  rand_distances = ceiling(runif(nb_metabolites * nb_metabolites, 0, 11)) 
   #conversion into matrix
-  data_test = matrix(rand_distances,nb_metabolites, nb_metabolites)
+  data_test = matrix(rand_distances, nb_metabolites, nb_metabolites)
   #label met1, met2,...
-  labels=paste("met",seq(1:nb_metabolites))
-  rownames(data_test)=labels
-  colnames(data_test)=labels
+  labels=paste("met", seq(1:nb_metabolites))
+  rownames(data_test) = labels
+  colnames(data_test) = labels
   #conversion of diagonal into 0
-  data_test[cbind(1:nrow(data_test),1:nrow(data_test))] = 0
+  data_test[cbind(1:nrow(data_test), 1:nrow(data_test))] = 0
   #conversion into symmetric matrix
   data_test[lower.tri(data_test)] = t(data_test)[lower.tri(data_test)]
   return (data_test)
 }
 
 #data=setRandomDataSet()
-data = read.table("matrix.txt",header=F,sep="\t",dec=".",row.names=1)
+data = read.table("matrix.txt", header=F, sep="\t", dec=".", row.names=1)
 colnames(data) = rownames(data)
 
 #conversion into distance
 #distance_matrix=as.dist(data)
-getDistance = function(x) dist(x,method = "euclidian")
+getDistance = function(x) dist(x, method = "euclidian")
 #library(vegan)
 #distance_matrix=vegdist(data,"jaccard")
 ################################
@@ -58,29 +58,27 @@ getDistance = function(x) dist(x,method = "euclidian")
 
 #Inputs: t: number of type of classification
 # d: data (or distance matrix for hierarchic)
-#Ouput: classification (hierarchic [t > 2] or partionning)
-getClassif = function(d,t){
+#Ouput: classification hierarchic
+getCAH = function(d, t){
+  if(t>2){
   #dis: distance matrix
-  dis = dist(d,method = "euclidian")
-  if (t==1) return (pam(d,2,diss=F,stand=F))
-  else if (t==2) return (kmeans(d,centers=2,nstart=100))
-  else if(typeClassif>2){ 
+  dis = dist(d, method = "euclidian")
     if (t==3) meth="ward.D2"
     else if (t==4) meth="complete"
     else if (t==5) meth="average"
     else if (t==6) meth="mcquitty"
     #cah: classification hierarchic ascending
-    cah = hclust(dis,method=meth)
+    cah = hclust(dis, method=meth)
   #automaticly ordering by clusters
   return (reorder.hclust(cah, d))
   }
   #TODO: exit if 0 < t < 6
 }
 
-classif = getClassif(data,typeClassif)
+classif = getCAH(data, typeClassif)
 
 getKmeans = function(d,k){
-  return (kmeans(d,centers=k,nstart=100))
+  return (kmeans(d, centers=k, nstart=100))
 }
 
 #Usage: colPers(x), x a number of colours in output
@@ -93,14 +91,14 @@ colPers = colorRampPalette(c(rgb(0.6,0.1,0.5,1), rgb(1,0,0,1), rgb(0.9,0.6,0,1),
 writeTsv = function(x,f){
   x[is.na(x)] = ""
   print(x)
-  output=rbind(c("",colnames(x)), cbind(rownames(x),x))
+  output=rbind(c("", colnames(x)), cbind(rownames(x),x))
   output[is.na(output)] = ""
-  write(t(output),file=f,ncolumns=ncol(output),sep="\t")
+  write(t(output), file=f, ncolumns=ncol(output), sep="\t")
   #write.table(x, f, na = "",col.names = colnames(x),row.names = rownames(x),append = F,sep = "\t")
 }
-################################
-#          Cophenetic
-################################
+############################################################
+#          Cophenetic (dendrogram distance matrix)
+############################################################
 
 #Inputs:
 # d : data
@@ -108,24 +106,24 @@ writeTsv = function(x,f){
 plotCohenetic=function(d,cah){
   library(scales)
   dis = getDistance(d)
-  coph_matrix=cophenetic(cah)
-  cor_coph=cor(dis,coph_matrix)
-  print(paste("% of explained variance by Cophenetic:",round(cor_coph^2,3)))
+  coph_matrix = cophenetic(cah)
+  cor_coph = cor(dis, coph_matrix)
+  print(paste("% of explained variance by Cophenetic:", round(cor_coph^2,3)))
   x11()
   par(mar=c(5.1,5.1,4.1,2.1))
   #pdf("shepard_graph.pdf")
-  plot(dis, coph_matrix, pch=19,col=alpha("red",0.2),cex=1,axes=F, cex.lab=1.5,cex.main=2,font.lab=font_size,xlim=c(0,max(dis)), ylim=c(0,max(coph_matrix)),xlab="Distance between metabolites",ylab="Cophenetic distance", asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
-  axis(2, seq(0.0,max(coph_matrix),1),lwd=font_size,font.axis=3,cex.axis=0.8)
-  axis(1, seq(0,max(dis),1),lwd=font_size,font.axis=3,cex.axis=0.8)
-  abline(0,1,col="grey",lwd=font_size,lty=2)
+  plot(dis, coph_matrix, pch=19,col=alpha("red",0.2), cex=1, axes=F, cex.lab=1.5, cex.main=2, font.lab=font_size, xlim=c(0,max(dis)), ylim=c(0,max(coph_matrix)), xlab="Distance between metabolites",ylab="Cophenetic distance", asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
+  axis(2, seq(0.0,max(coph_matrix),1), lwd=font_size, font.axis=3, cex.axis=0.8)
+  axis(1, seq(0,max(dis),1), lwd=font_size, font.axis=3, cex.axis=0.8)
+  abline(0,1, col="grey", lwd=font_size, lty=2)
   #dev.off()
 }
 
-if(typeClassif>2) plotCohenetic(data,classif)
+if(typeClassif>2) plotCohenetic(data, classif)
 
-################################
-#          Inertie inter-
-################################
+##############################################
+#          Inertia inter-cluster
+##############################################
 
 # Inputs: 
 # t: number of type of classification
@@ -135,15 +133,18 @@ if(typeClassif>2) plotCohenetic(data,classif)
 #Ouput: cumulated inertia inter-cluster of a classification
 getCumulatedInertiaInter = function(t, k, c=NULL, d=NULL) {
   if (t==2) {
-    c = getKmeans(d,k)
-    return (round(c$betweenss/c$totss,3)*100)
+    c = getKmeans(d, k)
+    return (round(c$betweenss/c$totss,3) * 100)
   }else{
     sum_inertia = 0
+    #begin with the last element
     element = length(c$label) - 1
     imax = k - 1
     for (i in 1:imax) {
+      #sum until k elements (nb of partitionning)
       sum_inertia = sum_inertia + c$height[element]
       element = element-1
+      #decremential loop
     }
     return(round(100 * sum_inertia / sum(c$height),2))
   }
@@ -156,14 +157,15 @@ getCumulatedInertiaInter = function(t, k, c=NULL, d=NULL) {
 # d: dataframe
 # Output: inter-cluster inertia for all clusters
 getInertiaInter = function(t, n, c=NULL, d=NULL) {
-  inertia = vector(mode="numeric",n)
+  inertia = vector(mode="numeric", n)
   if (t==2) {
     for (k in 2:(n+1)){
-      inertia[k-1] = getKmeans(d,k)$betweenss
+      inertia[k-1] = getKmeans(d, k)$betweenss
     }
     return (inertia)
   }else{
     max_lenght = length(c$height)
+    #get all the elements until the max of partitionned fixed
     return (c$height[(max_lenght-n+1):max_lenght])
   }
 }
@@ -173,10 +175,10 @@ getInertiaInter = function(t, n, c=NULL, d=NULL) {
 # n: maximum number of clusters
 # c: classification
 # d: data
-getCumulatedInertiaInterPerCluster = function(t,n,c=NULL,d=NULL){
-  inertia=vector(mode="numeric",n)
+getCumulatedInertiaInterPerCluster = function(t, n, c=NULL, d=NULL){
+  inertia = vector(mode="numeric", n)
   for (k in 2:(n+1)){
-    inertia[k-1] = getCumulatedInertiaInter(t,k,c,d)
+    inertia[k-1] = getCumulatedInertiaInter(t, k, c, d)
   }
   return (inertia)
 }
@@ -187,66 +189,63 @@ getCumulatedInertiaInterPerCluster = function(t,n,c=NULL,d=NULL){
 # k: number of clusters
 # c: classification
 # d: data
-plotCumulatedInertiaInter=function(t,n,c=NULL,d=NULL){
+plotCumulatedInertiaInter = function(t, n, c=NULL, d=NULL){
   x11()
   par(mar=c(5.1,5.1,4.1,2.1))
-  if(t==2) inertia = getCumulatedInertiaInterPerCluster(t,n,d=d)
-  if(t>2) inertia = getCumulatedInertiaInterPerCluster(t,n,c)
+  if(t==2) inertia = getCumulatedInertiaInterPerCluster(t, n, d=d)
+  if(t>2) inertia = getCumulatedInertiaInterPerCluster(t, n, c)
   k.best=which.max(inertia)
   #pdf("cumulated_between.pdf")
-  plot(inertia,type="b",ylim=c(0,(max(inertia)+5)),font.lab=3,cex.lab=font_size/2,cex.main=font_size/1.5,col="grey",axes=F,xlab="Nb. of cluster", ylab="Cumulated inertia inter-cluster", main="Cumulated inertia inter-group")
-  axis(1, seq(2,n),lwd=font_size,font.axis=3,cex.axis=0.8)
-  axis(2, seq(0,max(inertia)+5,10),lwd=font_size,font.axis=3,cex.axis=0.8)
-  text(k.best,max(inertia),paste("",round(max(inertia),4),sep="\n \n"),col="red",pos=2,cex=font_size/2.5)
+  plot(inertia, type="b" ,ylim=c(0,(max(inertia)+5)), font.lab=3, cex.lab=font_size/2, cex.main=font_size/1.5, col="grey", axes=F, xlab="Nb. of cluster", ylab="Cumulated inertia inter-cluster", main="Cumulated inertia inter-group")
+  axis(1, seq(2,n), lwd=font_size, font.axis=3, cex.axis=0.8)
+  axis(2, seq(0,max(inertia)+5,10),lwd=font_size, font.axis=3, cex.axis=0.8)
+  text(k.best, max(inertia), paste("",round(max(inertia),4),sep="\n \n"), col="red", pos=2, cex=font_size/2.5)
   points(k.best, max(inertia), pch=20, col="red", cex=font_size/1.5)
-  abline(v=k.best,lty=2,col="red",lwd=font_size/2)
+  abline(v=k.best, lty=2 ,col="red",lwd=font_size/2)
   cat("","Between-inertia optimal number of clusters k =", k.best, "\n","with a cumulated inter-inertia of", round(max(inertia),4), "\n")
   #dev.off()
 }
 
-plotCumulatedInertiaInter(typeClassif, max_cluster,classif,data)
+plotCumulatedInertiaInter(typeClassif, max_cluster, classif, data)
 
-################################
-#          Height difference
-################################
+############################################################
+#          Fusion levels (inter-cluster differences)
+############################################################
 
-#Show distance differences between nodes levels (distance between clusters)
-getHeightDifference=function(){
-  height_classif=getInertiaInter(classif,max_cluster)
-  height_diff=matrix(0, length(height_classif), 1)
-  for (i in 2:(length(height_classif))){
-    height_diff[i,]=height_classif[i]-height_classif[i-1]
+getInterDifference = function(t, n, c=NULL, d=NULL){
+  if(t==2) inertia = getInertiaInter(t, n, d=d)
+  if(t>2) inertia = getInertiaInter(t, n, c)
+  inertia_diff = matrix(0, length(inertia), 1)
+  for (i in 2:(length(inertia))){
+    inertia_diff[i,] = inertia[i] - inertia[i-1]
   }
-  rownames(height_diff)=c((length(height_classif)+1):2)
-  return(height_diff[-1])
-}
-height_diff=getHeightDifference()
-
-#matrix_height=cbind(height_classif,height_diff)
-#colnames(matrix_height)=c("node height","difference")
-
-getRankedHeight=function(){
-  ranked_height_diff=data.frame(getHeightDifference())
-  ranked_height_diff=ranked_height_diff[order(-ranked_height_diff), , drop = FALSE]
-  rownames(ranked_height_diff)=max_cluster-as.numeric(rownames(ranked_height_diff))+1
-  return(ranked_height_diff)
+  rownames(inertia_diff) = c((length(inertia) + 1):2)
+  return(inertia_diff[-1])
 }
 
-printTableInertia=function(){
-  ranked_height_diff=getRankedHeight()
-  matrix_output1=cbind(getInertiaInter(classif,max_cluster)[-1],getHeightDifference())
-  for(i in 1:ncol(matrix_output1)) {matrix_output1[,i] = rev(matrix_output1[,i])}
-  matrix_output1=cbind(matrix_output1,getCumulatedInertiaInterPerCluster(max_cluster-1))
-  rownames(matrix_output1)=seq(2,max_cluster)
-  colnames(matrix_output1)=c("Branch height", "Differences","Cumulated inertia")
-  matrix_output1=round(matrix_output1,2)
-  return (matrix_output1)
+getRankedInertia = function(t, n, c=NULL, d=NULL){
+  ranked_inertia_diff = data.frame(getInterDifference(t, n, c, d))
+  ranked_inertia_diff = ranked_inertia_diff[order(-ranked_inertia_diff), , drop = FALSE]
+  rownames(ranked_inertia_diff) = n - as.numeric(rownames(ranked_inertia_diff)) + 1
+  return(ranked_inertia_diff)
 }
-summary_between=printTableInertia()
+
+printTableInertia = function(t, n, c=NULL, d=NULL){
+  ranked_inertia_diff = getRankedInertia(t, n, c, d)
+  table_inertia = cbind(getInertiaInter(t, n, c, d)[-1], getInterDifference(t, n, c, d))
+  #outputs are reversed comparatively to CumulatedInter outputs
+  for(i in 1:ncol(table_inertia)) {table_inertia[,i] = rev(table_inertia[,i])}
+  table_inertia = cbind(table_inertia, getCumulatedInertiaInterPerCluster(t, n - 1, c, d))
+  rownames(table_inertia) = seq(2, n)
+  colnames(table_inertia) = c("Branch height", "Differences","Cumulated inertia")
+  table_inertia = round(table_inertia, 2)
+  return (table_inertia)
+}
+summary_between=printTableInertia(typeClassif, max_cluster, classif, data)
 writeTsv(summary_between,"summary_between.tsv")
 
 
-optimal_nb_clusters=as.numeric(rownames(getRankedHeight())[1])
+optimal_nb_clusters = as.numeric(rownames(getRankedInertia(typeClassif, max_cluster, classif, data))[1])
 #optimal_nb_clusters=nrow(data)-(which.max(getHeightDifference()[-(nrow(data)-1)])-1)
 
 getClusters = function(nb_clusters) {
