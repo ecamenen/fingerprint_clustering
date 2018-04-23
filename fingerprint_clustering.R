@@ -3,14 +3,14 @@ rm(list=ls())
 setwd("~/bin/fingerprint_clustering")
 
 #global variables
-nb_cluster=2
+#choix du niveau de coupure
+nb_clusters=2
 font_size=3
 nb_metabolites=9
 max_cluster=6
 #margin=par(mar=c(5, 4, 4, 2) + 1.1)
 interval=1
 typeClassif=4
-#choix du niveau de coupure
 
 
 library(cluster)
@@ -49,7 +49,7 @@ colnames(data) = rownames(data)
 
 #conversion into distance
 #distance_matrix=as.dist(data)
-distance_matrix=dist(data,method = "euclidian")
+getDistance = function(x) dist(x,method = "euclidian")
 #library(vegan)
 #distance_matrix=vegdist(data,"jaccard")
 ################################
@@ -70,7 +70,6 @@ getClassif = function(d,t){
     else if (t==5) meth="average"
     else if (t==6) meth="mcquitty"
     #cah: classification hierarchic ascending
-    print(meth)
     cah = hclust(dis,method=meth)
   #automaticly ordering by clusters
   return (reorder.hclust(cah, d))
@@ -79,6 +78,10 @@ getClassif = function(d,t){
 }
 
 classif = getClassif(data,typeClassif)
+
+getKmeans = function(d,k){
+  return (kmeans(d,centers=k,nstart=100))
+}
 
 #Usage: colPers(x), x a number of colours in output
 #Gradient of color
@@ -99,23 +102,27 @@ writeTsv = function(x,f){
 #          Cophenetic
 ################################
 
-plotCohenetic=function(){
-  cor_coph=cor(distance_matrix,cophenetic(classif))
+#Inputs:
+# d : data
+# cah : classification
+plotCohenetic=function(d,cah){
+  library(scales)
+  dis = getDistance(d)
+  coph_matrix=cophenetic(cah)
+  cor_coph=cor(dis,coph_matrix)
   print(paste("% of explained variance by Cophenetic:",round(cor_coph^2,3)))
-  #x11()
-  pdf("shepard_graph.pdf")
-  plot(distance_matrix, coph_matrix, pch=19,col="red",cex=1,axes=F, cex.lab=1.5,cex.main=2,font.lab=font_size,xlim=c(0,max(distance_matrix)), ylim=c(0,max(coph_matrix)),xlab="Distance between metabolites",ylab="Cophenetic distance", asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
-  axis(2, seq(0.0,max(coph_matrix),interval),lwd=2,font.axis=3,cex.axis=0.8)
-  axis(1, seq(0,max(distance_matrix),interval),lwd=2,font.axis=3,cex.axis=0.8)
+  x11()
+  par(mar=c(5.1,5.1,4.1,2.1))
+  #pdf("shepard_graph.pdf")
+  plot(dis, coph_matrix, pch=19,col=alpha("red",0.2),cex=1,axes=F, cex.lab=1.5,cex.main=2,font.lab=font_size,xlim=c(0,max(dis)), ylim=c(0,max(coph_matrix)),xlab="Distance between metabolites",ylab="Cophenetic distance", asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
+  axis(2, seq(0.0,max(coph_matrix),1),lwd=font_size,font.axis=3,cex.axis=0.8)
+  axis(1, seq(0,max(dis),1),lwd=font_size,font.axis=3,cex.axis=0.8)
   abline(0,1,col="grey",lwd=font_size,lty=2)
-  dev.off()
+  #dev.off()
 }
 
-if(typeClassif>2) plotCohenetic()
+if(typeClassif>2) plotCohenetic(data,classif)
 
-getKmeans = function(d,k){
-  return (kmeans(d,centers=k,nstart=100))
-}
 ################################
 #          Inertie inter-
 ################################
@@ -182,18 +189,19 @@ getCumulatedInertiaInterPerCluster = function(t,n,c=NULL,d=NULL){
 # d: data
 plotCumulatedInertiaInter=function(t,n,c=NULL,d=NULL){
   x11()
+  par(mar=c(5.1,5.1,4.1,2.1))
   if(t==2) inertia = getCumulatedInertiaInterPerCluster(t,n,d=d)
   if(t>2) inertia = getCumulatedInertiaInterPerCluster(t,n,c)
   k.best=which.max(inertia)
-  pdf("cumulated_between.pdf")
-  plot(inertia,type="b",ylim=c(0,(max(inertia)+5)),cex.lab=1.2,col="grey",axes=F,xlab="Nb. of cluster", ylab="Cumulated inertia inter-cluster")
-  axis(1, seq(2,n),lwd=3,font.axis=3,cex.axis=0.8)
-  axis(2, seq(0,max(inertia)+5,10),lwd=3,font.axis=3,cex.axis=0.8)
-  text(k.best,max(inertia),paste("",round(max(inertia),4),sep="\n \n"),col="red",pos=2)
-  points(k.best, max(inertia), pch=21, col="red", cex=1)
-  abline(v=k.best,lty=2,col="red")
+  #pdf("cumulated_between.pdf")
+  plot(inertia,type="b",ylim=c(0,(max(inertia)+5)),font.lab=3,cex.lab=font_size/2,cex.main=font_size/1.5,col="grey",axes=F,xlab="Nb. of cluster", ylab="Cumulated inertia inter-cluster", main="Cumulated inertia inter-group")
+  axis(1, seq(2,n),lwd=font_size,font.axis=3,cex.axis=0.8)
+  axis(2, seq(0,max(inertia)+5,10),lwd=font_size,font.axis=3,cex.axis=0.8)
+  text(k.best,max(inertia),paste("",round(max(inertia),4),sep="\n \n"),col="red",pos=2,cex=font_size/2.5)
+  points(k.best, max(inertia), pch=20, col="red", cex=font_size/1.5)
+  abline(v=k.best,lty=2,col="red",lwd=font_size/2)
   cat("","Between-inertia optimal number of clusters k =", k.best, "\n","with a cumulated inter-inertia of", round(max(inertia),4), "\n")
-  dev.off()
+  #dev.off()
 }
 
 plotCumulatedInertiaInter(typeClassif, max_cluster,classif,data)
