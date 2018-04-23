@@ -451,23 +451,19 @@ optimal_nb_clusters = plotAllSilhouette(typeClassif, max_cluster + 1, classif, d
 
 plotSmallClusterSilhouette = function(t, n, c=NULL, d=NULL){
   x11()
-  par(mfrow=c(2,2),mar=c(5, 10, 4, 2))
-  par(mar=c(5, 10, 2, 2))
+  par(mfrow=c(2,2),mar=c(5, 10, 2, 2))
+  #par(mar=c(5, 10, 2, 2))
   for (k in 2:4) {
     clusters = getClusters(t, k , c, d)
-    if(t > 1){
-      sil = silhouette(clusters, getDistance(d))
-    }else{
-      classif =  pam(data,k,diss=F,stand=F)
-      sil = silhouette(clusters, classif$diss)
-    }
-    silo = sortSilhouette(sil)
-    rownames(silo) = row.names(d)[attr(silo,"iOrd")]
-    clusters=silo[,1]
+    if(t > 1) diss = getDistance(d)
+    else diss = getCNH(t,d,k)$diss
+    sil = sortSilhouette(silhouette(clusters, diss))
+    rownames(sil) = row.names(d)[attr(sil,"iOrd")]
+    clusters=sil[,1]
     for (i in 1:4){
       clusters[clusters==i] = colPers(k)[i]
     }
-    plot(silo, max.strlen=20, main=" ", cex.names=0.8, col=clusters, nmax.lab=100)
+    plot(sil, max.strlen=20, main=" ", cex.names=0.8, col=clusters, nmax.lab=100)
   }
   par(mfrow=c(1,1), mar=c(5, 4, 4, 2) + 0.1 )
 }
