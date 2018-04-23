@@ -49,7 +49,10 @@ colnames(data) = rownames(data)
 
 #conversion into distance
 #distance_matrix=as.dist(data)
-getDistance = function(x) dist(x, method = "euclidian")
+getDistance = function(d, t=NULL, k=NULL){
+  if (t > 1) dist(d, method = "euclidian")
+  else getCNH(t,d,k)$diss
+}
 #library(vegan)
 #distance_matrix=vegdist(data,"jaccard")
 ################################
@@ -422,16 +425,22 @@ writeTsv(relative_ctr,"relative_ctr.tsv")
 #          Silhouette
 ################################
 
-plotAllSilhouette = function(t, n, c=NULL, d=NULL){
+#Ouput: an organised silhouette object
+getSilhouette = function(t, k , c, d){
+  clusters = getClusters(t, k , c, d)
+  diss = getDistance(d,t,k)
+  sil = sortSilhouette(silhouette(clusters, diss))
+  rownames(sil) = row.names(d)[attr(sil,"iOrd")]
+  return (sil)
+}
+
+# Plot the best average silhouette width for all clustering possible
+plotAverageSilhouette = function(t, n, c=NULL, d=NULL){
   
   mean_silhouette = numeric(n - 1)
   for (k in 2:(n - 1)) {
-    if(t > 1){
-      si = silhouette(getClusters(t, k, c, d), getDistance(d))
-      mean_silhouette[k] = summary(si)$avg.width
-    }else{
-      mean_silhouette[k] = (pam(data,k,diss=F,stand=F))$silinfo$avg.width
-    }
+    si = getSilhouette(t, k , c, d)
+    mean_silhouette[k] = summary(si)$avg.width
     print(mean_silhouette[k])
   }
   
@@ -447,87 +456,78 @@ plotAllSilhouette = function(t, n, c=NULL, d=NULL){
   abline(v=k.best, lty=2, col="red", lwd=2)
   return (k.best)
 }
-optimal_nb_clusters = plotAllSilhouette(typeClassif, max_cluster + 1, classif, data)
+optimal_nb_clusters = plotAverageSilhouette(typeClassif, max_cluster + 1, classif, data)
+sil = getSilhouette(typeClassif, optimal_nb_clusters, classif, data)
 
-plotSmallClusterSilhouette = function(t, n, c=NULL, d=NULL){
-  x11()
-  par(mfrow=c(2,2),mar=c(5, 10, 2, 2))
-  #par(mar=c(5, 10, 2, 2))
-  for (k in 2:4) {
-    clusters = getClusters(t, k , c, d)
-    if(t > 1) diss = getDistance(d)
-    else diss = getCNH(t,d,k)$diss
-    sil = sortSilhouette(silhouette(clusters, diss))
-    rownames(sil) = row.names(d)[attr(sil,"iOrd")]
-    clusters=sil[,1]
-    for (i in 1:4){
-      clusters[clusters==i] = colPers(k)[i]
-    }
-    plot(sil, max.strlen=20, main=" ", cex.names=0.8, col=clusters, nmax.lab=100)
+colorClusters = function(cl){
+  nb_clusters = length(levels(as.factor(cl)))
+  for (i in 1:nb_clusters){
+    cl[cl==i] = colPers(nb_clusters)[i]
   }
-  par(mfrow=c(1,1), mar=c(5, 4, 4, 2) + 0.1 )
+  return (cl)
 }
-plotSmallClusterSilhouette(typeClassif, max_cluster, classif, data)
+
+plotSilhouette = function(s){
+  x11()
+  par(mar=c(4, 8, 3, 2))
+  plot(s, max.strlen=20, main=" ", sub= "", do.clus.stat=FALSE, cex.lab=font_size/2, font.lab=3, xlab="Silhouette width", cex.names=0.8, col=colorClusters(s[,1]), nmax.lab=100, do.n.k = FALSE, axes=F)
+  mtext(paste("Average silhouette width:", round(summary(s)$avg.width,3)), font=2, cex=font_size/2, line=1)
+  axis(1, seq(0,1,by=0.2), lwd=font_size, font.axis=3, cex.axis=0.8)
+}
+plotSilhouette(sil)
+
+dis = getDistance(data, typeClassif, optimal_nb_clusters)
 
 #Plot a heatMap
-#Input: s: an ordonned silhouette object
-heatMap = function(s){
-  matrix=as.matrix(distance_matrix)
+#Input:
+# d: a distance object
+# s: an organised silhouette object
+heatMap = function(d, s){
+  x11()
+  par(mar=c(1, 8, 8, 1))
+  matrix=as.matrix(d)
   matrix=matrix[attr(s,"iOrd"),attr(s,"iOrd")]
   rownames(matrix) = rownames(data)[attr(s,"iOrd")]
-  plotcolors(dmat.color(as.dist(matrix),colors=heat.colors(1000)),na.color="red",rlabels=rownames(data)[attr(silo,"iOrd")],clabels=rownames(data)[attr(silo,"iOrd")],border=0)
+  labels = attr(d, "Labels")[attr(s,"iOrd")]
+  plotcolors(dmat.color(as.dist(matrix), colors=heat.colors(1000)), na.color="red", rlabels=labels, clabels=labels, border=0)
 }
+heatMap(dis, sil)
 
-heatMap(silo)
 ################################
 #          Dendrogram
 ################################
 
-#cah
-#Input: n, nb of clusters
-plotDendrogram=function(n){
-  par(margin);x11()
+# Inputs:
+# k: number of clusters
+# c: hierarchical classification
+plotDendrogram = function(c, k){
+  x11()
   #pdf("dendrogram.pdf")
-  plot(classif, ylim=c(0,max(classif$height)),xlim=c(0,nrow(data)),hang=-1, cex.main=2, cex.lab=1.5,lwd=font_size,xlab="Metabolites", sub="",ylab="Distance Between-group",main="Dendrogram",font.lab=font_size,axes=F)
-  axis(2, seq(0,max(classif$height)),lwd=font_size,font.axis=font_size,cex.axis=0.8)
-  #abline(h=seq(0.0,max(classif$height),0.1), lty=3, col="grey")
-  #abline(h=c(classif$height), lty=3, lwd=2, col="grey")
+  par(mar=c(2,5,5,1))
+  plot(c, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), hang=-1, cex.main=2, cex.lab=1.5, lwd=font_size, sub="", ylab="Distance Between-group", main="Dendrogram", font.lab=font_size, axes=F)
+  axis(2, seq(0,max(c$height)), lwd=font_size, font.axis=font_size, cex.axis=0.8)
   #projection of the clusters
-  rect.hclust(classif, k=n, border=colPers(n))
+  rect.hclust(c, k=as.numeric(k), border=colPers(k))
   #dev.off()
 }
-
-if(typeClassif>2) plotDendrogram(as.numeric(optimal_nb_clusters))
+if(typeClassif > 2) plotDendrogram(classif, optimal_nb_clusters)
 
 ################################
 #            PCA
 ################################
 
-plotAcp=function(optimal_nb_clusters){
-  acp=dudi.pca(data,scannf=F)
+plotPca = function(t, k, c, d){
+  pca = dudi.pca(d, scannf=F)
   x11()
   #pdf("pca.pdf")
   #par(mar=c(0,0,0,0))
-  clusters=getClusters(optimal_nb_clusters)
-  title=paste("Cumulated inertia: ",round((acp$eig[1]+acp$eig[2])/sum(acp$eig),4)*100,"%",sep="")
-  #s.class(addaxes=F,acp$li,sub=title,possub="topright",csub=1.5,as.factor(getClusters(optimal_nb_clusters)),grid=F,col=colPers(optimal_nb_clusters))
-  s.class(addaxes=F,acp$li,ylim=c(min(acp$li[,2])-3,max(acp$li[,2])+3),xlim=c(min(acp$li[,1])-3,max(acp$li[,1])+3),sub=title,possub="topright",csub=1.5,as.factor(clusters),grid=F,col=colPers(optimal_nb_clusters))
-  abline(h=0,v=0,lty=2,lwd=2,col="grey")
-  for (i in 1:optimal_nb_clusters){
-    clusters[clusters==i] = colPers(optimal_nb_clusters)[i]
-  }
-  text(x=acp$li[,1],y=acp$li[,2],labels=rownames(acp$li),col=clusters,cex=1)
-  #s.label(acp$li,add.plot = T,boxes=F,clabel=0.8,col="red")
+  clusters = getClusters(t, k, c, d)
+  title = paste("Cumulated inertia:", round((pca$eig[1]+pca$eig[2])/sum(pca$eig),4)*100, "%")
+  s.class(addaxes=F, pca$li ,ylim=c(min(pca$li[,2])-3, max(pca$li[,2])+3), xlim=c(min(pca$li[,1])-3, max(pca$li[,1])+3), csub=1.5, as.factor(clusters), grid=F, col=colPers(optimal_nb_clusters))
+  mtext(title, font=2, cex=font_size/2, line=1)
+  abline(h=0, v=0, lty=2, lwd=2, col="grey")
+  text(x=pca$li[,1], y=pca$li[,2], labels=rownames(pca$li), col=colorClusters(clusters), cex=1)
   #dev.off()
 }
 
-plotAcp(2)
-
-
-#heatmap.2(as.matrix(distance_matrix),distfun = function(x) dist(x,method = 'euclidean'),hclustfun = function(x) hclust(x,method = 'complete'),key=FALSE, density.info="none",lhei = c(0.05,0.95) ,cexRow=2,cexCol=2,margins=c(20,26),trace="none",srtCol=45,dendrogram="row")
-#plot(data[,1],data[,2],type="p",pch="+",xlab="Axis 1", ylab="Axis 2",col=rainbow(optimal_nb_clusters)[clusters])
-#points(classif$medoids[,1],classif$medoids[,2], cex=1.5,pch=16,col=c("red","blue","green")[1:3])
-#s.label(data,boxes=F,clabel=0.8,neig = F,add.plot = T)
-#points(data[,1],data[,2],col=c("lightcoral","skyblue","greenyellow")[classif$clustering])
-
-#classif$cluster[order(-classif$cluster,decreasing=T)]
+plotPca(typeClassif, optimal_nb_clusters, classif, data)
