@@ -317,43 +317,54 @@ if(typeClassif > 1) plot_fusion_levels(typeClassif, max_cluster, classif, data)
 ################################
 #            PDIS
 ################################
-centreduire <- function(T) { 
-  N <- nrow(T) ; T1 <- scale(T); 
-  return(T1*sqrt(N/(N-1))) 
-} 
-
-
-# Pouvoir discriminant des variables
-# Parametres :	table des donnees,	classification hierarchique,
-#		nombre de classes
-# Sortie : les carres des distances (PDIS)
-pdis = function(T1,H,k) {
-  T = centreduire(T1)
-  N = nrow(T) ; M = ncol(T)
-  C = cutTree(H,k)
-  ctr = matrix(0,nrow=k,ncol=M)
-  for (i in 1:N) {
-    cli = C[i]
-    for (j in 1:M) ctr[cli,j] = ctr[cli,j] + T[i,j]
-  }
-  r = vector(mode="numeric",M)
-  for (i in 1:k)
-    for (j in 1:M) ctr[i,j] = ctr[i,j]^2/(N*length(C[C==i]))
-    for (i in 1:M) r[i] = sum(ctr[,i])
-    return(round(1000*r)/10)
+scalecenter <- function(d) {
+  N = nrow(d) ; d = scale(d);
+  return(d * sqrt(N/(N-1)))
 }
 
-pdis_classif=matrix(0,max_cluster-1,ncol(data))
-colnames(pdis_classif)=colnames(data)
-rownames(pdis_classif)=seq(2,max_cluster)
-
-for (k in 2:max_cluster){
-  res = pdis(data,classif,k)
-  for(i in 1:length(res)){
-    pdis_classif[k-1,i]=round(res[i],2)
+# Pouvoir discriminant des variables (PDIS)
+# Inputs: 
+# t: number of type of classification
+# k: number of clusters
+# c: hierarchical classification
+# d: data
+getPdis = function(t, k, c, d) {
+  #get percent values in output
+  d = scalecenter(d)
+  cl = getClusters(t, k, c, d)
+  nb_cl = length(levels(as.factor(cl)))
+  nb_met = length(cl)
+  ctr = matrix(0, nrow=nb_cl, ncol=nb_met)
+  for (i in 1:nb_met) {
+    #get the group number for each row
+    cli = cl[i]
+    #in the dataset, for a metabolite row, loop an each metadabolite column
+    #values are affected the corresponding cluster row and metabolite column in ctr
+    for (j in 1:nb_met) ctr[cli,j] = ctr[cli,j] + d[i,j]
   }
+  pdis = vector(mode="numeric", nb_met)
+  for (i in 1:nb_cl)
+    for (j in 1:nb_met) ctr[i,j] = ctr[i,j]^2 / (nb_met * length(cl[cl==i]))
+  #for each metabolite contribution (in column), sum the k clusters values
+  for (i in 1:nb_met) pdis[i] = sum(ctr[,i])
+  return(round(1000*pdis) / 10)
 }
 
+getPdisPerPartition = function(t, n, c, d){
+  pdis_per_partition = matrix(0, n-1, ncol(d))
+  colnames(pdis_per_partition) = colnames(d)
+  rownames(pdis_per_partition) = seq(2, n)
+  
+  for (k in 2:n){
+    pdis = getPdis(t, k, c, d)
+    for(i in 1:length(pdis)){
+      pdis_per_partition[k-1, i] = round(pdis[i], 2)
+    }
+  }
+  return (pdis_per_partition)
+}
+
+pdis_per_partition = getPdisPerPartition(typeClassif, 43, classif, data)
 writeTsv(pdis_classif,"discriminant_power.tsv")
 
 ################################
