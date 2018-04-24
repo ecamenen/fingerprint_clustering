@@ -323,6 +323,7 @@ scalecenter <- function(d) {
 }
 
 # Pouvoir discriminant des variables (PDIS)
+# Contribution relative des variables a l'inertie d'un partitionnement
 # Inputs: 
 # t: number of type of classification
 # k: number of clusters
@@ -367,20 +368,25 @@ getPdisPerPartition = function(t, n, c, d){
 pdis_per_partition = getPdisPerPartition(typeClassif, 43, classif, data)
 writeTsv(pdis_classif,"discriminant_power.tsv")
 
-################################
-#            RHO2
-################################
+#########################################
+#            Excentricity (RHO2)
+#########################################
 
 # Distance**2 des classes au centre du nuage
 # Parametres :	table des donnees,
 #		classement hierarchique,
 #		nombre de classes
 # Sortie : les carres des distances (souvent notes RHO2)
-rho2 <- function(T1,H,k) {
-  T <- centreduire(T1);
-  N <- nrow(T) ; M <- ncol(T);
-  C <- cutTree(H,k);
-  cdg <- matrix(data=0,nrow=k,ncol=M);
+getRho2 = function(t, k, c, d) {
+  
+  #get percent values in output
+  d = scalecenter(d)
+  cl = getClusters(t, k, c, d)
+  nb_cl = length(levels(as.factor(cl)))
+  nb_met = length(cl)
+  ctr = matrix(0, nrow=nb_cl, ncol=nb_met)
+  
+  
   for (i in 1:N) {
     cli <- C[i];
     for (j in 1:M) cdg[cli,j] <- cdg[cli,j] + T[i,j];
@@ -408,15 +414,15 @@ writeTsv(excentricity,"excentricity.tsv")
 #            CTR
 ################################
 
-# Contribution relative des classes a inertie du nuage
+# Contribution relative des variables a l'inertie de chaque groupes
 # Parametres :	table des donn?es,
 #		classfication hierarchique,
 #		nombre de classes
 # Sortie : les contributions (souvent notees CTR)
-ctrng <- function(T1,H,k) {
-  T <- centreduire(T1)
+ctrng = function(d,H,k) {
+  d = centreduire(d)
   N <- nrow(T) ; M <- ncol(T)
-  C <- cutTree(H,k)
+  cl = getClusters()
   ctr <- matrix(0,nrow=k,ncol=M)
   for (i in 1:N) {
     cli <- C[i]
