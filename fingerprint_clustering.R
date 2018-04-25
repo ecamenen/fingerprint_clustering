@@ -11,7 +11,7 @@ max_cluster=6
 #margin=par(mar=c(5, 4, 4, 2) + 1.1)
 interval=1
 typeClassif=4
-advanced = FALSE
+advanced = TRUE
 
 
 library(cluster)
@@ -439,6 +439,9 @@ scalecenter <- function(d) {
   return(d * sqrt(N/(N-1)))
 }
 
+# Inputs:
+# d: data
+# cl: clusters object
 getBetweenPerVariable = function(d, cl){
   #get percent values in output
   d = scalecenter(d)
@@ -455,11 +458,12 @@ getBetweenPerVariable = function(d, cl){
   return (ctr)
 }
 
-# Contribution relative des variables a l'inertie de chaque groupes
-# Parametres :	table des donn?es,
-#		classfication hierarchique,
-#		nombre de classes
-# Sortie : les contributions (souvent notees CTR)
+# Relative contributions of the metabolites to inertia of each clusters (CTR)
+# Inputs:
+# t: number of type of classification
+# k: number of clusters
+# c: hierarchical classification
+# d: data
 getCtrVar = function(t, k, c, d) {
   cl = getClusters(t, k, c, d)
   nb_cl = length(levels(as.factor(cl)))
@@ -470,22 +474,24 @@ getCtrVar = function(t, k, c, d) {
   for (i in 1:nb_cl)
     for (j in 1:nb_met) ctr[i,j] = ctr[i,j]^2 / (nb_met * length(cl[cl==i]))
   
-  return(round(1000*ctr)/10)
+  return(ctr)
 }
 
-ctrVar = getCtrVar(typeClassif, optimal_nb_clusters, classif, data)
-cat("\nCONTRIBUTION:")
-writeTsv(ctrVar,"relative_ctr.tsv")
+if (advanced == TRUE){
+  ctrVar = round(1000 * getCtrVar(typeClassif, optimal_nb_clusters, classif, data) / 10)
+  cat("\nCONTRIBUTION:")
+  writeTsv(ctrVar,"relative_ctr.tsv")
+}
 
 ################################
 #            PDIS
 ################################
 
-# Pouvoir discriminant des variables (PDIS)
-# Contribution relative des variables a l'inertie d'un partitionnement
+# Discriminant power (PDIS)
+# Relative contributions of the metabolites to inertia of a partitionning
 # Inputs: 
 # t: number of type of classification
-# k: number of clusters
+# n: number max of clusters
 # c: hierarchical classification
 # d: data
 getPdis = function(t, k, c, d) {
@@ -499,34 +505,50 @@ getPdis = function(t, k, c, d) {
   return(pdis)
 }
 
-getPdisPerPartition = function(t, n, c, d){
+# Inputs: 
+# t: number of type of classification
+# n: number max of clusters
+# c: hierarchical classification
+# d: data
+# index: pdis or rho2 calculation
+getIndexPerPartition = function(t, n, c, d, index){
   
-  pdis_per_partition = matrix(0, n-1, ncol(d))
-  colnames(pdis_per_partition) = colnames(d)
-  rownames(pdis_per_partition) = seq(2, n)
+  if (index == "pdis") nb_col = ncol(d)
+  else nb_col = n
+  index_per_partition = matrix(NA, n-1, nb_col)
+  rownames(index_per_partition) = seq(2, n)
   
   for (k in 2:n){
-    pdis = getPdis(t, k, c, d)
-    for(i in 1:length(pdis)){
-      pdis_per_partition[k-1, i] = round(pdis[i], 2)
+    if (index == "pdis"){
+      colnames(index_per_partition) = colnames(d)
+      res = getPdis(t, k, c, d)
+    }else{
+      colnames(index_per_partition) = paste("G", seq(1, n), sep="")
+      res = getRho2(t, k, c, d)
+    }
+    for(i in 1:length(res)){
+      index_per_partition[k-1, i] = round(res[i], 2)
     }
   }
-  return (pdis_per_partition)
+  return (index_per_partition)
 }
 
-pdis_per_partition = getPdisPerPartition(typeClassif, max_cluster, classif, data)
-cat("\nDISCRIMINANT POWER:")
-writeTsv(pdis_per_partition,"discriminant_power.tsv")
+if (advanced == TRUE){
+  pdis_per_partition = getIndexPerPartition(typeClassif, max_cluster, classif, data, "pdis")
+  cat("\nDISCRIMINANT POWER:")
+  writeTsv(pdis_per_partition, "discriminant_power.tsv")
+}
 
 #########################################
 #            Excentricity (RHO2)
 #########################################
 
-# Distance**2 des classes au centre du nuage
-# Parametres :	table des donnees,
-#		classement hierarchique,
-#		nombre de classes
-# Sortie : les carres des distances (souvent notes RHO2)
+# Distance**2 of each cluster from the data center (RHO2)
+# Inputs: 
+# t: number of type of classification
+# n: number max of clusters
+# c: hierarchical classification
+# d: data
 getRho2 = function(t, k, c, d) {
   
   cl = getClusters(t, k, c, d)
@@ -548,23 +570,11 @@ getRho2 = function(t, k, c, d) {
   return(rho2)
 }
 
-getRho2PerPartition = function(t, n, c, d){
-  rho2 = matrix(0, n-1, n)
-  rownames(rho2) = seq(2, n)
-  colnames(rho2) = paste("G", seq(1, n), sep="")
-  for (k in 2:n){
-    res = getRho2(t, k, c, d)
-    for(i in 1:length(res)){
-      rho2[k-1,i] = round(res[i], 2)
-    }
-  }
-  rho2[rho2==0] = NA
-  return (rho2)
+if (advanced == TRUE){
+  excentricity = getIndexPerPartition(typeClassif, max_cluster, classif, data, "rho2")
+  cat("\nEXCENTRICIY:")
+  writeTsv(excentricity,"excentricity.tsv")
 }
-
-excentricity = getRho2PerPartition(typeClassif, max_cluster, classif, data)
-cat("\nEXCENTRICIY:")
-writeTsv(excentricity,"excentricity.tsv")
 
 ################################
 #            CLUSTERS
