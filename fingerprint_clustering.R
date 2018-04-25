@@ -1,51 +1,50 @@
+#!/usr/bin/env Rscript
+
 #clean all objects
 rm(list=ls())
 setwd("~/bin/fingerprint_clustering")
 
-#global variables
-#choix du niveau de coupure
-nb_clusters=2
-font_size=3
-nb_metabolites=9
-max_cluster=6
-#margin=par(mar=c(5, 4, 4, 2) + 1.1)
-interval=1
-typeClassif=4
-advanced = TRUE
-
-
 library(cluster)
 library(gclus)
 library(ade4)
+
+suppressPackageStartupMessages(require(optparse))
+
+option_list = list(
+  make_option(c("-i", "--infile"), type="character", default="matrix.txt", 
+              help="Fingerprint file name [default: %default]"),
+  make_option(c("-m", "--maxCluster"), type="integer", default=6, 
+              help="Maximum number of clusters [default: Complete link"),
+  make_option(c("-t", "--typeClassif"), type="integer", default=4, 
+              help="Type of classifation [default: %default] (1: K-menoids; 2: K-means; 3: Ward; 4: Complete link; 5: UPGMA; 6: WPGMA"),
+  make_option(c("-adv", "--advanced"), type="logical", action="store_true", 
+              help="Activate advanced mode (print more outputs)"),
+  make_option(c("-n", "--nbCluster"), type="integer", help="Fix the number of clusters")
+)
+
+opt_parser = OptionParser(option_list=option_list);
+opt = parse_args(opt_parser);
 
 #Pseudo-random settings: 
 #set.seed(1)
 #milisec * PID
 set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
 
+#global variables
+#choix du niveau de coupure
+nb_clusters=opt$nbCluster
+font_size=3
+max_cluster=opt$maxCluster
+typeClassif=opt$typeClassif
+advanced = "advanced" %in% names(opt)
+
+
 ################################################
 #     Data test: random distance matrix   
 ################################################
 
-#Output: a random distance matrix (symetric, with a diagonal of 0)
-setRandomDataSet = function(){
-  #generation of number between 1 and 11
-  rand_distances = ceiling(runif(nb_metabolites * nb_metabolites, 0, 11)) 
-  #conversion into matrix
-  data_test = matrix(rand_distances, nb_metabolites, nb_metabolites)
-  #label met1, met2,...
-  labels=paste("met", seq(1:nb_metabolites))
-  rownames(data_test) = labels
-  colnames(data_test) = labels
-  #conversion of diagonal into 0
-  data_test[cbind(1:nrow(data_test), 1:nrow(data_test))] = 0
-  #conversion into symmetric matrix
-  data_test[lower.tri(data_test)] = t(data_test)[lower.tri(data_test)]
-  return (data_test)
-}
-
 #data=setRandomDataSet()
-data = read.table("matrix.txt", header=F, sep="\t", dec=".", row.names=1)
+data = read.table(opt$infile, header=F, sep="\t", dec=".", row.names=1)
 colnames(data) = rownames(data)
 
 #conversion into distance
