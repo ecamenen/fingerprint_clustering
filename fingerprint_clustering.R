@@ -4,11 +4,11 @@
 rm(list=ls())
 setwd("~/bin/fingerprint_clustering")
 
-library(cluster)
-library(gclus)
-library(ade4)
-
-suppressPackageStartupMessages(require(optparse))
+librairies = c("cluster", "optparse", "gclus", "ade4", "scales")
+for (l in librairies){
+  if (! (l %in% installed.packages()[,"Package"])) install.packages(l, repos = "http://cran.us.r-project.org")
+  library(l, character.only = TRUE)
+}
 
 option_list = list(
   make_option(c("-i", "--infile"), type="character", default="matrix.txt", 
@@ -26,12 +26,10 @@ opt_parser = OptionParser(option_list=option_list);
 opt = parse_args(opt_parser);
 
 #Pseudo-random settings: 
-#set.seed(1)
 #milisec * PID
 set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
 
 #global variables
-#choix du niveau de coupure
 nb_clusters=opt$nbCluster
 font_size=3
 max_cluster=opt$maxCluster
@@ -135,7 +133,6 @@ writeTsv = function(x,f, h=TRUE){
 # d : data
 # cah : hierarchical classification
 plotCohenetic=function(t, d,cah){
-  library(scales)
   dis = getDistance(d, t)
   coph_matrix = cophenetic(cah)
   cor_coph = cor(dis, coph_matrix)
