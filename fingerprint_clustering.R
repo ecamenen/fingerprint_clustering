@@ -7,7 +7,9 @@ getArgs = function(){
     make_option(c("-t", "--typeClassif"), type="integer", default=4, 
                 help="Type of classifation [default: %default] (1: K-menoids; 2: K-means; 3: Ward; 4: Complete link; 5: UPGMA; 6: WPGMA"),
     make_option(c("-adv", "--advanced"), type="logical", action="store_true",
-                help="Activate advanced mode (print more outputs)"), 
+                help="Activate advanced mode (print more outputs)"),
+    make_option(c("-q", "--quiet"), type="logical", action="store_true",
+                help="Activate quiet mode"), 
     make_option(c("-n", "--nbCluster"), type="integer", default=0, help="Fix the number of clusters")
   )
   
@@ -38,7 +40,7 @@ writeTsv = function(x,f, h=TRUE){
   else output = x
   output[is.na(output)] = ""
   colnames(output)=rep("", ncol(output)); rownames(output)=rep("", nrow(output))
-  print(output,row.names=FALSE, col.names=FALSE, quote=F)
+  if (v==T)  print(output,row.names=FALSE, col.names=FALSE, quote=F)
   write(t(output), file=f, ncolumns=ncol(output), sep="\t")
   #write.table(x, f, na = "",col.names = colnames(x),row.names = rownames(x),append = F,sep = "\t")
   options(warn = 0)
@@ -53,8 +55,8 @@ writeTsv = function(x,f, h=TRUE){
 #Ouput: Hierarchical classification
 getCAH = function(d, t){
   if(t>2){
-  #dis: distance matrix
-  dis = dist(d, method = "euclidian")
+    #dis: distance matrix
+    dis = dist(d, method = "euclidian")
     if (t==3) meth="ward.D2"
     else if (t==4) meth="complete"
     else if (t==5) meth="average"
@@ -135,7 +137,7 @@ plotCohenetic=function(t, d,cah){
   dis = getDistance(d, t)
   coph_matrix = cophenetic(cah)
   cor_coph = cor(dis, coph_matrix)
-  cat(paste("\nCOPHENETIC:\n% of explained variance:", round(cor_coph^2,3)))
+  if (v==T) cat(paste("COPHENETIC:\n% of explained variance:", round(cor_coph^2,3)))
   #x11()
   pdf("shepard_graph.pdf")
   par(mar=c(5.1,5.1,4.1,2.1))
@@ -242,11 +244,7 @@ printTableInertia = function(t, n, c=NULL, d=NULL){
   return (table_inertia)
 }
 
-################################
-#          Fusion levels
-################################
-
-#Plot fusion graph
+# Between inertia differences between a partionning and the previous
 plot_fusion_levels = function(t, n, c=NULL, d=NULL) {
   subset_height = getBetweenInertia(t, n, c, d)
   height_diff = getBetweenDifference(t, n, c, d)
@@ -263,7 +261,7 @@ plot_fusion_levels = function(t, n, c=NULL, d=NULL) {
   text(y=rev(subset_height[-1]), x=2:max_cluster, labels=rev(round(height_diff,2)), cex=1.2, pos=4, col="red")
   points(optimal_nb_clusters, subset_height[max_cluster+2-optimal_nb_clusters], pch=19, col="red", cex=3/1.5)
   abline(v=optimal_nb_clusters, col="red", lty=2, lwd=3/1.5)
-  cat("\nOptimal number of clusters k = ", optimal_nb_clusters, "\n","With the best differencs with the previous clustering of ", max(rev(round(height_diff,2))), "\n", sep="")
+  if (v==T) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With the best differencs with the previous clustering of ", max(rev(round(height_diff,2))), "\n", sep="")
   #catch_printing=identify(x=classif$height[-1], y=(nrow(data)-1):2,labels=paste(round(height_diff[-1],digits=2), result[-(nrow(data)-1),2], sep="\n"),col="red", cex=0.8,plot=T)
   suprLog = dev.off()
 }
@@ -288,7 +286,7 @@ plotAverageSilhouette = function(t, n, c=NULL, d=NULL){
   for (k in 2:(n - 1)) {
     si = getSilhouette(t, k , c, d)
     mean_silhouette[k] = summary(si)$avg.width
-    cat(paste("G",k, ": ", round(mean_silhouette[k],3), "\n",sep=""))
+    if (v==T) cat(paste("G",k, ": ", round(mean_silhouette[k],3), "\n",sep=""))
   }
   
   #x11()
@@ -300,7 +298,7 @@ plotAverageSilhouette = function(t, n, c=NULL, d=NULL){
   axis(1, seq(2,(max_cluster)), lwd=3, font.axis=3)
   axis(2, seq(0.0,(max(mean_silhouette)+0.1),0.1), lwd=3, font.axis=3)
   points(k.best, max(mean_silhouette), pch=19, col="red", cex=1.5)
-  cat("Optimal number of clusters k = ", k.best, "\n","With an average silhouette width of ", round(max(mean_silhouette),4), "\n", sep="")
+  if (v==T) cat("Optimal number of clusters k = ", k.best, "\n","With an average silhouette width of ", round(max(mean_silhouette),4), "\n", sep="")
   abline(v=k.best, lty=2, col="red", lwd=2)
   suprLog = dev.off()
   return (k.best)
@@ -514,21 +512,21 @@ nb_clusters = opt$nbCluster
 max_cluster = opt$maxCluster
 typeClassif = opt$typeClassif
 advanced = "advanced" %in% names(opt)
+v = !("quiet" %in% names(opt))
 
 data = read.table(opt$infile, header=F, sep="\t", dec=".", row.names=1)
 colnames(data) = rownames(data)
 
 classif = getCAH(data, typeClassif)
-
 if(typeClassif>2) plotCohenetic(typeClassif, data, classif)
 
-cat("\n\nBETWEEN-INERTIA:")
+if (v==T) cat("\n\nBETWEEN-INERTIA:")
 summary_between = printTableInertia(typeClassif, max_cluster, classif, data)
 writeTsv(summary_between,"summary_between.tsv")
 optimal_nb_clusters = as.numeric(rownames(getRankedInertia(typeClassif, max_cluster, classif, data))[1])
 if(typeClassif > 1) plot_fusion_levels(typeClassif, max_cluster, classif, data)
 
-cat("\nSILHOUETTE:\n")
+if (v==T) cat("\nSILHOUETTE:\n")
 optimal_nb_clusters = plotAverageSilhouette(typeClassif, max_cluster + 1, classif, data)
 if(nb_clusters > 1) optimal_nb_clusters = nb_clusters
 sil = getSilhouette(typeClassif, optimal_nb_clusters, classif, data)
@@ -538,25 +536,25 @@ dis = getDistance(data, typeClassif, optimal_nb_clusters)
 clusters = getClusters(typeClassif, optimal_nb_clusters, classif, data)
 
 heatMap(dis, sil)
-
 if(typeClassif > 2) plotDendrogram(classif, optimal_nb_clusters)
-
 plotPca(typeClassif, optimal_nb_clusters, classif, data)
 
 if (advanced == TRUE){
   
   ctrVar = round(1000 * getCtrVar(typeClassif, optimal_nb_clusters, classif, data) / 10)
-  cat("\nCONTRIBUTION:")
+  if (v==T) cat("\nCONTRIBUTION:")
   writeTsv(ctrVar,"relative_ctr.tsv")
 
   pdis_per_partition = getIndexPerPartition(typeClassif, max_cluster, classif, data, "pdis")
-  cat("\nDISCRIMINANT POWER:")
+  if (v==T) cat("\nDISCRIMINANT POWER:")
   writeTsv(pdis_per_partition, "discriminant_power.tsv")
 
   excentricity = getIndexPerPartition(typeClassif, max_cluster, classif, data, "rho2")
-  cat("\nEXCENTRICIY:")
+  if (v==T) cat("\nEXCENTRICIY:")
   writeTsv(excentricity,"excentricity.tsv")
 }
 
-cat("\nCLUSTERS:")
+if (v==T) cat("\nCLUSTERS:")
 writeClusters(clusters, "clusters.tsv")
+
+if (v != T) cat(paste("Clustering done.\nOptimal number of clusters choosen:", optimal_nb_clusters,"\n"))
