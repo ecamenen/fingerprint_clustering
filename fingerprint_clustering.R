@@ -98,9 +98,10 @@ colPers = colorRampPalette(c(rgb(0.6,0.1,0.5,1), rgb(1,0,0,1), rgb(0.9,0.6,0,1),
 #Inputs: x : a matrix
 #filename of the saved file
 #Prints the matrix, save the matrix
-writeTsv = function(x,f){
+writeTsv = function(x,f, h=TRUE){
   print(x)
-  output=as.matrix(rbind(c("", colnames(x)), cbind(rownames(x),x)))
+  if(h==TRUE) output=as.matrix(rbind(c("", colnames(x)), cbind(rownames(x),x)))
+  else output = x
   output[is.na(output)] = ""
   suppressWarnings(write(t(output), file=f, ncolumns=ncol(output), sep="\t"))
   #write.table(x, f, na = "",col.names = colnames(x),row.names = rownames(x),append = F,sep = "\t")
@@ -506,9 +507,9 @@ writeClusters = function(c, f){
   for (i in 1:nb_cl ){
     output[c(1:length(c[c==i])),i] <- names(c[c==i])
   }
-  writeTsv(output, f)
+  writeTsv(output, f, h=FALSE)
 }
-writeClusters(clusters, "clusters")
+writeClusters(clusters, "clusters.tsv")
 
 #Plot a heatMap
 #Input:
