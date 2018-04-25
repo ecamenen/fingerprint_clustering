@@ -429,15 +429,17 @@ plotPca = function(t, k, c, d){
 
 plotPca(typeClassif, optimal_nb_clusters, classif, data)
 
+
 ################################
-#            PDIS
+#            CTR
 ################################
+
 scalecenter <- function(d) {
   N = nrow(d) ; d = scale(d);
   return(d * sqrt(N/(N-1)))
 }
 
-getBetweenPervariable = function(d, cl){
+getBetweenPerVariable = function(d, cl){
   #get percent values in output
   d = scalecenter(d)
   nb_cl = length(levels(as.factor(cl)))
@@ -453,6 +455,31 @@ getBetweenPervariable = function(d, cl){
   return (ctr)
 }
 
+# Contribution relative des variables a l'inertie de chaque groupes
+# Parametres :	table des donn?es,
+#		classfication hierarchique,
+#		nombre de classes
+# Sortie : les contributions (souvent notees CTR)
+getCtrVar = function(t, k, c, d) {
+  cl = getClusters(t, k, c, d)
+  nb_cl = length(levels(as.factor(cl)))
+  nb_met = length(cl)
+  
+  ctr = getBetweenPerVariable(d, cl)
+  rownames(ctr) = paste("G", seq(1, k), sep=""); colnames(ctr) = colnames(d)
+  for (i in 1:nb_cl)
+    for (j in 1:nb_met) ctr[i,j] = ctr[i,j]^2 / (nb_met * length(cl[cl==i]))
+  
+  return(round(1000*ctr)/10)
+}
+
+ctrVar = getCtrVar(typeClassif, optimal_nb_clusters, classif, data)
+cat("\nCONTRIBUTION:")
+writeTsv(ctrVar,"relative_ctr.tsv")
+
+################################
+#            PDIS
+################################
 
 # Pouvoir discriminant des variables (PDIS)
 # Contribution relative des variables a l'inertie d'un partitionnement
@@ -462,19 +489,18 @@ getBetweenPervariable = function(d, cl){
 # c: hierarchical classification
 # d: data
 getPdis = function(t, k, c, d) {
-  cl = getClusters(t, k, c, d)
-  nb_cl = length(levels(as.factor(cl)))
-  nb_met = length(cl)
-  ctr = getBetweenPervariable(d, cl)
-  pdis = vector(mode="numeric", nb_met)
-  for (i in 1:nb_cl)
-    for (j in 1:nb_met) ctr[i,j] = ctr[i,j]^2 / (nb_met * length(cl[cl==i]))
+  
+  nb_met = nrow(d)
+  ctrVar = getCtrVar(t, k, c, d)
+  
   #for each metabolite contribution (in column), sum the k clusters values
-  for (i in 1:nb_met) pdis[i] = sum(ctr[,i])
-  return(round(1000*pdis) / 10)
+  pdis = vector(mode="numeric", nb_met)
+  for (i in 1:nb_met) pdis[i] = sum(ctrVar[,i])
+  return(pdis)
 }
 
 getPdisPerPartition = function(t, n, c, d){
+  
   pdis_per_partition = matrix(0, n-1, ncol(d))
   colnames(pdis_per_partition) = colnames(d)
   rownames(pdis_per_partition) = seq(2, n)
@@ -506,7 +532,7 @@ getRho2 = function(t, k, c, d) {
   cl = getClusters(t, k, c, d)
   nb_cl = length(levels(as.factor(cl)))
   nb_met = length(cl)
-  ctr = getBetweenPervariable(d, cl)
+  ctr = getBetweenPerVariable(d, cl)
   
   for (i in 1:nb_cl) {
     cli = cl[i]
@@ -539,36 +565,6 @@ getRho2PerPartition = function(t, n, c, d){
 excentricity = getRho2PerPartition(typeClassif, max_cluster, classif, data)
 cat("\nEXCENTRICIY:")
 writeTsv(excentricity,"excentricity.tsv")
-
-################################
-#            CTR
-################################
-
-# Contribution relative des variables a l'inertie de chaque groupes
-# Parametres :	table des donn?es,
-#		classfication hierarchique,
-#		nombre de classes
-# Sortie : les contributions (souvent notees CTR)
-ctrng = function(t, T,c,k) {
-  T = scalecenter(T)
-  N <- nrow(T) ; M <- ncol(T)
-  ctr <- matrix(0,nrow=k,ncol=M)
-  C = getClusters(t, k, c, T)
-  for (i in 1:N) {
-    cli <- C[i]
-    for (j in 1:M) ctr[cli,j] <- ctr[cli,j] + T[i,j]
-  }
-  for (i in 1:k)
-    for (j in 1:M) ctr[i,j] <- ctr[i,j]^2/(N*length(C[C==i]))
-  ctrframe <- as.data.frame(ctr)
-  colnames(ctrframe) <- colnames(T)
-  return(round(1000*ctrframe)/10)
-}
-
-relative_ctr = ctrng(typeClassif, data,classif, optimal_nb_clusters)
-cat("\nCONTRIBUTION:")
-writeTsv(relative_ctr,"relative_ctr.tsv")
-
 
 ################################
 #            CLUSTERS
