@@ -31,20 +31,21 @@ for (i in 1:nrow(d_test)){
 (dist_matrix = as.dist(dist_matrix))
 
 #dendogramme
-plotRect = function (x1, y1, x2, y2) {
-  rect(x1, y1, x2, y2, border = "red", lwd=2)
+plotRect = function (x1, y1, x2, y2, c="red") {
+  rect(x1, y1, x2, y2, border = c, lwd=2)
   rect(x1+0.03, y1, x2-0.03, y2-0.1, col = "white", border="white")
 }
 
-
-plot(d_test,xlim=c(0,nb_met), xaxt = "n", ylim=c(0,max(dist_matrix)+1), font.lab=3, type='n',axes=F)
+plot(d_test,xlim=c(0,nb_met), xaxt = "n", ylim=c(0,max(dist_matrix)+1), font.lab=3, xlab="Metabolites", ylab="Nb. nodes between metabolites", type='n',axes=F)
 # par("usr")[1] - 0.25 as the vertical placement
 # srt = 45 as text rotation angle
 # adj = 1 to place right end of text at tick mark
 # xpd = TRUE to allow for text outside the plot region
 text(seq(0,nb_met-1), par("usr")[1] - 1.5, srt = 45, adj = 1, labels = names, xpd = TRUE)
-plotRect(0.5, 0, 1.5, 3)
+#plotRect(0.5, 0, 2, 3, "orange")
 plotRect(0, 0, 1, 2)
+rect(3, 0, 2, 4, border="orange", lwd=2)
+rect(2.98, 0, 2.02, 3.9, col = "white", border="white")
 abline(h=0, col = "white", lwd=4)
 axis(1, seq(0,nb_met-1), labels=FALSE, lwd=3, font.axis=3); axis(2, seq(0,max(dist_matrix)+1,5), lwd=3, font.axis=3)
 
