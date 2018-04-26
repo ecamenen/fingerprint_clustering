@@ -3,7 +3,7 @@ getArgs = function(){
     make_option(c("-i", "--infile"), type="character", default="matrix.txt", 
                 help="Fingerprint file name [default: %default]"),
     make_option(c("-m", "--maxCluster"), type="integer", default=6, 
-                help="Maximum number of clusters [default: Complete link"),
+                help="Maximum number of clusters [default: %default]"),
     make_option(c("-t", "--typeClassif"), type="integer", default=4, 
                 help="Type of classifation [default: %default] (1: K-menoids; 2: K-means; 3: Ward; 4: Complete link; 5: UPGMA; 6: WPGMA"),
     make_option(c("-adv", "--advanced"), type="logical", action="store_true",
@@ -110,6 +110,7 @@ colorClusters = function(cl){
 # cl: clusters
 # f : filename
 writeClusters = function(cl, f){
+  if (v==T) cat("\nCLUSTERS:")
   nb_cl = length(levels(as.factor(cl)))
   output = matrix(NA, length(cl), nb_cl)
   for (i in 1:nb_cl ){
@@ -521,7 +522,9 @@ advanced = "advanced" %in% names(opt)
 v = !("quiet" %in% names(opt))
 
 data = read.table(opt$infile, header=F, sep="\t", dec=".", row.names=1)
-colnames(data) = rownames(data)
+colnames(data) <-  rownames(data)
+#avoid to long names
+#colnames(data) <- substr(rownames(data), 1, 35) -> rownames(data)
 
 classif = getCAH(data, typeClassif)
 if(typeClassif>2) plotCohenetic(typeClassif, data, classif)
@@ -549,7 +552,7 @@ if (advanced == TRUE){
   
   ctrVar = round(1000 * getCtrVar(typeClassif, optimal_nb_clusters, classif, data) / 10)
   if (v==T) cat("\nCONTRIBUTION:")
-  writeTsv(ctrVar,"relative_ctr.tsv")
+  writeTsv(ctrVar,"contribution.tsv")
 
   pdis_per_partition = getIndexPerPartition(typeClassif, max_cluster, classif, data, "pdis")
   if (v==T) cat("\nDISCRIMINANT POWER:")
@@ -560,7 +563,6 @@ if (advanced == TRUE){
   writeTsv(excentricity,"excentricity.tsv")
 }
 
-if (v==T) cat("\nCLUSTERS:")
 writeClusters(clusters, "clusters.tsv")
 
 if (v != T) cat(paste("Clustering done.\nOptimal number of clusters choosen:", optimal_nb_clusters,"\n"))
