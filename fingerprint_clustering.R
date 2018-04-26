@@ -64,7 +64,7 @@ getCAH = function(d, t){
     else if (t==5) meth="average"
     else if (t==6) meth="mcquitty"
     #cah: classification hierarchic ascending
-    classif = hclust(dis, method=meth)
+    cah = hclust(dis, method=meth)
   #automaticly ordering by clusters
   return (reorder.hclust(cah, d))
   }
@@ -139,7 +139,7 @@ plotCohenetic=function(t, d,cah){
   dis = getDistance(d, t)
   coph_matrix = cophenetic(cah)
   cor_coph = cor(dis, coph_matrix)
-  if (v==T) cat(paste("COPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation: ",round(cor_coph,3),"\n\n"))
+  if (v==T) cat(paste("COPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation:",round(cor_coph,3),"\n\n"))
   #x11()
   pdf("shepard_graph.pdf")
   par(mar=c(5.1,5.1,4.1,2.1))
@@ -243,10 +243,10 @@ printTableInertia = function(t, n, c=NULL, d=NULL){
   table_inertia = cbind(getBetweenInertia(t, n, c, d)[-1], getBetweenDifference(t, n, c, d)) / getTotInertia(t, c, d)
   #outputs are reversed comparatively to CumulatedBetween outputs
   for(i in 1:ncol(table_inertia)) {table_inertia[,i] = rev(table_inertia[,i])}
-  table_inertia = cbind(table_inertia, getCumulatedBetweenInertiaPerCluster(t, n - 1, c, d))
+  table_inertia = cbind(table_inertia*100, getCumulatedBetweenInertiaPerCluster(t, n - 1, c, d))
   rownames(table_inertia) = seq(2, n)
-  colnames(table_inertia) = c("Raw between-inertia", "Differences","Cumulated inertia (%)")
-  table_inertia = round(table_inertia, 2)
+  colnames(table_inertia) = c("Between-inertia (%)", "Differences (%)","Cumulated inertia (%)")
+  table_inertia = round(table_inertia, 3)
   return (table_inertia)
 }
 
@@ -254,8 +254,8 @@ printTableInertia = function(t, n, c=NULL, d=NULL){
 plot_fusion_levels = function(t, n, c=NULL, d=NULL) {
   subset_height = (getBetweenInertia(t, n, c, d) / getTotInertia(t, c, d)) *100
   height_diff = (getBetweenDifference(t, n, c, d) / getTotInertia(t, c, d))*100
-  x11()
-  #pdf("fusion_levels.pdf")
+  #x11()
+  pdf("fusion_levels.pdf")
   par(mar=c(5.1,5.1,5.1,2.1))
   plot(2:n, rev(subset_height[-1]), type="b", cex.lab=3/2, lwd=3, font.lab=3, ylim=c(round(min(subset_height))-1,round(max(subset_height))+1), xlim=c(2,n), xlab="Nb. of clusters", ylab="Between-group inertia", col="grey", axes=F)
   title(main="Fusion levels", line=2,cex.main=3/1.5)
@@ -264,12 +264,12 @@ plot_fusion_levels = function(t, n, c=NULL, d=NULL) {
   if (t== 2){ interval = 100
   }else{ interval = 1 }
   axis(2, seq(round(min(subset_height)),round(max(subset_height)), by=interval), lwd=3, font.axis=3, cex.axis=0.8)
-  text(y=rev(subset_height[-1]), x=2:max_cluster, labels=rev(round(height_diff,2)), cex=1.2, pos=4, col="red")
+  text(y=rev(subset_height[-1]), x=2:max_cluster, labels=rev(round(height_diff,3)), cex=1.2, pos=4, col="red")
   points(optimal_nb_clusters, subset_height[max_cluster+2-optimal_nb_clusters], pch=19, col="red", cex=3/1.5)
   abline(v=optimal_nb_clusters, col="red", lty=2, lwd=3/1.5)
   if (v==T) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a difference with the previous clustering of ", max(rev(round(height_diff,2))), "\n", sep="")
   #catch_printing=identify(x=classif$height[-1], y=(nrow(data)-1):2,labels=paste(round(height_diff[-1],digits=2), result[-(nrow(data)-1),2], sep="\n"),col="red", cex=0.8,plot=T)
-  #suprLog = dev.off()
+  suprLog = dev.off()
 }
 
 ################################
