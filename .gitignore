@@ -36,3 +36,5 @@ silhouette\.pdf
 clusters
 
 clusters\.tsv
+
+*.tsv

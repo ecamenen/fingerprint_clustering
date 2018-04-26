@@ -164,7 +164,7 @@ plotCohenetic=function(t, d,cah){
 getCumulatedBetweenInertia = function(t, k, c=NULL, d=NULL) {
   if (t==2) {
     c = getCNH(t, d, k)
-    return (round(c$betweenss/c$totss,3) * 100)
+    return (round(c$betweenss/c$totss,5) * 100)
   }else{
     sum_inertia = 0
     #begin with the last element
@@ -181,7 +181,8 @@ getCumulatedBetweenInertia = function(t, k, c=NULL, d=NULL) {
 }
 
 getTotInertia = function(t, c, d) {
-    return (sum(getBetweenInertia(t, nrow(data), c, d)) )
+    if(t > 2 ) sum(getBetweenInertia(t, nrow(d), c, d))
+    else if (t == 2) getCNH(typeClassif, data, 2)$totss
 }
 
 # Inputs:
@@ -243,8 +244,13 @@ getRankedInertia = function(t, n, c=NULL, d=NULL){
 printTableInertia = function(t, n, c=NULL, d=NULL){
   table_inertia = cbind(getBetweenInertia(t, n, c, d)[-1], getBetweenDifference(t, n, c, d)) / getTotInertia(t, c, d)
   #outputs are reversed comparatively to CumulatedBetween outputs
-  for(i in 1:ncol(table_inertia)) {table_inertia[,i] = rev(table_inertia[,i])}
-  table_inertia = cbind(table_inertia*100, getCumulatedBetweenInertiaPerCluster(t, n - 1, c, d))
+  if (t > 2 ){
+    for(i in 1:ncol(table_inertia)) {
+      table_inertia[,i] = rev(table_inertia[,i])
+      cumulated = getCumulatedBetweenInertiaPerCluster(t, n - 1, c, d)
+    }
+  }else if (t==2) cumulated = getCumulatedBetweenInertiaPerCluster(t, n, c, d)[-1]
+  table_inertia = cbind(table_inertia*100, cumulated)
   rownames(table_inertia) = seq(2, n)
   colnames(table_inertia) = c("Between-inertia (%)", "Differences (%)","Cumulated inertia (%)")
   table_inertia = round(table_inertia, 3)
@@ -522,16 +528,14 @@ advanced = "advanced" %in% names(opt)
 v = !("quiet" %in% names(opt))
 
 data = read.table(opt$infile, header=F, sep="\t", dec=".", row.names=1)
-colnames(data) <-  rownames(data)
-#avoid to long names
-#colnames(data) <- substr(rownames(data), 1, 35) -> rownames(data)
+colnames(data) <- substr(rownames(data), 1, 35) -> rownames(data)
 
 classif = getCAH(data, typeClassif)
 if(typeClassif>2) plotCohenetic(typeClassif, data, classif)
 
 if (v==T) cat("BETWEEN-INERTIA:")
 summary_between = printTableInertia(typeClassif, max_cluster, classif, data)
-writeTsv(summary_between,"summary_between.tsv")
+writeTsv(summary_between,"between_inertia.tsv")
 optimal_nb_clusters = as.numeric(rownames(getRankedInertia(typeClassif, max_cluster, classif, data))[1])
 if(typeClassif > 1) plot_fusion_levels(typeClassif, max_cluster, classif, data)
 
