@@ -175,7 +175,7 @@ getCumulatedBetweenInertia = function(t, k, c=NULL, d=NULL) {
       element = element-1
       #decremential loop
     }
-    return(round(100 * sum_inertia / sum(c$height),2))
+    return(round(100 * sum_inertia / sum(c$height),3))
   }
 }
 
@@ -267,7 +267,7 @@ plot_fusion_levels = function(t, n, c=NULL, d=NULL) {
   text(y=rev(subset_height[-1]), x=2:max_cluster, labels=rev(round(height_diff,3)), cex=1.2, pos=4, col="red")
   points(optimal_nb_clusters, subset_height[max_cluster+2-optimal_nb_clusters], pch=19, col="red", cex=3/1.5)
   abline(v=optimal_nb_clusters, col="red", lty=2, lwd=3/1.5)
-  if (v==T) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a difference with the previous clustering of ", max(rev(round(height_diff,2))), "\n", sep="")
+  if (v==T) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a difference with the next partitionning of ", max(rev(round(height_diff,2))), "%\n", sep="")
   #catch_printing=identify(x=classif$height[-1], y=(nrow(data)-1):2,labels=paste(round(height_diff[-1],digits=2), result[-(nrow(data)-1),2], sep="\n"),col="red", cex=0.8,plot=T)
   suprLog = dev.off()
 }
@@ -304,7 +304,7 @@ plotAverageSilhouette = function(t, n, c=NULL, d=NULL){
   axis(1, seq(2,(max_cluster)), lwd=3, font.axis=3)
   axis(2, seq(0.0,(max(mean_silhouette)+0.1),0.1), lwd=3, font.axis=3)
   points(k.best, max(mean_silhouette), pch=19, col="red", cex=1.5)
-  if (v==T) cat("Optimal number of clusters k = ", k.best, "\n","With an average silhouette width of ", round(max(mean_silhouette),4), "\n", sep="")
+  if (v==T) cat("Optimal number of clusters k = ", k.best, "\n","With an average silhouette width of ", round(max(mean_silhouette),3), "\n", sep="")
   abline(v=k.best, lty=2, col="red", lwd=2)
   suprLog = dev.off()
   return (k.best)
