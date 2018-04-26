@@ -38,6 +38,8 @@ writeTsv = function(x,f, h=TRUE){
   options(warn = -1)
   if(h==TRUE) output=as.matrix(rbind(c("", colnames(x)), cbind(rownames(x),x)))
   else output = x
+  #discard empty rows
+  output = output[rowSums(is.na(output)) != ncol(output),]
   output[is.na(output)] = ""
   colnames(output)=rep("", ncol(output)); rownames(output)=rep("", nrow(output))
   if (v==T)  print(output,row.names=FALSE, col.names=FALSE, quote=F)
@@ -113,7 +115,7 @@ writeClusters = function(cl, f){
   for (i in 1:nb_cl ){
     output[c(1:length(cl[cl==i])),i] <- names(cl[cl==i])
   }
-  writeTsv(output, f, h=FALSE)
+  writeTsv(as.matrix(output), f, h=FALSE)
 }
 
 #Input:
@@ -286,7 +288,7 @@ plotAverageSilhouette = function(t, n, c=NULL, d=NULL){
   for (k in 2:(n - 1)) {
     si = getSilhouette(t, k , c, d)
     mean_silhouette[k] = summary(si)$avg.width
-    if (v==T) cat(paste("G",k, ": ", round(mean_silhouette[k],3), "\n",sep=""))
+    if (v==T) cat(paste("", k, ": ", round(mean_silhouette[k],3), "\n",sep=""))
   }
   
   #x11()
