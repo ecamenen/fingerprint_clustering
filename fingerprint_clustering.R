@@ -1,19 +1,36 @@
 getArgs = function(){
   option_list = list(
+    make_option(c("-w", "--workdir"), type="character", metavar="character",
+                help="[REQUIRED] Working directory full path"),
     make_option(c("-i", "--infile"), type="character", default="matrix.txt", 
+                metavar="character",
                 help="Fingerprint file name [default: %default]"),
-    make_option(c("-m", "--maxCluster"), type="integer", default=6, 
+    make_option(c("-m", "--maxCluster"), type="integer", default=6, metavar="integer",
                 help="Maximum number of clusters [default: %default]"),
-    make_option(c("-t", "--typeClassif"), type="integer", default=2, 
+    make_option(c("-t", "--typeClassif"), type="integer", default=2, metavar="integer",
                 help="Type of classifation [default: %default] (1: K-menoids; 2: K-means; 3: Ward; 4: Complete link; 5: UPGMA; 6: WPGMA"),
-    make_option(c("-adv", "--advanced"), type="logical", action="store_true",
+    make_option(c("-adv", "--advanced"), type="logical", action="store_true", 
                 help="Activate advanced mode (print more outputs)"),
     make_option(c("-q", "--quiet"), type="logical", action="store_true",
                 help="Activate quiet mode"), 
-    make_option(c("-n", "--nbCluster"), type="integer", default=0, help="Fix the number of clusters")
-  )
+    make_option(c("-n", "--nbCluster"), type="integer", default=0, metavar="integer",
+                help="Fix the number of clusters"),
+    make_option(c("-r", "--ranked"), type="logical", action="store_true", 
+                help="Rank the metabolites in clusters by silhouette scores instead of alphabetically")
+    )
   
-  return (parse_args(OptionParser(option_list=option_list)))
+  return (OptionParser(option_list=option_list))
+}
+
+#Check the arguments validity
+#Inputs:
+# a: arguments (optionParser object)
+checkArg = function(a){
+  opt = parse_args(a)
+  #if (is.null(opt$workdir)){
+    #print_help(a)
+    #stop("At least one argument must be supplied (-w, --workdir).\n", call.=FALSE)
+  #}
 }
 
 #Usage: colPers(x), x a number of colours in output
@@ -524,7 +541,6 @@ getRho2 = function(t, k, c, d) {
 #            MAIN
 ################################
 
-setwd("~/bin/fingerprint_clustering")
 #Pseudo-random settings: 
 #milisec * PID
 set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
@@ -536,12 +552,16 @@ for (l in librairies){
 }
 
 #global variables
-opt = getArgs()
+args = getArgs()
+checkArg(args)
+opt = parse_args(args)
 nb_clusters = opt$nbCluster
 max_cluster = opt$maxCluster
 typeClassif = opt$typeClassif
 advanced = "advanced" %in% names(opt)
 v = !("quiet" %in% names(opt))
+ranked = !("ranked" %in% names(opt))
+if (!is.null(opt$workdir)) setwd(opt$workdir)
 
 data = read.table(opt$infile, header=F, sep="\t", dec=".", row.names=1)
 colnames(data) <- substr(rownames(data), 1, 35) -> rownames(data)
@@ -583,6 +603,6 @@ if (advanced == TRUE){
   writeTsv(excentricity,"excentricity.tsv")
 }
 
-writeClusters(clusters, "clusters.tsv", TRUE)
+writeClusters(clusters, "clusters.tsv", ranked)
 
 if (v != T) cat(paste("Clustering done.\nOptimal number of clusters choosen:", optimal_nb_clusters,"\n"))
