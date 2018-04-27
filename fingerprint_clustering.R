@@ -57,8 +57,7 @@ checkArg = function(a){
 #Gradient of color
 colPers = colorRampPalette(c(rgb(0.6,0.1,0.5,1), rgb(1,0,0,1), rgb(0.9,0.6,0,1), rgb(0.1,0.6,0.3,1), rgb(0.1,0.6,0.5,1), rgb(0,0,1,1)), alpha = TRUE)
 
-
-scalecenter <- function(d) {
+scalecenter = function(d) {
   N = nrow(d) ; d = scale(d);
   return(d * sqrt(N/(N-1)))
 }
@@ -71,10 +70,13 @@ getDistance = function(d, t, k=NULL){
 #Inputs: x : a matrix
 #filename of the saved file
 #Prints the matrix, save the matrix
-writeTsv = function(x,f, h=TRUE){
+writeTsv = function(x, h=TRUE){
+
+  if (v==T) cat(paste("\n", gsub("_", " ", toupper(x)), ":", sep=""))
   options(warn = -1)
-  if(h==TRUE) output=as.matrix(rbind(c("", colnames(x)), cbind(rownames(x),x)))
-  else output = x
+  tab = get(x)
+  if(h==TRUE) output=as.matrix(rbind(c("", colnames(tab)), cbind(rownames(tab),tab)))
+  else output = tab
   #discard empty rows
   output = output[rowSums(is.na(output)) != ncol(output),]
   #TODOD:
@@ -82,7 +84,7 @@ writeTsv = function(x,f, h=TRUE){
   output[is.na(output)] = ""
   colnames(output)=rep("", ncol(output)); rownames(output)=rep("", nrow(output))
   if (v==T)  print(output,row.names=FALSE, col.names=FALSE, quote=F)
-  write(t(output), file=f, ncolumns=ncol(output), sep="\t")
+  write(t(output), paste(x,".tsv",sep=""), ncolumns=ncol(output), sep="\t")
   #write.table(x, f, na = "",col.names = colnames(x),row.names = rownames(x),append = F,sep = "\t")
   options(warn = 0)
 }
@@ -149,28 +151,28 @@ colorClusters = function(cl){
 # cl: clusters
 # f : filename
 # r: ordered alphabetically
-writeClusters = function(cl, f, r=FALSE){
-  if (v==T) cat("\nCLUSTERS:")
+writeClusters = function(cl, r=FALSE){
   nb_cl = length(levels(as.factor(cl)))
-  output = matrix(NA, length(cl), nb_cl)
+  clusters = matrix(NA, length(cl), nb_cl)
   for (i in 1:nb_cl ){
     if (r == FALSE){
-      output[c(1:length(cl[cl==i])),i] = names(cl[cl==i])
+      clusters[c(1:length(cl[cl==i])),i] = names(cl[cl==i])
     }else if (r == TRUE){
       #ordering alphabetically
-      output[c(1:length(cl[cl==i])),i] = sort(names(cl[cl==i]))
+      clusters[c(1:length(cl[cl==i])),i] = sort(names(cl[cl==i]))
     }
     #ordering by clusters size
-    length_cl = colSums(!is.na(output))
+    length_cl = colSums(!is.na(clusters))
     for (i in 2:nb_cl) {
       if (length_cl[i] > length_cl[i-1]){
-        temp = output[,i-1]
-        output[,i-1] = output[,i]
-        output[,i] = temp
+        temp = clusters[,i-1]
+        clusters[,i-1] = clusters[,i]
+        clusters[,i] = temp
       }
     }
   }
-  writeTsv(as.matrix(output), f, h=FALSE)
+  assign("clusters", clusters,.GlobalEnv)
+  writeTsv("clusters", h=FALSE)
 }
 
 #Input:
@@ -619,19 +621,16 @@ plotPca(typeClassif, optimal_nb_clusters, classif, data)
 
 if (advanced == TRUE){
   
-  ctrVar = round(1000 * getCtrVar(typeClassif, optimal_nb_clusters, classif, data) / 10)
-  if (v==T) cat("\nCONTRIBUTION:")
-  writeTsv(ctrVar,"contribution.tsv")
+  contribution = round(1000 * getCtrVar(typeClassif, optimal_nb_clusters, classif, data) / 10)
+  writeTsv("contribution")
 
-  pdis_per_partition = getIndexPerPartition(typeClassif, max_cluster, classif, data, "pdis")
-  if (v==T) cat("\nDISCRIMINANT POWER:")
-  writeTsv(pdis_per_partition, "discriminant_power.tsv")
+  discriminant_power = getIndexPerPartition(typeClassif, max_cluster, classif, data, "pdis")
+  writeTsv("discriminant_power")
 
   excentricity = getIndexPerPartition(typeClassif, max_cluster, classif, data, "rho2")
-  if (v==T) cat("\nEXCENTRICIY:")
-  writeTsv(excentricity,"excentricity.tsv")
+  writeTsv("excentricity")
 }
 
-writeClusters(clusters, "clusters.tsv", ranked)
+writeClusters(clusters, ranked)
 
 if (v != T) cat(paste("Clustering done.\nOptimal number of clusters choosen:", optimal_nb_clusters,"\n"))
