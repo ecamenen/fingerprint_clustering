@@ -1,7 +1,7 @@
 getArgs = function(){
   option_list = list(
     make_option(c("-w", "--workdir"), type="character", metavar="character",
-                help="[REQUIRED] Working directory full path"),
+                help="Working directory path [default: the folder where the script is launched]"),
     make_option(c("-i", "--infile"), type="character", default="matrix.txt", 
                 metavar="character",
                 help="Fingerprint file name [default: %default]"),
@@ -42,6 +42,15 @@ checkArg = function(a){
     print_help(a)
     stop("--typeClassif must be comprise between 1 and 6 [by default: 2].\n", call.=FALSE)
   }
+  
+  checkFile = function (o){
+    if(!file.exists(opt[[o]])){
+      print_help(a)
+      stop(paste("--",o," name does not exist\n",sep=""), call.=FALSE)
+    }
+  }
+  if(!is.null(opt$workdir)) checkFile("workdir")
+  if(!is.null(opt$infile)) checkFile("infile")
 }
 
 #Usage: colPers(x), x a number of colours in output
