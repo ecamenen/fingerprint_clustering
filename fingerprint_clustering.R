@@ -28,12 +28,12 @@ getArgs = function(){
 checkArg = function(a){
   opt = parse_args(a)
   #o: argument
-  #d: default message
+  # def: defaul message
   
-  checkMinCluster = function (o, d="")
+  checkMinCluster = function (o, def="")
   if (opt[[o]] < 2){
     print_help(a)
-    stop(paste("--",o ," must be upper or equal to 2",d,".\n",sep=""), call.=FALSE)
+    stop(paste("--",o ," must be upper or equal to 2",def,".\n",sep=""), call.=FALSE)
   }
   checkMinCluster("maxCluster"," [by default: 6]")
   if(!is.null(opt$nbCluster)) checkMinCluster("nbCluster")
@@ -51,6 +51,24 @@ checkArg = function(a){
   }
   if(!is.null(opt$workdir)) checkFile("workdir")
   if(!is.null(opt$infile)) checkFile("infile")
+}
+
+#Inputs:
+# a: arguments (optionParser object)
+# d: data
+# def: defaul message
+postChecking = function (a, d){
+  
+  opt = parse_args(a)
+  
+  checkMaxCluster = function (o, def="")
+    if (opt[[o]] > nrow(d)){
+      print_help(a)
+      stop(paste("--", o," must be lower or equal to the fingerprint",def,".\n",sep=""), call.=FALSE)
+    }
+  
+  checkMaxCluster("maxCluster"," [by default: 6]")
+  if(!is.null(opt$nbCluster)) checkMaxCluster("nbCluster")
 }
 
 #Usage: colPers(x), x a number of colours in output
@@ -83,7 +101,7 @@ writeTsv = function(x, h=TRUE){
   #output = output[,colSums(is.na(output)) != nrow(output)]
   output[is.na(output)] = ""
   colnames(output)=rep("", ncol(output)); rownames(output)=rep("", nrow(output))
-  if (v==T)  print(output,row.names=FALSE, col.names=FALSE, quote=F)
+  if (v==T)  print(output, row.names=FALSE, col.names=FALSE, quote=F)
   write(t(output), paste(x,".tsv",sep=""), ncolumns=ncol(output), sep="\t")
   #write.table(x, f, na = "",col.names = colnames(x),row.names = rownames(x),append = F,sep = "\t")
   options(warn = 0)
@@ -349,7 +367,7 @@ getSilhouette = function(t, k , c, d){
 
 # Plot the best average silhouette width for all clustering possible
 plotAverageSilhouette = function(t, n, c=NULL, d=NULL){
-  
+  if (v==T) cat("\nSILHOUETTE:\n")
   mean_silhouette = numeric(n - 1)
   for (k in 2:(n - 1)) {
     si = getSilhouette(t, k , c, d)
@@ -567,13 +585,14 @@ getRho2 = function(t, k, c, d) {
 #milisec * PID
 set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
 
+#Loading librairies
 librairies = c("cluster", "optparse", "gclus", "ade4", "scales")
 for (l in librairies){
   if (! (l %in% installed.packages()[,"Package"])) install.packages(l, repos = "http://cran.us.r-project.org")
   library(l, character.only = TRUE)
 }
 
-#global variables
+#Global variables
 args = getArgs()
 checkArg(args)
 opt = parse_args(args)
@@ -586,51 +605,47 @@ ranked = !("ranked" %in% names(opt))
 if (!is.null(opt$workdir)) setwd(opt$workdir)
 #setwd("~/bin/fingerprint_clustering/")
 
+#Loading data
 data = read.table(opt$infile, header=F, sep="\t", dec=".", row.names=1)
 colnames(data) <- substr(rownames(data), 1, 35) -> rownames(data)
-checkMaxCluster = function (o, d="")
-  if (opt[[o]] > nrow(data)){
-    print_help(args)
-    stop(paste("--", o," must be lower or equal to the fingerprint",d,".\n",sep=""), call.=FALSE)
-  }
-checkMaxCluster("maxCluster"," [by default: 6]")
-if(!is.null(opt$nbCluster)) checkMaxCluster("nbCluster")
+postChecking(args, data)
 
-
+#Perform classification
 classif = getCAH(data, typeClassif)
 if(typeClassif>2) plotCohenetic(typeClassif, data, classif)
 
-if (v==T) cat("BETWEEN-INERTIA:")
-summary_between = printTableInertia(typeClassif, max_cluster, classif, data)
-writeTsv(summary_between,"between_inertia.tsv")
+#Between inertia analysis
+between_inertia = printTableInertia(typeClassif, max_cluster, classif, data)
+writeTsv("between_inertia")
 optimal_nb_clusters = as.numeric(rownames(getRankedInertia(typeClassif, max_cluster, classif, data))[1])
 if(typeClassif > 1) plot_fusion_levels(typeClassif, max_cluster, classif, data)
 
-if (v==T) cat("\nSILHOUETTE:\n")
+#Silhouette analysis
 optimal_nb_clusters = plotAverageSilhouette(typeClassif, max_cluster + 1, classif, data)
 if(!is.null(nb_clusters)) optimal_nb_clusters = nb_clusters
 sil = getSilhouette(typeClassif, optimal_nb_clusters, classif, data)
 plotSilhouette(sil)
 
+#Global variables
 dis = getDistance(data, typeClassif, optimal_nb_clusters)
 clusters = getClusters(typeClassif, optimal_nb_clusters, classif, data)
 
+#Plots
 heatMap(dis, sil)
 if(typeClassif > 2) plotDendrogram(classif, optimal_nb_clusters)
 plotPca(typeClassif, optimal_nb_clusters, classif, data)
 
+#Advanced indexes
 if (advanced == TRUE){
   
   contribution = round(1000 * getCtrVar(typeClassif, optimal_nb_clusters, classif, data) / 10)
-  writeTsv("contribution")
-
   discriminant_power = getIndexPerPartition(typeClassif, max_cluster, classif, data, "pdis")
-  writeTsv("discriminant_power")
-
   excentricity = getIndexPerPartition(typeClassif, max_cluster, classif, data, "rho2")
-  writeTsv("excentricity")
+  
+  for (i in c("contribution", "discriminant_power", "excentricity"))
+    writeTsv(i)
 }
 
+#Final outputs
 writeClusters(clusters, ranked)
-
 if (v != T) cat(paste("Clustering done.\nOptimal number of clusters choosen:", optimal_nb_clusters,"\n"))
