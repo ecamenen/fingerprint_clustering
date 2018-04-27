@@ -27,7 +27,7 @@ getArgs = function(){
 # a: arguments (optionParser object)
 checkArg = function(a){
   opt = parse_args(a)
-  #o: argument
+  # o: one argument from the list of arguments
   # def: defaul message
   
   checkMinCluster = function (o, def="")
@@ -46,16 +46,18 @@ checkArg = function(a){
   checkFile = function (o){
     if(!file.exists(opt[[o]])){
       print_help(a)
-      stop(paste("--",o," name does not exist\n",sep=""), call.=FALSE)
+      stop(paste("--", o, " name does not exist\n", sep=""), call.=FALSE)
     }
   }
   if(!is.null(opt$workdir)) checkFile("workdir")
   if(!is.null(opt$infile)) checkFile("infile")
 }
 
+#Checking clusters args after data loading
 #Inputs:
 # a: arguments (optionParser object)
 # d: data
+# o: one argument from the list of arguments
 # def: defaul message
 postChecking = function (a, d){
   
@@ -89,9 +91,11 @@ getDistance = function(d, t, k=NULL){
 #filename of the saved file
 #Prints the matrix, save the matrix
 writeTsv = function(x, h=TRUE){
-
+  #print on stdout
   if (v==T) cat(paste("\n", gsub("_", " ", toupper(x)), ":", sep=""))
+  #disabling warning
   options(warn = -1)
+  #get variable
   tab = get(x)
   if(h==TRUE) output=as.matrix(rbind(c("", colnames(tab)), cbind(rownames(tab),tab)))
   else output = tab
@@ -106,6 +110,23 @@ writeTsv = function(x, h=TRUE){
   #write.table(x, f, na = "",col.names = colnames(x),row.names = rownames(x),append = F,sep = "\t")
   options(warn = 0)
 }
+
+################################
+#          Graphic
+################################
+
+
+printAxis = function (side, min, max){
+  axis(side, seq(min,max), lwd=3)
+}
+
+
+#f: filename
+savePdf = function (f){
+  pdf(f)
+  setGraphic()
+}
+
 ################################
 #          Clustering
 ################################
@@ -174,6 +195,8 @@ writeClusters = function(cl, r=FALSE){
   clusters = matrix(NA, length(cl), nb_cl)
   for (i in 1:nb_cl ){
     if (r == FALSE){
+      #get metabolites from clusters and put into a column of the output matrix
+      # from the begining of the column to the end of the vector of metabolites names
       clusters[c(1:length(cl[cl==i])),i] = names(cl[cl==i])
     }else if (r == TRUE){
       #ordering alphabetically
@@ -182,6 +205,7 @@ writeClusters = function(cl, r=FALSE){
     #ordering by clusters size
     length_cl = colSums(!is.na(clusters))
     for (i in 2:nb_cl) {
+      #inversion if a column as more metabolites than the previous
       if (length_cl[i] > length_cl[i-1]){
         temp = clusters[,i-1]
         clusters[,i-1] = clusters[,i]
@@ -189,18 +213,10 @@ writeClusters = function(cl, r=FALSE){
       }
     }
   }
+  #dirty way to force saving a local variable
+  # (because writeTsv use only global variables)
   assign("clusters", clusters,.GlobalEnv)
   writeTsv("clusters", h=FALSE)
-}
-
-#Input:
-# cl: clusters
-getClusterSizes = function(cl){
-  cluster_sizes = table(cl)
-  cluster_sizes = data.frame(cluster_sizes)[,2]
-  cluster_sizes = data.frame(cluster_sizes)
-  names(cluster_sizes) = "Effectif"
-  return(cluster_sizes)
 }
 
 ############################################################
@@ -214,14 +230,13 @@ plotCohenetic=function(t, d,cah){
   dis = getDistance(d, t)
   coph_matrix = cophenetic(cah)
   cor_coph = cor(dis, coph_matrix)
-  if (v==T) cat(paste("COPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation:",round(cor_coph,3),"\n\n"))
+  if (v==T) cat(paste("\nCOPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation:",round(cor_coph,3),"\n"))
   #x11()
-  pdf("shepard_graph.pdf")
-  par(mar=c(5.1,5.1,4.1,2.1))
-  plot(dis, coph_matrix, pch=19,col=alpha("red",0.2), cex=1, axes=F, cex.lab=1.5, cex.main=2, font.lab=3, xlim=c(0,max(dis)), ylim=c(0,max(coph_matrix)), xlab="Distance between metabolites",ylab="Cophenetic distance", asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
-  axis(2, seq(0.0,max(coph_matrix),1), lwd=3, font.axis=3, cex.axis=0.8)
-  axis(1, seq(0,max(dis),1), lwd=3, font.axis=3, cex.axis=0.8)
-  abline(0,1, col="grey", lwd=3, lty=2)
+  savePdf("shepard_graph.pdf")
+  plot(dis, coph_matrix, pch=19, col=alpha("red",0.2), axes=F, xlim=c(0,max(dis)), ylim=c(0,max(coph_matrix)), xlab="Distance between metabolites",ylab="Cophenetic distance", asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
+  printAxis(2, 0, max(coph_matrix))
+  printAxis(1, 0, max(dis))
+  abline(0, 1, col="grey", lwd=3, lty=2)
   suprLog = dev.off()
 }
 
@@ -336,20 +351,29 @@ plot_fusion_levels = function(t, n, c=NULL, d=NULL) {
   height_diff = (getBetweenDifference(t, n, c, d) / getTotInertia(t, c, d))*100
   if (t==2) height_diff = rev(height_diff)
   #x11()
-  pdf("fusion_levels.pdf")
-  par(mar=c(5.1,5.1,5.1,2.1))
-  plot(2:n, subset_height, type="b", cex.lab=3/2, lwd=3, font.lab=3, ylim=c(round(min(subset_height))-1,round(max(subset_height))+1), xlim=c(2,n), xlab="Nb. of clusters", ylab="Between-group inertia (%)", col="grey", axes=F)
-  title(main="Fusion levels", line=2,cex.main=3/1.5)
+  savePdf("fusion_levels.pdf")
+  plot(2:n, subset_height, type="b", ylim=c(round(min(subset_height))-1,round(max(subset_height))+1), xlim=c(2,n), xlab="Nb. of clusters", ylab="Between-group inertia (%)", col="grey", axes=F)
+  title(main="Fusion levels", line=2, cex.main=3/1.5)
   mtext("(in red, between-group differences with the previous clustering)", side=3, line=1)
-  axis(1, seq(2,n), lwd=3, font.axis=3, cex.axis=0.8)
-  interval = 1
-  axis(2, seq(round(min(subset_height)),round(max(subset_height))), lwd=3, font.axis=3, cex.axis=0.8)
-  text(y=subset_height, x=2:max_cluster, labels=rev(round(height_diff,3)), cex=1.2, pos=4, col="red")
-  points(optimal_nb_clusters, subset_height[optimal_nb_clusters -1], pch=19, col="red", cex=3/1.5)
-  abline(v=optimal_nb_clusters, col="red", lty=2, lwd=3/1.5)
-  if (v==T) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a difference with the next partitionning of ", max(rev(round(height_diff,2))), "%\n", sep="")
+  printBestClustering(subset_height, 
+                      "difference with the next partitionning",
+                      rev(round(height_diff,3)))
   #catch_printing=identify(x=classif$height[-1], y=(nrow(data)-1):2,labels=paste(round(height_diff[-1],digits=2), result[-(nrow(data)-1),2], sep="\n"),col="red", cex=0.8,plot=T)
   suprLog = dev.off()
+}
+
+
+setGraphic = function(){
+  par(font.axis=3, cex.axis=0.8, cex.lab=3/2, cex.main=1.5, cex=1, font.lab=3, lwd=3, mar=c(5.1,5.1,5.1,2.1))
+}
+
+printBestClustering = function(pointValue, valueType, textValue){
+  printAxis(1, 2, max_cluster)
+  printAxis(2, round(min(pointValue)), round(max(pointValue)))
+  abline(v=optimal_nb_clusters, col="red", lty=2, lwd=3/1.5)
+  points(optimal_nb_clusters, pointValue[1], pch=19, col="red", cex=3/1.5)
+  text(y=pointValue, x=2:max_cluster, labels=textValue, cex=1.2, pos=4, col="red")
+  if (v==T) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a ", valueType, " of ", max(textValue), "\n", sep="")
 }
 
 ################################
