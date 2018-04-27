@@ -40,6 +40,8 @@ writeTsv = function(x,f, h=TRUE){
   else output = x
   #discard empty rows
   output = output[rowSums(is.na(output)) != ncol(output),]
+  #TODOD:
+  #output = output[,colSums(is.na(output)) != nrow(output)]
   output[is.na(output)] = ""
   colnames(output)=rep("", ncol(output)); rownames(output)=rep("", nrow(output))
   if (v==T)  print(output,row.names=FALSE, col.names=FALSE, quote=F)
@@ -109,12 +111,27 @@ colorClusters = function(cl){
 #Inputs:
 # cl: clusters
 # f : filename
-writeClusters = function(cl, f){
+# r: ordered alphabetically
+writeClusters = function(cl, f, r=FALSE){
   if (v==T) cat("\nCLUSTERS:")
   nb_cl = length(levels(as.factor(cl)))
   output = matrix(NA, length(cl), nb_cl)
   for (i in 1:nb_cl ){
-    output[c(1:length(cl[cl==i])),i] <- names(cl[cl==i])
+    if (r == FALSE){
+      output[c(1:length(cl[cl==i])),i] = names(cl[cl==i])
+    }else if (r == TRUE){
+      #ordering alphabetically
+      output[c(1:length(cl[cl==i])),i] = sort(names(cl[cl==i]))
+    }
+    #ordering by clusters size
+    length_cl = colSums(!is.na(output))
+    for (i in 2:nb_cl) {
+      if (length_cl[i] > length_cl[i-1]){
+        temp = output[,i-1]
+        output[,i-1] = output[,i]
+        output[,i] = temp
+      }
+    }
   }
   writeTsv(as.matrix(output), f, h=FALSE)
 }
@@ -566,6 +583,6 @@ if (advanced == TRUE){
   writeTsv(excentricity,"excentricity.tsv")
 }
 
-writeClusters(clusters, "clusters.tsv")
+writeClusters(clusters, "clusters.tsv", TRUE)
 
 if (v != T) cat(paste("Clustering done.\nOptimal number of clusters choosen:", optimal_nb_clusters,"\n"))
