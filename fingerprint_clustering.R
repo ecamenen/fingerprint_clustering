@@ -271,7 +271,7 @@ plot_fusion_levels = function(t, n, c=NULL, d=NULL) {
   interval = 1
   axis(2, seq(round(min(subset_height)),round(max(subset_height))), lwd=3, font.axis=3, cex.axis=0.8)
   text(y=subset_height, x=2:max_cluster, labels=rev(round(height_diff,3)), cex=1.2, pos=4, col="red")
-  points(optimal_nb_clusters, subset_height[max_cluster+1-optimal_nb_clusters], pch=19, col="red", cex=3/1.5)
+  points(optimal_nb_clusters, subset_height[optimal_nb_clusters -1], pch=19, col="red", cex=3/1.5)
   abline(v=optimal_nb_clusters, col="red", lty=2, lwd=3/1.5)
   if (v==T) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a difference with the next partitionning of ", max(rev(round(height_diff,2))), "%\n", sep="")
   #catch_printing=identify(x=classif$height[-1], y=(nrow(data)-1):2,labels=paste(round(height_diff[-1],digits=2), result[-(nrow(data)-1),2], sep="\n"),col="red", cex=0.8,plot=T)
