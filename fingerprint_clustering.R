@@ -116,8 +116,8 @@ writeTsv = function(x, h=TRUE){
 ################################
 
 
-printAxis = function (side, min, max){
-  axis(side, seq(min,max), lwd=3)
+printAxis = function (side, min, max, interval = 1){
+  axis(side, seq(min,max, interval), lwd=3)
 }
 
 
@@ -356,24 +356,10 @@ plot_fusion_levels = function(t, n, c=NULL, d=NULL) {
   title(main="Fusion levels", line=2, cex.main=3/1.5)
   mtext("(in red, between-group differences with the previous clustering)", side=3, line=1)
   printBestClustering(subset_height, 
-                      "difference with the next partitionning",
+                      " difference with the next partitionning",
                       rev(round(height_diff,3)))
   #catch_printing=identify(x=classif$height[-1], y=(nrow(data)-1):2,labels=paste(round(height_diff[-1],digits=2), result[-(nrow(data)-1),2], sep="\n"),col="red", cex=0.8,plot=T)
   suprLog = dev.off()
-}
-
-
-setGraphic = function(){
-  par(font.axis=3, cex.axis=0.8, cex.lab=3/2, cex.main=1.5, cex=1, font.lab=3, lwd=3, mar=c(5.1,5.1,5.1,2.1))
-}
-
-printBestClustering = function(pointValue, valueType, textValue){
-  printAxis(1, 2, max_cluster)
-  printAxis(2, round(min(pointValue)), round(max(pointValue)))
-  abline(v=optimal_nb_clusters, col="red", lty=2, lwd=3/1.5)
-  points(optimal_nb_clusters, pointValue[1], pch=19, col="red", cex=3/1.5)
-  text(y=pointValue, x=2:max_cluster, labels=textValue, cex=1.2, pos=4, col="red")
-  if (v==T) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a ", valueType, " of ", max(textValue), "\n", sep="")
 }
 
 ################################
@@ -400,20 +386,31 @@ plotAverageSilhouette = function(t, n, c=NULL, d=NULL){
   }
   
   #x11()
-  pdf("average_silhouettes.pdf")
-  par(mar=c(5.1,5.1,5.1,2.1))
-  k.best = which.max(mean_silhouette)
-  plot(1:(n-1), mean_silhouette, type="b", lwd=2, cex=1.2, font.lab=3, xlim=c(2,(n - 1)), cex.main=2, cex.lab=1.5, ylim=c(0,max(mean_silhouette)+0.1), col="grey", main="Silhouette plot for k groups", xlab="Nb. of clusters", ylab="Average silhouette width", axes=F)
-  text(k.best, max(mean_silhouette), round(max(mean_silhouette),3), col="red", pos=4, cex=1.2)
-  axis(1, seq(2,(max_cluster)), lwd=3, font.axis=3)
-  axis(2, seq(0.0,(max(mean_silhouette)+0.1),0.1), lwd=3, font.axis=3)
-  points(k.best, max(mean_silhouette), pch=19, col="red", cex=1.5)
-  if (v==T) cat("Optimal number of clusters k = ", k.best, "\n","With an average silhouette width of ", round(max(mean_silhouette),3), "\n", sep="")
-  abline(v=k.best, lty=2, col="red", lwd=2)
+  savePdf("average_silhouettes.pdf")
+  assign("optimal_nb_clusters", which.max(mean_silhouette))
+  plot(1:(n-1), mean_silhouette, type="b", xlim=c(2,(n - 1)), ylim=c(0,max(mean_silhouette)+0.1), col="grey", main="Silhouette plot for k groups", xlab="Nb. of clusters", ylab="Average silhouette width", axes=F)
+  printBestClustering(round(mean_silhouette,3)[-1],"n average silhouette width", round(mean_silhouette,3), 0.1)
   suprLog = dev.off()
-  return (k.best)
+  return (optimal_nb_clusters)
 }
 
+printBestClustering = function(pointValue, valueType, textValue, interval = 1){
+  printAxis(1, 2, max_cluster)
+  if (interval >= 1){ axisSeq=round(pointValue)
+  }else{ axisSeq = c(0, max(pointValue) +0.1)}
+  printAxis(2, min(axisSeq), max(axisSeq), interval)
+  abline(v=optimal_nb_clusters, col="red", lty=2, lwd=2)
+  points(optimal_nb_clusters, max(pointValue), pch=19, col="red", cex=2)
+  text(y=pointValue, x=2:max_cluster, labels=textValue, cex=1.2, pos=4, col="red")
+  if (v==T) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a", valueType, " of ", max(textValue), "\n", sep="")
+}
+
+setGraphic = function(){
+  par(font.axis=3, cex.axis=0.8, cex.lab=3/2, cex.main=2, cex=1, font.lab=3, lwd=3, mar=c(5.1,5.1,5.1,2.1))
+}
+
+
+#TODO: here: setParam
 plotSilhouette = function(s){
   #x11()
   pdf("silhouette.pdf")
