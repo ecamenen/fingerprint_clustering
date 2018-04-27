@@ -13,7 +13,7 @@ getArgs = function(){
                 help="Activate advanced mode (print more outputs)"),
     make_option(c("-q", "--quiet"), type="logical", action="store_true",
                 help="Activate quiet mode"), 
-    make_option(c("-n", "--nbCluster"), type="integer", default=0, metavar="integer",
+    make_option(c("-n", "--nbCluster"), type="integer", metavar="integer",
                 help="Fix the number of clusters"),
     make_option(c("-r", "--ranked"), type="logical", action="store_true", 
                 help="Rank the metabolites in clusters by silhouette scores instead of alphabetically")
@@ -27,10 +27,21 @@ getArgs = function(){
 # a: arguments (optionParser object)
 checkArg = function(a){
   opt = parse_args(a)
-  #if (is.null(opt$workdir)){
-    #print_help(a)
-    #stop("At least one argument must be supplied (-w, --workdir).\n", call.=FALSE)
-  #}
+  #o: argument
+  #d: default message
+  
+  checkMinCluster = function (o, d="")
+  if (opt[[o]] < 2){
+    print_help(a)
+    stop(paste("--",o ," must be upper or equal to 2",d,".\n",sep=""), call.=FALSE)
+  }
+  checkMinCluster("maxCluster"," [by default: 6]")
+  if(!is.null(opt$nbCluster)) checkMinCluster("nbCluster")
+  
+  if ((opt$typeClassif < 1) || (opt$typeClassif > 6)){
+    print_help(a)
+    stop("--typeClassif must be comprise between 1 and 6 [by default: 2].\n", call.=FALSE)
+  }
 }
 
 #Usage: colPers(x), x a number of colours in output
@@ -562,9 +573,18 @@ advanced = "advanced" %in% names(opt)
 v = !("quiet" %in% names(opt))
 ranked = !("ranked" %in% names(opt))
 if (!is.null(opt$workdir)) setwd(opt$workdir)
+#setwd("~/bin/fingerprint_clustering/")
 
 data = read.table(opt$infile, header=F, sep="\t", dec=".", row.names=1)
 colnames(data) <- substr(rownames(data), 1, 35) -> rownames(data)
+checkMaxCluster = function (o, d="")
+  if (opt[[o]] > nrow(data)){
+    print_help(args)
+    stop(paste("--", o," must be lower or equal to the fingerprint",d,".\n",sep=""), call.=FALSE)
+  }
+checkMaxCluster("maxCluster"," [by default: 6]")
+if(!is.null(opt$nbCluster)) checkMaxCluster("nbCluster")
+
 
 classif = getCAH(data, typeClassif)
 if(typeClassif>2) plotCohenetic(typeClassif, data, classif)
@@ -577,7 +597,7 @@ if(typeClassif > 1) plot_fusion_levels(typeClassif, max_cluster, classif, data)
 
 if (v==T) cat("\nSILHOUETTE:\n")
 optimal_nb_clusters = plotAverageSilhouette(typeClassif, max_cluster + 1, classif, data)
-if(nb_clusters > 1) optimal_nb_clusters = nb_clusters
+if(!is.null(nb_clusters)) optimal_nb_clusters = nb_clusters
 sil = getSilhouette(typeClassif, optimal_nb_clusters, classif, data)
 plotSilhouette(sil)
 
