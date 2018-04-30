@@ -443,8 +443,14 @@ heatMap = function(d, s){
   matrix=matrix[attr(s,"iOrd"),attr(s,"iOrd")]
   rownames(matrix) = rownames(data)[attr(s,"iOrd")]
   labels = attr(d, "Labels")[attr(s,"iOrd")]
-  plotcolors(dmat.color(as.dist(matrix), colors=heat.colors(1000)), na.color="red", rlabels=labels, clabels=labels, border=0)
-  suprLog = dev.off()
+  #if(tri == TRUE) matrix[!lower.tri(matrix)] = NA
+  #image(1:ncol(matrix), 1:ncol(matrix), t(matrix), axes=F, xlab="", ylab="")
+  plotcolors(dmat.color(matrix, colors=heat.colors(1000)), ptype="image", na.color="red", rlabels=FALSE, clabels=FALSE, border=0)
+  text(-0.5, 0:(ncol(matrix)-1)+1, rev(labels), xpd=NA, adj=1, cex=0.7)
+  text(0.5:(ncol(matrix)-0.5), ncol(matrix)+1, labels, xpd=NA, cex=0.7, srt=65, pos=4)
+  #axis(2, 1:ncol(matrix), labels, cex.axis = 0.5, las=1, tck=0, lwd=-1, font.axis=3)
+  #axis(3, 1:ncol(matrix), labels, cex.axis = 0.5, las=1, tck=0, lwd=-1, font.axis=3)
+   suprLog = dev.off()
 }
 
 ################################
