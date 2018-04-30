@@ -78,8 +78,7 @@ postChecking = function (a, d){
 colPers = colorRampPalette(c(rgb(0.6,0.1,0.5,1), rgb(1,0,0,1), rgb(0.9,0.6,0,1), rgb(0.1,0.6,0.3,1), rgb(0.1,0.6,0.5,1), rgb(0,0,1,1)), alpha = TRUE)
 
 scalecenter = function(d) {
-  N = nrow(d) ; d = scale(d);
-  return(d * sqrt(N/(N-1)))
+  return(scale(d) * sqrt(nrow(d)/(nrow(d)-1)))
 }
 
 getDistance = function(d, t, k=NULL){
@@ -115,11 +114,29 @@ writeTsv = function(x, h=TRUE){
 #          Graphic
 ################################
 
+setGraphic = function(){
+  setGraphicBasic()
+  par(mar=c(5.1,5.1,5.1,2.1))
+}
+
+setGraphicBasic = function(){
+  par(cex.lab=1.5, font.lab=3, font.axis=3, cex.axis=0.8, cex.main=2, cex=1, lwd=3)
+}
 
 printAxis = function (side, min, max, interval = 1){
   axis(side, seq(min,max, interval), lwd=3)
 }
 
+printBestClustering = function(pointValue, valueType, textValue, interval = 1){
+  printAxis(1, 2, max_cluster)
+  if (interval >= 1){ axisSeq=round(pointValue)
+  }else{ axisSeq = c(0, max(pointValue) +0.1)}
+  printAxis(2, min(axisSeq), max(axisSeq), interval)
+  abline(v=optimal_nb_clusters, col="red", lty=2, lwd=2)
+  points(optimal_nb_clusters, max(pointValue), pch=19, col="red", cex=2)
+  text(y=pointValue, x=2:max_cluster, labels=textValue, cex=1.2, pos=4, col="red")
+  if (v==T) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a", valueType, " of ", max(textValue), "\n", sep="")
+}
 
 #f: filename
 savePdf = function (f){
@@ -352,12 +369,12 @@ plot_fusion_levels = function(t, n, c=NULL, d=NULL) {
   if (t==2) height_diff = rev(height_diff)
   #x11()
   savePdf("fusion_levels.pdf")
-  plot(2:n, subset_height, type="b", ylim=c(round(min(subset_height))-1,round(max(subset_height))+1), xlim=c(2,n), xlab="Nb. of clusters", ylab="Between-group inertia (%)", col="grey", axes=F)
-  title(main="Fusion levels", line=2, cex.main=3/1.5)
+  plot(2:n, subset_height, type="b", ylim=c(round(min(subset_height))-1,round(max(subset_height))+1), xlim=c(2,n+1), xlab="Nb. of clusters", ylab="Between-group inertia (%)", col="grey", axes=F)
+  title(main="Fusion levels", line=2, cex.main=2)
   mtext("(in red, between-group differences with the previous clustering)", side=3, line=1)
   printBestClustering(subset_height, 
                       " difference with the next partitionning",
-                      rev(round(height_diff,3)))
+                      rev(round(height_diff,2)))
   #catch_printing=identify(x=classif$height[-1], y=(nrow(data)-1):2,labels=paste(round(height_diff[-1],digits=2), result[-(nrow(data)-1),2], sep="\n"),col="red", cex=0.8,plot=T)
   suprLog = dev.off()
 }
@@ -388,36 +405,21 @@ plotAverageSilhouette = function(t, n, c=NULL, d=NULL){
   #x11()
   savePdf("average_silhouettes.pdf")
   assign("optimal_nb_clusters", which.max(mean_silhouette))
-  plot(1:(n-1), mean_silhouette, type="b", xlim=c(2,(n - 1)), ylim=c(0,max(mean_silhouette)+0.1), col="grey", main="Silhouette plot for k groups", xlab="Nb. of clusters", ylab="Average silhouette width", axes=F)
-  printBestClustering(round(mean_silhouette,3)[-1],"n average silhouette width", round(mean_silhouette,3), 0.1)
+  plot(1:(n-1), mean_silhouette, type="b", xlim=c(2,n), ylim=c(0,max(mean_silhouette)+0.1), col="grey", main="Silhouette plot for k groups", xlab="Nb. of clusters", ylab="Average silhouette width", axes=F)
+  printBestClustering(round(mean_silhouette,2)[-1],"n average silhouette width", round(mean_silhouette,3), 0.1)
   suprLog = dev.off()
   return (optimal_nb_clusters)
 }
-
-printBestClustering = function(pointValue, valueType, textValue, interval = 1){
-  printAxis(1, 2, max_cluster)
-  if (interval >= 1){ axisSeq=round(pointValue)
-  }else{ axisSeq = c(0, max(pointValue) +0.1)}
-  printAxis(2, min(axisSeq), max(axisSeq), interval)
-  abline(v=optimal_nb_clusters, col="red", lty=2, lwd=2)
-  points(optimal_nb_clusters, max(pointValue), pch=19, col="red", cex=2)
-  text(y=pointValue, x=2:max_cluster, labels=textValue, cex=1.2, pos=4, col="red")
-  if (v==T) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a", valueType, " of ", max(textValue), "\n", sep="")
-}
-
-setGraphic = function(){
-  par(font.axis=3, cex.axis=0.8, cex.lab=3/2, cex.main=2, cex=1, font.lab=3, lwd=3, mar=c(5.1,5.1,5.1,2.1))
-}
-
 
 #TODO: here: setParam
 plotSilhouette = function(s){
   #x11()
   pdf("silhouette.pdf")
-  par(mar=c(4, 8, 3, 2))
-  plot(s, max.strlen=20, main=" ", sub= "", do.clus.stat=FALSE, cex.lab=3/2, font.lab=3, xlab="Silhouette width", cex.names=0.8, col=colorClusters(s[,1]), nmax.lab=100, do.n.k = FALSE, axes=F)
-  mtext(paste("Average silhouette width:", round(summary(s)$avg.width,3)), font=2, cex=3/2, line=1)
-  axis(1, seq(0,1,by=0.2), lwd=3, font.axis=3, cex.axis=0.8)
+  setGraphicBasic()
+  par(mar=c(4, 12, 3, 2))
+  plot(s, max.strlen=20, main=" ", sub= "", do.clus.stat=FALSE, xlab="Silhouette width", cex.names=0.8, col=colorClusters(s[,1]), nmax.lab=100, do.n.k = FALSE, axes=F)
+  mtext(paste("Average silhouette width:", round(summary(s)$avg.width,3)), font=2, cex=1.5, line=1)
+  printAxis(1, 0, 1, 0.2)
   suprLog = dev.off()
 }
 
@@ -449,9 +451,10 @@ heatMap = function(d, s){
 plotDendrogram = function(c, k){
   #x11()
   pdf("dendrogram.pdf")
+  setGraphicBasic()
   par(mar=c(2,5,5,1))
-  plot(c, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), hang=-1, cex.main=2, cex.lab=1.5, lwd=3, sub="", ylab="Distance Between-group", main="Dendrogram", font.lab=3, axes=F)
-  axis(2, seq(0,max(c$height)), lwd=3, font.axis=3, cex.axis=0.8)
+  plot(c, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), hang=-1, sub="", ylab="Distance Between-group", main="Dendrogram", axes=F)
+  printAxis(2, 0, max(c$height))
   #projection of the clusters
   rect.hclust(c, k=as.numeric(k), border=colPers(k))
   suprLog = dev.off()
@@ -465,13 +468,13 @@ plotPca = function(t, k, c, d){
   pca = dudi.pca(d, scannf=F)
   #x11()
   pdf("pca.pdf")
-  #par(mar=c(0,0,0,0))
+  par(mar=c(0,0,4.1,0))
   clusters = getClusters(t, k, c, d)
   title = paste("Cumulated inertia:", round((pca$eig[1]+pca$eig[2])/sum(pca$eig),4)*100, "%")
   s.class(addaxes=F, pca$li ,ylim=c(min(pca$li[,2])-3, max(pca$li[,2])+3), xlim=c(min(pca$li[,1])-3, max(pca$li[,1])+3), csub=1.5, as.factor(clusters), grid=F, col=colPers(optimal_nb_clusters))
-  mtext(title, font=2, cex=3/2, line=1)
+  mtext(title, font=2, cex=1.5, line=1)
   abline(h=0, v=0, lty=2, lwd=2, col="grey")
-  text(x=pca$li[,1], y=pca$li[,2], labels=rownames(pca$li), col=colorClusters(clusters), cex=1)
+  text(x=pca$li[,1], y=pca$li[,2], labels=rownames(pca$li), col=colorClusters(clusters), cex=0.6)
   suprLog = dev.off()
 }
 
@@ -624,6 +627,7 @@ advanced = "advanced" %in% names(opt)
 v = !("quiet" %in% names(opt))
 ranked = !("ranked" %in% names(opt))
 if (!is.null(opt$workdir)) setwd(opt$workdir)
+#to work under Rstudio
 #setwd("~/bin/fingerprint_clustering/")
 
 #Loading data
