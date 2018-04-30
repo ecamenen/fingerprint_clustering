@@ -435,22 +435,37 @@ plotSilhouette = function(s){
 #Inputs:
 # d: a distance object
 # s: an organised silhouette object
-heatMap = function(d, s){
+heatMap = function(d, s, text=FALSE){
   #x11()
   pdf("heat_map.pdf")
-  par(mar=c(1, 8, 8, 1))
+  options(warn = -1)
   matrix=as.matrix(d)
   matrix=matrix[attr(s,"iOrd"),attr(s,"iOrd")]
   rownames(matrix) = rownames(data)[attr(s,"iOrd")]
   labels = attr(d, "Labels")[attr(s,"iOrd")]
   #if(tri == TRUE) matrix[!lower.tri(matrix)] = NA
   #image(1:ncol(matrix), 1:ncol(matrix), t(matrix), axes=F, xlab="", ylab="")
+
+  par(mar=c(1, 8, 8, 1))
+  par(fig=c(0,0.9,0,1), new=TRUE)
   plotcolors(dmat.color(matrix, colors=heat.colors(1000)), ptype="image", na.color="red", rlabels=FALSE, clabels=FALSE, border=0)
   text(-0.5, 0:(ncol(matrix)-1)+1, rev(labels), xpd=NA, adj=1, cex=0.7)
   text(0.5:(ncol(matrix)-0.5), ncol(matrix)+1, labels, xpd=NA, cex=0.7, srt=65, pos=4)
+  
+  #BUGUED
+  #if (text==TRUE) text(expand.grid(1:ncol(matrix), 1:ncol(matrix)), sprintf("%0.1f", t(matrix)), cex=0.6)
   #axis(2, 1:ncol(matrix), labels, cex.axis = 0.5, las=1, tck=0, lwd=-1, font.axis=3)
   #axis(3, 1:ncol(matrix), labels, cex.axis = 0.5, las=1, tck=0, lwd=-1, font.axis=3)
-   suprLog = dev.off()
+  
+  par(mar=c(5, 0, 4, 0) + 0.1)
+  par(fig=c(0.85,1,0.3,0.8),new=TRUE)
+  legend_image = as.raster(matrix(heat.colors(1000), ncol=1))
+  plot(c(0,1),c(0,1),type = 'n', axes = F,xlab = '', ylab = '', main = '')
+  rasterImage(legend_image, 0.4, 0, 0.5, 1)
+  #text('Silhouette width')
+  text(x=0.5, y = seq(0,1,l=3), labels = seq(0,1,l=3),cex=0.8,pos=4)
+  options(warn = 0)
+  suprLog = dev.off()
 }
 
 ################################
