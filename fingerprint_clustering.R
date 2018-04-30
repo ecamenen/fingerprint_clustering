@@ -134,8 +134,8 @@ printBestClustering = function(pointValue, valueType, textValue, interval = 1){
   printAxis(2, min(axisSeq), max(axisSeq), interval)
   abline(v=optimal_nb_clusters, col="red", lty=2, lwd=2)
   points(optimal_nb_clusters, max(pointValue), pch=19, col="red", cex=2)
-  text(y=pointValue, x=2:max_cluster, labels=textValue, cex=1.2, pos=4, col="red")
-  if (v==T) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a", valueType, " of ", max(textValue), "\n", sep="")
+  text(y=pointValue, x=2:max_cluster, labels=round(textValue,2), cex=1.2, pos=4, col="red")
+  if (v==T) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a", valueType, " of ", round(max(textValue),2), "\n", sep="")
 }
 
 #f: filename
@@ -365,16 +365,14 @@ printTableInertia = function(t, n, c=NULL, d=NULL){
 # Between inertia differences between a partionning and the previous
 plot_fusion_levels = function(t, n, c=NULL, d=NULL) {
   subset_height = rev((getBetweenInertia(t, n, c, d)[-1] / getTotInertia(t, c, d)) *100)
-  height_diff = (getBetweenDifference(t, n, c, d) / getTotInertia(t, c, d))*100
+  height_diff = (getBetweenDifference(t, n, c, d) / getTotInertia(t, c, d)) *100
   if (t==2) height_diff = rev(height_diff)
   #x11()
   savePdf("fusion_levels.pdf")
   plot(2:n, subset_height, type="b", ylim=c(round(min(subset_height))-1,round(max(subset_height))+1), xlim=c(2,n+1), xlab="Nb. of clusters", ylab="Between-group inertia (%)", col="grey", axes=F)
   title(main="Fusion levels", line=2, cex.main=2)
   mtext("(in red, between-group differences with the previous clustering)", side=3, line=1)
-  printBestClustering(subset_height, 
-                      " difference with the next partitionning",
-                      rev(round(height_diff,2)))
+  printBestClustering(subset_height, " difference with the next partitionning", rev(height_diff))
   #catch_printing=identify(x=classif$height[-1], y=(nrow(data)-1):2,labels=paste(round(height_diff[-1],digits=2), result[-(nrow(data)-1),2], sep="\n"),col="red", cex=0.8,plot=T)
   suprLog = dev.off()
 }
@@ -399,14 +397,14 @@ plotAverageSilhouette = function(t, n, c=NULL, d=NULL){
   for (k in 2:(n - 1)) {
     si = getSilhouette(t, k , c, d)
     mean_silhouette[k] = summary(si)$avg.width
-    if (v==T) cat(paste("", k, ": ", round(mean_silhouette[k],3), "\n",sep=""))
+    if (v==T) cat(paste("", k, ": ", round(mean_silhouette[k],2), "\n",sep=""))
   }
   
   #x11()
   savePdf("average_silhouettes.pdf")
   assign("optimal_nb_clusters", which.max(mean_silhouette))
   plot(1:(n-1), mean_silhouette, type="b", xlim=c(2,n), ylim=c(0,max(mean_silhouette)+0.1), col="grey", main="Silhouette plot for k groups", xlab="Nb. of clusters", ylab="Average silhouette width", axes=F)
-  printBestClustering(round(mean_silhouette,2)[-1],"n average silhouette width", round(mean_silhouette,3), 0.1)
+  printBestClustering(mean_silhouette[-1],"n average silhouette width", mean_silhouette, 0.1)
   suprLog = dev.off()
   return (optimal_nb_clusters)
 }
@@ -417,9 +415,17 @@ plotSilhouette = function(s){
   pdf("silhouette.pdf")
   setGraphicBasic()
   par(mar=c(4, 12, 3, 2))
-  plot(s, max.strlen=20, main=" ", sub= "", do.clus.stat=FALSE, xlab="Silhouette width", cex.names=0.8, col=colorClusters(s[,1]), nmax.lab=100, do.n.k = FALSE, axes=F)
+  plot(s, max.strlen=25, main=" ", sub= "", do.clus.stat=TRUE, xlab="Silhouette width", cex.names=0.8, col=colorClusters(s[,1]), nmax.lab=100, do.n.k = FALSE, axes=F)
   mtext(paste("Average silhouette width:", round(summary(s)$avg.width,3)), font=2, cex=1.5, line=1)
   printAxis(1, 0, 1, 0.2)
+  #cl_widths = summary(s)$clus.avg.widths
+  #cl_sizes = summary(s)$clus.sizes
+  #tempSize = 0
+  #mtext("Groupe: Average silhouette", side=3, adj= 1)
+  #for (i in length(cl_widths):1){
+  #  text(0.9, (tempSize + cl_sizes[i])/2, paste("G", names(cl_widths)[i], " : ", round(cl_widths, 2)[i], sep=""))
+  #  tempSize = cl_sizes[i]
+  #}
   suprLog = dev.off()
 }
 
@@ -632,7 +638,7 @@ if (!is.null(opt$workdir)) setwd(opt$workdir)
 
 #Loading data
 data = read.table(opt$infile, header=F, sep="\t", dec=".", row.names=1)
-colnames(data) <- substr(rownames(data), 1, 35) -> rownames(data)
+colnames(data) <- substr(rownames(data), 1, 25) -> rownames(data)
 postChecking(args, data)
 
 #Perform classification
