@@ -432,6 +432,20 @@ plotSilhouette = function(s){
 ################################
 #          HEATMAP
 ################################
+
+#Inputs:
+# s: an organised silhouette object
+printRect = function (s){
+  cl_sizes = summary(s)$clus.sizes
+  tempSize = 0
+  colors = colPers(length(cl_sizes))
+  for (i in 1:length(cl_sizes)){
+    rect(tempSize + 0.5, sum(cl_sizes) -tempSize -cl_sizes[i] +0.5, cl_sizes[i] +tempSize +0.5, sum(cl_sizes) -tempSize +0.5, border = colors[i], lwd=3)
+    tempSize = cl_sizes[i]
+  }
+}
+
+
 #Inputs:
 # d: a distance object
 # s: an organised silhouette object
@@ -449,10 +463,12 @@ heatMap = function(d, s, text=FALSE){
   par(mar=c(1, 8, 8, 1))
   par(fig=c(0,0.9,0,1), new=TRUE)
   plotcolors(dmat.color(matrix, colors=heat.colors(1000),byrank = FALSE), ptype="image", na.color="red", rlabels=FALSE, clabels=FALSE, border=0)
+  
   mtext('Distance matrix ordered by silhouette\'s scores', 3, line=6, font=4, cex=1.5)
   
   text(-0.5, 0:(ncol(matrix)-1)+1, rev(labels), xpd=NA, adj=1, cex=0.7)
   text(0.5:(ncol(matrix)-0.5), ncol(matrix)+1, substr(labels, 0, 20), xpd=NA, cex=0.7, srt=65, pos=4)
+  printRect(s)
   
   if (text==TRUE)   text(expand.grid(1:ncol(matrix), ncol(matrix):1), sprintf("%d", matrix), cex=0.4)
   #axis(2, 1:ncol(matrix), labels, cex.axis = 0.5, las=1, tck=0, lwd=-1, font.axis=3)
