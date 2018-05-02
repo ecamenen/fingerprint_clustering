@@ -449,11 +449,12 @@ heatMap = function(d, s, text=FALSE){
   par(mar=c(1, 8, 8, 1))
   par(fig=c(0,0.9,0,1), new=TRUE)
   plotcolors(dmat.color(matrix, colors=heat.colors(1000)), ptype="image", na.color="red", rlabels=FALSE, clabels=FALSE, border=0)
+  mtext('Distance matrix ordered by silhouette\'s scores', 3, line=6, font=4, cex=1.5)
+  
   text(-0.5, 0:(ncol(matrix)-1)+1, rev(labels), xpd=NA, adj=1, cex=0.7)
   text(0.5:(ncol(matrix)-0.5), ncol(matrix)+1, labels, xpd=NA, cex=0.7, srt=65, pos=4)
   
-  #BUGUED
-  #if (text==TRUE) text(expand.grid(1:ncol(matrix), 1:ncol(matrix)), sprintf("%0.1f", t(matrix)), cex=0.6)
+  if (text==TRUE)   text(expand.grid(1:ncol(matrix), ncol(matrix):1), sprintf("%0.1f", matrix), cex=0.4)
   #axis(2, 1:ncol(matrix), labels, cex.axis = 0.5, las=1, tck=0, lwd=-1, font.axis=3)
   #axis(3, 1:ncol(matrix), labels, cex.axis = 0.5, las=1, tck=0, lwd=-1, font.axis=3)
   
@@ -462,8 +463,8 @@ heatMap = function(d, s, text=FALSE){
   legend_image = as.raster(matrix(heat.colors(1000), ncol=1))
   plot(c(0,1),c(0,1),type = 'n', axes = F,xlab = '', ylab = '', main = '')
   rasterImage(legend_image, 0.4, 0, 0.5, 1)
-  #text('Silhouette width')
-  text(x=0.5, y = seq(0,1,l=3), labels = seq(0,1,l=3),cex=0.8,pos=4)
+  mtext('   Distance', 3, line=0.5, cex=0.85, font=2)
+  text(x=0.5, y = seq(0,1,l=3), labels = round(seq(max(matrix),0,l=3)),cex=0.7,pos=4)
   options(warn = 0)
   suprLog = dev.off()
 }
@@ -683,7 +684,7 @@ dis = getDistance(data, typeClassif, optimal_nb_clusters)
 clusters = getClusters(typeClassif, optimal_nb_clusters, classif, data)
 
 #Plots
-heatMap(dis, sil)
+heatMap(dis, sil, TRUE)
 if(typeClassif > 2) plotDendrogram(classif, optimal_nb_clusters)
 plotPca(typeClassif, optimal_nb_clusters, classif, data)
 
