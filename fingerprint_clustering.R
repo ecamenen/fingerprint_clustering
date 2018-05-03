@@ -77,8 +77,12 @@ postChecking = function (a, d){
 #Gradient of color
 colPers = colorRampPalette(c(rgb(0.6,0.1,0.5,1), rgb(1,0,0,1), rgb(0.9,0.6,0,1), rgb(0.1,0.6,0.3,1), rgb(0.1,0.6,0.5,1), rgb(0,0,1,1)), alpha = TRUE)
 
+#Outputs:
+# for each column, the mean=0 and the variance is the same
 scalecenter = function(d) {
+  #output scale function: for each column, mean=0, sd=1
   return(scale(d) * sqrt(nrow(d)/(nrow(d)-1)))
+  # without multiplying by this constante, for advanced outputs, total (max_cluster=nrow(data)) will be different from 1
 }
 
 getDistance = function(d, t, k=NULL){
@@ -403,8 +407,8 @@ plotAverageSilhouette = function(t, n, c=NULL, d=NULL){
   #x11()
   savePdf("average_silhouettes.pdf")
   assign("optimal_nb_clusters", which.max(mean_silhouette))
-  plot(1:(n-1), mean_silhouette, type="b", xlim=c(2,n), ylim=c(0,max(mean_silhouette)+0.1), col="grey", main="Silhouette plot for k groups", xlab="Nb. of clusters", ylab="Average silhouette width", axes=F)
-  printBestClustering(mean_silhouette[-1],"n average silhouette width", mean_silhouette, 0.1)
+  plot(2:(n-1), mean_silhouette[-1], type="b", xlim=c(2,n), ylim=c(0,max(mean_silhouette)+0.1), col="grey", main="Silhouette plot for k groups", xlab="Nb. of clusters", ylab="Average silhouette width", axes=F)
+  printBestClustering(mean_silhouette[-1],"n average silhouette width", mean_silhouette[-1], 0.1)
   suprLog = dev.off()
   return (optimal_nb_clusters)
 }
@@ -436,15 +440,20 @@ plotSilhouette = function(s){
 #Inputs:
 # s: an organised silhouette object
 printRect = function (s){
+  # size of each clusters
   cl_sizes = summary(s)$clus.sizes
   tempSize = 0
+  #vector of color: one by cluster
   colors = colPers(length(cl_sizes))
   for (i in 1:length(cl_sizes)){
+    #y begin at the top, so sum(cl_sizes) must be substracted to y coord.
+    #rect(xleft, ybottom, xright, ytop)
+    # +0.5 because x, y coord are shifted to 0.5 comparativly to plotcolors functions
     rect(tempSize + 0.5, sum(cl_sizes) -tempSize -cl_sizes[i] +0.5, cl_sizes[i] +tempSize +0.5, sum(cl_sizes) -tempSize +0.5, border = colors[i], lwd=3)
+    #memorize the size of the cluster (for a bottom-right shift)
     tempSize = cl_sizes[i]
   }
 }
-
 
 #Inputs:
 # d: a distance object
@@ -526,6 +535,7 @@ plotPca = function(t, k, c, d){
 #            CTR
 ################################
 
+# For a given partition, contribution of each metabolites to each clusters
 # Inputs:
 # d: data
 # cl: clusters object
@@ -540,12 +550,12 @@ getBetweenPerVariable = function(d, cl){
     cli = cl[i]
     #in the dataset, for a metabolite row, loop an each metadabolite column
     #values are affected the corresponding cluster row and metabolite column in ctr
-    for (j in 1:nb_met) ctr[cli,j] = ctr[cli,j] + d[i,j]
+    for (j in 1:nb_met) ctr[cli,j] = ctr[cli,j] + d2[i,j]
   }
   return (ctr)
 }
 
-# Relative contributions of the metabolites to inertia of each clusters (CTR)
+# For a given partition, relative contributions of each metabolites to inertia of each clusters (CTR)
 # Inputs:
 # t: number of type of classification
 # k: number of clusters
@@ -577,13 +587,8 @@ getCtrVar = function(t, k, c, d) {
 # d: data
 getPdis = function(t, k, c, d) {
   
-  nb_met = nrow(d)
-  ctrVar = getCtrVar(t, k, c, d)
-  
   #for each metabolite contribution (in column), sum the k clusters values
-  pdis = vector(mode="numeric", nb_met)
-  for (i in 1:nb_met) pdis[i] = sum(ctrVar[,i])
-  return(pdis)
+  return(apply(getCtrVar(t, k, c, d), 2, sum))
 }
 
 # Inputs: 
@@ -630,11 +635,6 @@ getRho2 = function(t, k, c, d) {
   nb_cl = length(levels(as.factor(cl)))
   nb_met = length(cl)
   ctr = getBetweenPerVariable(d, cl)
-  
-  for (i in 1:nb_cl) {
-    cli = cl[i]
-    for (j in 1:nb_met) ctr[cli,j] = ctr[cli,j] + d[i,j]
-  }
   
   for (i in 1:k)
     for (j in 1:nb_met) ctr[i,j] = ctr[i,j]/length(cl[cl==i])
