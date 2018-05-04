@@ -7,7 +7,7 @@ getArgs = function(){
                 help="Fingerprint file name [default: %default]"),
     make_option(c("-m", "--maxCluster"), type="integer", default=6, metavar="integer",
                 help="Maximum number of clusters [default: %default]"),
-    make_option(c("-t", "--typeClassif"), type="integer", default=4, metavar="integer",
+    make_option(c("-t", "--typeClassif"), type="integer", default=2, metavar="integer",
                 help="Type of classifation [default: %default] (1: K-menoids; 2: K-means; 3: Ward; 4: Complete link; 5: UPGMA; 6: WPGMA"),
     make_option(c("-adv", "--advanced"), type="logical", action="store_true", 
                 help="Activate advanced mode (print more outputs)"),
@@ -109,7 +109,7 @@ writeTsv = function(x, h=TRUE){
   #output = output[,colSums(is.na(output)) != nrow(output)]
   output[is.na(output)] = ""
   colnames(output)=rep("", ncol(output)); rownames(output)=rep("", nrow(output))
-  if (v==T)  print(round(output,3), row.names=FALSE, col.names=FALSE, quote=F)
+  if (v==T)  print(output, row.names=FALSE, col.names=FALSE, quote=F)
   write(t(output), paste(x,".tsv",sep=""), ncolumns=ncol(output), sep="\t")
   #write.table(x, f, na = "",col.names = colnames(x),row.names = rownames(x),append = F,sep = "\t")
   options(warn = 0)
@@ -271,7 +271,7 @@ plotCohenetic=function(t, d,cah){
 # k: number of clusters
 # c: hierarchical classification
 getBetween = function(t, k, c=NULL, d=NULL) {
-  if (t == 2) getCNH(t, d, k)$betweenss
+  if (t == 2) return (getCNH(t, d, k)$betweenss)
   # get a vector of heights for the k first groups
   # sum of squares of the vector (height is a distanc, an inertia is dist^2)
   # begin to 2 clusters for CAH
@@ -453,8 +453,8 @@ plotDendrogram = function(c, k){
   setGraphicBasic()
   par(mar=c(2,5,5,1))
   #D^2 to have inertia instead of distance
-  #c = getCAH(d^2, t)
-  plot(c, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), hang=-1, sub="", ylab="Within-group inertia", main="Dendrogram", axes=F)
+  #c$height=c$height^2
+  plot(c, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), hang=-1, sub="", ylab="Between-cluster distance", main="Dendrogram", axes=F)
   printAxis(2, 0, max(c$height))
   #projection of the clusters
   rect.hclust(c, k=as.numeric(k), border=colPers(k))
@@ -647,8 +647,10 @@ optimal_nb_clusters = plotSilhouettePerPart(typeClassif, max_cluster + 1, classi
 if(!is.null(nb_clusters)) optimal_nb_clusters = nb_clusters
 sil = getSilhouette(typeClassif, optimal_nb_clusters, classif, data)
 plotSilhouette(sil)
-summary = printSummary(typeClassif, max_cluster, classif, data)
-writeTsv("summary")
+if(typeClassif > 1){ 
+  summary = printSummary(typeClassif, max_cluster, classif, data)
+  writeTsv("summary")
+}
 
 #Global variables settings
 dis = getDistance(data, typeClassif, optimal_nb_clusters)
