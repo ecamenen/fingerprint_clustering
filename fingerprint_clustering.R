@@ -7,8 +7,8 @@ getArgs = function(){
                 help="Fingerprint file name [default: %default]"),
     make_option(c("-m", "--maxCluster"), type="integer", default=6, metavar="integer",
                 help="Maximum number of clusters [default: %default]"),
-    make_option(c("-t", "--typeClassif"), type="integer", default=2, metavar="integer",
-                help="Type of classifation [default: %default] (1: K-menoids; 2: K-means; 3: Ward; 4: Complete link; 5: UPGMA; 6: WPGMA"),
+    make_option(c("-t", "--typeClassif"), type="integer", default=4, metavar="integer",
+                help="Type of classifation [default: Complete links] (1: K-menoids; 2: K-means; 3: Ward; 4: Complete links; 5: UPGMA; 6: WPGMA"),
     make_option(c("-adv", "--advanced"), type="logical", action="store_true", 
                 help="Activate advanced mode (print more outputs)"),
     make_option(c("-q", "--quiet"), type="logical", action="store_true",
@@ -163,16 +163,21 @@ getCAH = function(d, t){
   if(t>2){
     #dis: distance matrix
     dis = dist(d, method = "euclidian")
-    if (t==3) meth="ward.D2"
-    else if (t==4) meth="complete"
-    else if (t==5) meth="average"
-    else if (t==6) meth="mcquitty"
     #cah: classification hierarchic ascending
-    cah = hclust(dis, method=meth)
+    cah = hclust(dis, method=getTypeClassif(t))
   #automaticly ordering by clusters
   return (reorder.hclust(cah, d))
   }
   #TODO: exit if 0 < t < 6
+}
+
+#Inputs:
+# t: number of type of classification
+getTypeClassif = function(t){
+  if (t==3) "ward.D2"
+  else if (t==4) "complete"
+  else if (t==5) "average"
+  else if (t==6) "mcquitty"
 }
 
 #Inputs: 
@@ -617,7 +622,7 @@ getRho2 = function(t, k, c, d) {
 set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
 
 #Loading librairies
-librairies = c("cluster", "optparse", "gclus", "ade4", "scales")
+librairies = c("cluster", "optparse", "gclus", "ade4", "scales", "gplots")
 for (l in librairies){
   if (! (l %in% installed.packages()[,"Package"])) install.packages(l, repos = "http://cran.us.r-project.org")
   library(l, character.only = TRUE)
@@ -664,7 +669,6 @@ dis = getDistance(data, typeClassif, optimal_nb_clusters)
 clusters = getClusters(typeClassif, optimal_nb_clusters, classif, data)
 
 #Plots
-heatMap(dis, sil, TRUE)
 if(typeClassif > 2) plotDendrogram(typeClassif, optimal_nb_clusters, classif, data)
 plotPca(typeClassif, optimal_nb_clusters, classif, data)
 
@@ -677,6 +681,35 @@ if (advanced == TRUE){
   
   for (i in c("contribution", "discriminant_power", "excentricity"))
     writeTsv(i)
+  
+
+}
+if(typeClassif <= 2 | advanced == TRUE){
+  heatMap(dis, sil, TRUE)
+}else{
+  pdf("heat_map.pdf")
+  heatmap.2(as.matrix(data),
+            distfun = function(x) dist(x,method = 'euclidean'),
+            hclustfun = function(x) hclust(x,method = getTypeClassif(typeClassif)),
+            #density.info="none",
+            trace="none",
+            #lhei = c(0.05,0.95),
+            cexRow=0.6,
+            cexCol=0.6,
+            key=TRUE,
+            key.xlab="Distance",
+            key.ylab="",
+            #keysize=1,
+            key.title="",
+            margins=c(6,8),
+            revC=TRUE,
+            srtCol=45,
+            symm=TRUE,
+            dendrogram="row",
+            #col=heat.colors(1000)
+            )
+  title(main="Distance matrix\n ordered by CAH's distances", cex.main=1.7, line=-1)
+  suprLog = dev.off()
 }
 
 #Final outputs
