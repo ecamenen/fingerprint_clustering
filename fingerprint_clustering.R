@@ -7,7 +7,7 @@ getArgs = function(){
                 help="Fingerprint file name [default: %default]"),
     make_option(c("-m", "--maxCluster"), type="integer", default=6, metavar="integer",
                 help="Maximum number of clusters [default: %default]"),
-    make_option(c("-t", "--typeClassif"), type="integer", default=4, metavar="integer",
+    make_option(c("-t", "--classif_type"), type="integer", default=4, metavar="integer",
                 help="Type of classifation [default: Complete links] (1: K-menoids; 2: K-means; 3: Ward; 4: Complete links; 5: UPGMA; 6: WPGMA"),
     make_option(c("-adv", "--advanced"), type="logical", action="store_true", 
                 help="Activate advanced mode (print more outputs)"),
@@ -38,9 +38,9 @@ checkArg = function(a){
   checkMinCluster("maxCluster"," [by default: 6]")
   if(!is.null(opt$nbCluster)) checkMinCluster("nbCluster")
   
-  if ((opt$typeClassif < 1) || (opt$typeClassif > 6)){
+  if ((opt$classif_type < 1) || (opt$classif_type > 6)){
     print_help(a)
-    stop("--typeClassif must be comprise between 1 and 6 [by default: 2].\n", call.=FALSE)
+    stop("--classif_type must be comprise between 1 and 6 [by default: 2].\n", call.=FALSE)
   }
   
   checkFile = function (o){
@@ -96,12 +96,12 @@ getDistance = function(d, t, k=NULL){
 #Prints the matrix, save the matrix
 writeTsv = function(x, h=TRUE){
   #print on stdout
-  if (v==T) cat(paste("\n", gsub("_", " ", toupper(x)), ":", sep=""))
+  if (isTRUE(verbose)) cat(paste("\n", gsub("_", " ", toupper(x)), ":", sep=""))
   #disabling warning
   options(warn = -1)
   #get variable
   tab = get(x)
-  if(h==TRUE) output=as.matrix(rbind(c("", colnames(tab)), cbind(rownames(tab),tab)))
+  if(isTRUE(h)) output=as.matrix(rbind(c("", colnames(tab)), cbind(rownames(tab),tab)))
   else output = tab
   #discard empty rows
   output = output[rowSums(is.na(output)) != ncol(output),]
@@ -109,7 +109,7 @@ writeTsv = function(x, h=TRUE){
   #output = output[,colSums(is.na(output)) != nrow(output)]
   output[is.na(output)] = ""
   colnames(output)=rep("", ncol(output)); rownames(output)=rep("", nrow(output))
-  if (v==T)  print(output, row.names=FALSE, col.names=FALSE, quote=F)
+  if (isTRUE(verbose))  print(output, row.names=FALSE, col.names=FALSE, quote=F)
   write(t(output), paste(x,".tsv",sep=""), ncolumns=ncol(output), sep="\t")
   #write.table(x, f, na = "",col.names = colnames(x),row.names = rownames(x),append = F,sep = "\t")
   options(warn = 0)
@@ -142,7 +142,7 @@ printBestClustering = function(sub_title, values, values_type, optimal_nb_cluste
   abline(v=optimal_nb_clusters, col="red", lty=2, lwd=2)
   points(optimal_nb_clusters, max(values), pch=19, col="red", cex=2)
   text(y=values, x=2:max_cluster, labels=round(values,2), cex=1.2, pos=4, col="red")
-  if (v==T) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a", values_type, " of ", round(max(values),2), "\n", sep="")
+  if (isTRUE(verbose)) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a", values_type, " of ", round(max(values),2), "\n", sep="")
 }
 
 #f: filename
@@ -164,16 +164,15 @@ getCAH = function(d, t){
     #dis: distance matrix
     dis = dist(d, method = "euclidian")
     #cah: classification hierarchic ascending
-    cah = hclust(dis, method=getTypeClassif(t))
+    cah = hclust(dis, method=getclassif_type(t))
   #automaticly ordering by clusters
   return (reorder.hclust(cah, d))
   }
-  #TODO: exit if 0 < t < 6
 }
 
 #Inputs:
 # t: number of type of classification
-getTypeClassif = function(t){
+getclassif_type = function(t){
   if (t==3) "ward.D2"
   else if (t==4) "complete"
   else if (t==5) "average"
@@ -260,7 +259,7 @@ plotCohenetic=function(t, d,cah){
   dis = getDistance(d, t)
   coph_matrix = cophenetic(cah)
   cor_coph = cor(dis, coph_matrix)
-  if (v==T) cat(paste("\nCOPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation with the data:",round(cor_coph,3),"\n"))
+  if (isTRUE(verbose)) cat(paste("\nCOPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation with the data:",round(cor_coph,3),"\n"))
   #x11()
   savePdf("shepard_graph.pdf")
   plot(dis, coph_matrix, pch=19, col=alpha("red",0.2), axes=F, xlim=c(0,max(dis)), ylim=c(0,max(coph_matrix)), xlab="Distance between metabolites",ylab="Cophenetic distance", asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
@@ -324,7 +323,7 @@ getBetweenDifferences = function(t, n, c=NULL, d=NULL){
 
 # Between inertia differences between a partionning and the previous
 plotFusionLevels = function(t, n, c=NULL, d=NULL) {
-  if (v==T) cat("\nBETWEEN DIFFERENCES:\n")
+  if (isTRUE(verbose)) cat("\nBETWEEN DIFFERENCES:\n")
   between_diff = getBetweenDifferences(t, n, c, d)
   
   #x11()
@@ -355,11 +354,11 @@ getSilhouettePerPart =function(t, n, c=NULL, d=NULL){
     mean_silhouette[k] = summary(si)$avg.width
   }
   return(mean_silhouette[-1])
-}
+}l
 
 # Plot the best average silhouette width for all clustering possible
 plotSilhouettePerPart = function(t, n, c=NULL, d=NULL){
-  if (v==T) cat("\nSILHOUETTE:\n")
+  if (isTRUE(verbose)) cat("\nSILHOUETTE:\n")
   mean_silhouette = getSilhouettePerPart(t, n, c, d)
   
   #x11()
@@ -397,58 +396,81 @@ printSummary = function(t, n, c=NULL, d=NULL){
 ################################
 
 #Inputs:
-# s: an organised silhouette object
-printRect = function (s){
+# cl_size: vector of size for each clusters
+printRect = function (cl_sizes){
   # size of each clusters
-  cl_sizes = summary(s)$clus.sizes
-  tempSize = 0
+  temp_size = 0
   #vector of color: one by cluster
   colors = colPers(length(cl_sizes))
   for (i in 1:length(cl_sizes)){
     #y begin at the top, so sum(cl_sizes) must be substracted to y coord.
     #rect(xleft, ybottom, xright, ytop)
     # +0.5 because x, y coord are shifted to 0.5 comparativly to plotcolors functions
-    rect(tempSize + 0.5, sum(cl_sizes) -tempSize -cl_sizes[i] +0.5, cl_sizes[i] +tempSize +0.5, sum(cl_sizes) -tempSize +0.5, border = colors[i], lwd=3)
+    rect(temp_size + 0.5, sum(cl_sizes) -temp_size -cl_sizes[i] +0.5, cl_sizes[i] +temp_size +0.5, sum(cl_sizes) -temp_size +0.5, border = colors[i], lwd=3)
     #memorize the size of the cluster (for a bottom-right shift)
-    tempSize = cl_sizes[i]
+    temp_size = cl_sizes[i]
   }
+}
+
+#Outputs:
+# lenght of clusters ordered by the clusters order
+getOrderedClusterSize = function(cl){
+  nb_cl = length(levels(as.factor(cl)))
+  size_cl = rep(0, nb_cl)
+  temp_cl = rep(0, length(cl))
+  j = 0
+  
+  for (i in 1:length(cl)) {
+    if (!cl[i] %in% temp_cl) j = j+1
+    size_cl[j] = size_cl[j] + 1
+    temp_cl[i] = cl[i]
+  }
+  return (size_cl)
 }
 
 #Inputs:
 # d: a distance object
 # s: an organised silhouette object
-heatMap = function(d, s, text=FALSE){
-  #x11()
-  pdf("heat_map.pdf")
-  options(warn = -1)
+# c: CAH
+heatMap = function(d, s=NULL, c=NULL, text=FALSE){
+  
+  if(!is.null(s)){
+    order = attr(s,"iOrd")
+    cl_sizes = summary(s)$clus.size
+    title = "silhouette\'s scores"
+  }else{
+    order = c$order
+    cl_sizes = getOrderedClusterSize(cl[c$order])
+    title="CAH\'s distances"
+  }
+
   matrix=as.matrix(d)
-  matrix=matrix[attr(s,"iOrd"),attr(s,"iOrd")]
-  rownames(matrix) = rownames(data)[attr(s,"iOrd")]
-  labels = attr(d, "Labels")[attr(s,"iOrd")]
+  matrix=matrix[order, order]
+  rownames(matrix) <- rownames(d)[order] -> labels
   #if(tri == TRUE) matrix[!lower.tri(matrix)] = NA
   #image(1:ncol(matrix), 1:ncol(matrix), t(matrix), axes=F, xlab="", ylab="")
 
-  par(mar=c(1, 8, 8, 1))
+  options(warn = -1)
+  #x11()
+  pdf("heat_map.pdf")
+  
   par(fig=c(0,0.9,0,1), new=TRUE)
+  par(mar=c(1, 8, 8, 1))
   plotcolors(dmat.color(matrix, colors=heat.colors(1000),byrank = FALSE), ptype="image", na.color="red", rlabels=FALSE, clabels=FALSE, border=0)
-  
-  mtext('Distance matrix ordered by silhouette\'s scores', 3, line=6, font=4, cex=1.5)
-  
+  mtext(paste('Distance matrix ordered by', title), 3, line=6, font=4, cex=1.5)
   text(-0.5, 0:(ncol(matrix)-1)+1, rev(labels), xpd=NA, adj=1, cex=0.7)
   text(0.5:(ncol(matrix)-0.5), ncol(matrix)+1, substr(labels, 0, 20), xpd=NA, cex=0.7, srt=65, pos=4)
-  printRect(s)
-  
-  if (text==TRUE)   text(expand.grid(1:ncol(matrix), ncol(matrix):1), sprintf("%d", matrix), cex=0.4)
-  #axis(2, 1:ncol(matrix), labels, cex.axis = 0.5, las=1, tck=0, lwd=-1, font.axis=3)
-  #axis(3, 1:ncol(matrix), labels, cex.axis = 0.5, las=1, tck=0, lwd=-1, font.axis=3)
-  
-  par(mar=c(5, 0, 4, 0) + 0.1)
+  printRect(cl_sizes)
+  if (isTRUE(text))   text(expand.grid(1:ncol(matrix), ncol(matrix):1), sprintf("%d", matrix), cex=0.4)
+
   par(fig=c(0.85,1,0.3,0.8),new=TRUE)
+  par(mar=c(5, 0, 4, 0) + 0.1)
   legend_image = as.raster(matrix(heat.colors(1000), ncol=1))
   plot(c(0,1),c(0,1),type = 'n', axes = F,xlab = '', ylab = '', main = '')
   rasterImage(legend_image, 0.4, 0, 0.5, 1)
   mtext('   Distance', 3, line=0.5, cex=0.85, font=2)
   text(x=0.5, y = seq(0,1,l=3), labels = round(seq(max(matrix),0,l=3)),cex=0.7,pos=4)
+  
   options(warn = 0)
   suprLog = dev.off()
 }
@@ -636,82 +658,59 @@ opt = parse_args(args)
 #Global variables settings
 nb_clusters = opt$nbCluster
 max_cluster = opt$maxCluster
-typeClassif = opt$typeClassif
+classif_type = opt$classif_type
 advanced = "advanced" %in% names(opt)
-v = !("quiet" %in% names(opt))
+verbose= !("quiet" %in% names(opt))
 ranked = !("ranked" %in% names(opt))
 if (!is.null(opt$workdir)) setwd(opt$workdir)
 #to work under Rstudio
-#setwd("~/bin/fingerprint_clustering/")
+setwd("~/bin/fingerprint_clustering/")
 
 #Loading data
-data = read.table(opt$infile, header=F, sep="\t", dec=".", row.names=1)
+data = read.table("matrix.txt", header=F, sep="\t", dec=".", row.names=1)
 colnames(data) <- substr(rownames(data), 1, 25) -> rownames(data)
 postChecking(args, data)
 
 #Perform classification
-classif = getCAH(data, typeClassif)
-if(typeClassif>2) plotCohenetic(typeClassif, data, classif)
-if(typeClassif>1) plotFusionLevels(typeClassif, max_cluster, classif, data)
+classif = getCAH(data, classif_type)
+if(classif_type>2) plotCohenetic(classif_type, data, classif)
+if(classif_type>1) plotFusionLevels(classif_type, max_cluster, classif, data)
 
 #Silhouette analysis
-optimal_nb_clusters = plotSilhouettePerPart(typeClassif, max_cluster + 1, classif, data)
+optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
 if(!is.null(nb_clusters)) optimal_nb_clusters = nb_clusters
-sil = getSilhouette(typeClassif, optimal_nb_clusters, classif, data)
+sil = getSilhouette(classif_type, optimal_nb_clusters, classif, data)
 plotSilhouette(sil)
-if(typeClassif > 1){ 
-  summary = round(printSummary(typeClassif, max_cluster, classif, data),2)
+if(classif_type > 1){ 
+  summary = round(printSummary(classif_type, max_cluster, classif, data),2)
   writeTsv("summary")
 }
 
 #Global variables settings
-dis = getDistance(data, typeClassif, optimal_nb_clusters)
-clusters = getClusters(typeClassif, optimal_nb_clusters, classif, data)
+dis = getDistance(data, classif_type, optimal_nb_clusters)
+clusters = getClusters(classif_type, optimal_nb_clusters, classif, data)
 
 #Plots
-if(typeClassif > 2) plotDendrogram(typeClassif, optimal_nb_clusters, classif, data)
-plotPca(typeClassif, optimal_nb_clusters, classif, data)
+if(classif_type > 2) plotDendrogram(classif_type, optimal_nb_clusters, classif, data)
+plotPca(classif_type, optimal_nb_clusters, classif, data)
 
 #Advanced indexes
 if (advanced == TRUE){
   
-  contribution = round(1000 * getCtrVar(typeClassif, optimal_nb_clusters, classif, data) / 10)
-  discriminant_power = getIndexPerPartition(typeClassif, max_cluster, classif, data, "pdis")
-  excentricity = getIndexPerPartition(typeClassif, max_cluster, classif, data, "rho2")
+  contribution = round(1000 * getCtrVar(classif_type, optimal_nb_clusters, classif, data) / 10)
+  discriminant_power = getIndexPerPartition(classif_type, max_cluster, classif, data, "pdis")
   
-  for (i in c("contribution", "discriminant_power", "excentricity"))
+  for (i in c("contribution", "discriminant_power"))
     writeTsv(i)
   
 
 }
-if(typeClassif <= 2 | advanced == TRUE){
-  heatMap(dis, sil, TRUE)
+if(classif_type >= 2 | advanced == TRUE){
+  heatMap(data, sil, text=TRUE)
 }else{
-  pdf("heat_map.pdf")
-  heatmap.2(as.matrix(data),
-            distfun = function(x) dist(x,method = 'euclidean'),
-            hclustfun = function(x) hclust(x,method = getTypeClassif(typeClassif)),
-            #density.info="none",
-            trace="none",
-            #lhei = c(0.05,0.95),
-            cexRow=0.6,
-            cexCol=0.6,
-            key=TRUE,
-            key.xlab="Distance",
-            key.ylab="",
-            #keysize=1,
-            key.title="",
-            margins=c(6,8),
-            revC=TRUE,
-            srtCol=45,
-            symm=TRUE,
-            dendrogram="row",
-            #col=heat.colors(1000)
-            )
-  title(main="Distance matrix\n ordered by CAH's distances", cex.main=1.7, line=-1)
-  suprLog = dev.off()
+  heatMap(data, c=classif, text=TRUE)
 }
 
 #Final outputs
 writeClusters(clusters, ranked)
-if (v != T) cat(paste("Clustering done.\nOptimal number of clusters choosen:", optimal_nb_clusters,"\n"))
+if (!isTRUE(verbose)) cat(paste("Clustering done.\nOptimal number of clusters choosen:", optimal_nb_clusters,"\n"))
