@@ -395,6 +395,7 @@ printSummary = function(t, n, c=NULL, d=NULL){
 #          HEATMAP
 ################################
 
+
 #Inputs:
 # cl_size: vector of size for each clusters
 printRect = function (cl_sizes){
@@ -408,9 +409,12 @@ printRect = function (cl_sizes){
     # +0.5 because x, y coord are shifted to 0.5 comparativly to plotcolors functions
     rect(temp_size + 0.5, sum(cl_sizes) -temp_size -cl_sizes[i] +0.5, cl_sizes[i] +temp_size +0.5, sum(cl_sizes) -temp_size +0.5, border = colors[i], lwd=3)
     #memorize the size of the cluster (for a bottom-right shift)
-    temp_size = cl_sizes[i]
+    temp_size = temp_size + cl_sizes[i]
   }
 }
+
+#plotcolors(dmat.color(matrix, colors=heat.colors(1000),byrank = FALSE), ptype="image", na.color="red", rlabels=FALSE, clabels=FALSE, border=0)
+
 
 #Outputs:
 # lenght of clusters ordered by the clusters order
@@ -584,56 +588,19 @@ getPdis = function(t, k, c, d) {
 # c: hierarchical classification
 # d: data
 # index: pdis or rho2 calculation
-getIndexPerPartition = function(t, n, c, d, index){
-  
-  if (index == "pdis") nb_col = ncol(d)
-  else nb_col = n
-  index_per_partition = matrix(NA, n-1, nb_col)
-  rownames(index_per_partition) = seq(2, n)
+getPdisPerPartition = function(t, n, c, d){
+
+  pdis_per_partition = matrix(NA, n-1, ncol(d))
+  rownames(pdis_per_partition) = seq(2, n)
   
   for (k in 2:n){
-    if (index == "pdis"){
-      colnames(index_per_partition) = colnames(d)
+      colnames(pdis_per_partition) = colnames(d)
       res = getPdis(t, k, c, d)
-    }else{
-      colnames(index_per_partition) = paste("G", seq(1, n), sep="")
-      res = getRho2(t, k, c, d)
-    }
     for(i in 1:length(res)){
-      index_per_partition[k-1, i] = round(res[i], 2)
+      pdis_per_partition[k-1, i] = round(res[i], 2)
     }
   }
-  return (index_per_partition)
-}
-
-#########################################
-#            Excentricity (RHO2)
-#########################################
-
-# Distance**2 of each cluster from the data center (RHO2)
-# Rho=0, a cluster close to the center
-# Rho= infinity, a cluster far from the center
-# Inputs: 
-# t: number of type of classification
-# k: number of clusters
-# c: hierarchical classification
-# d: data
-getRho2 = function(t, k, c, d) {
-  
-  cl = getClusters(t, k, c, d)
-  nb_cl = length(levels(as.factor(cl)))
-  nb_met = length(cl)
-  ctr = getBetweenPerVariable(d, cl)
-  
-  for (i in 1:k)
-    #each metabolites is weighted by the total number of metabolites in each clusters
-    for (j in 1:nb_met) ctr[i,j] = ctr[i,j]/length(cl[cl==i])
-  
-  #sum of row ^2 (a row =  a cluster)
-  rho2 = vector(mode="numeric", k)
-  for (i in 1:k) rho2[i] = sum(ctr[i,]^2)
-  
-  return(rho2)
+  return (pdis_per_partition)
 }
 
 ################################
@@ -691,20 +658,18 @@ if(classif_type > 1){
 dis = getDistance(data, classif_type, optimal_nb_clusters)
 clusters = getClusters(classif_type, optimal_nb_clusters, classif, data)
 
-#Plots
-if(classif_type > 2) plotDendrogram(classif_type, optimal_nb_clusters, classif, data)
-plotPca(classif_type, optimal_nb_clusters, classif, data)
-
 #Advanced indexes
-if (advanced == TRUE){
+if (isTRUE(advanced)){
   contribution = round(1000 * getCtrVar(classif_type, optimal_nb_clusters, classif, data) / 10)
-  discriminant_power = getIndexPerPartition(classif_type, max_cluster, classif, data, "pdis")
+  discriminant_power = getPdisPerPartition(classif_type, max_cluster, classif, data)
   
   for (i in c("contribution", "discriminant_power"))
     writeTsv(i)
 }
 
-
+#Plots
+if(classif_type > 2) plotDendrogram(classif_type, optimal_nb_clusters, classif, data)
+plotPca(classif_type, optimal_nb_clusters, classif, data)
 if(classif_type <= 2 | isTRUE(advanced)){
   heatMap(data, sil, text=TRUE)
 }else{
