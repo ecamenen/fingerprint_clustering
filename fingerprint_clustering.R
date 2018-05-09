@@ -354,7 +354,7 @@ getSilhouettePerPart =function(t, n, c=NULL, d=NULL){
     mean_silhouette[k] = summary(si)$avg.width
   }
   return(mean_silhouette[-1])
-}l
+}
 
 # Plot the best average silhouette width for all clustering possible
 plotSilhouettePerPart = function(t, n, c=NULL, d=NULL){
@@ -415,7 +415,7 @@ printRect = function (cl_sizes){
 #Outputs:
 # lenght of clusters ordered by the clusters order
 getOrderedClusterSize = function(cl){
-  nb_cl = length(levels(as.factor(cl)))
+  nb_cl =  length(levels(as.factor(cl))) 
   size_cl = rep(0, nb_cl)
   temp_cl = rep(0, length(cl))
   j = 0
@@ -432,7 +432,8 @@ getOrderedClusterSize = function(cl){
 # d: a distance object
 # s: an organised silhouette object
 # c: CAH
-heatMap = function(d, s=NULL, c=NULL, text=FALSE){
+# c: clusters from CAH
+heatMap = function(d, s=NULL, c=NULL, cl=NULL, text=FALSE){
   
   if(!is.null(s)){
     order = attr(s,"iOrd")
@@ -440,7 +441,7 @@ heatMap = function(d, s=NULL, c=NULL, text=FALSE){
     title = "silhouette\'s scores"
   }else{
     order = c$order
-    cl_sizes = getOrderedClusterSize(cl[c$order])
+    cl_sizes = getOrderedClusterSize(cl[order])
     title="CAH\'s distances"
   }
 
@@ -461,7 +462,7 @@ heatMap = function(d, s=NULL, c=NULL, text=FALSE){
   text(-0.5, 0:(ncol(matrix)-1)+1, rev(labels), xpd=NA, adj=1, cex=0.7)
   text(0.5:(ncol(matrix)-0.5), ncol(matrix)+1, substr(labels, 0, 20), xpd=NA, cex=0.7, srt=65, pos=4)
   printRect(cl_sizes)
-  if (isTRUE(text))   text(expand.grid(1:ncol(matrix), ncol(matrix):1), sprintf("%d", matrix), cex=0.4)
+  if (isTRUE(text)) text(expand.grid(1:ncol(matrix), ncol(matrix):1), sprintf("%d", matrix), cex=0.4)
 
   par(fig=c(0.85,1,0.3,0.8),new=TRUE)
   par(mar=c(5, 0, 4, 0) + 0.1)
@@ -644,7 +645,7 @@ getRho2 = function(t, k, c, d) {
 set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
 
 #Loading librairies
-librairies = c("cluster", "optparse", "gclus", "ade4", "scales", "gplots")
+librairies = c("cluster", "optparse", "gclus", "ade4", "scales")
 for (l in librairies){
   if (! (l %in% installed.packages()[,"Package"])) install.packages(l, repos = "http://cran.us.r-project.org")
   library(l, character.only = TRUE)
@@ -667,7 +668,7 @@ if (!is.null(opt$workdir)) setwd(opt$workdir)
 setwd("~/bin/fingerprint_clustering/")
 
 #Loading data
-data = read.table("matrix.txt", header=F, sep="\t", dec=".", row.names=1)
+data = read.table(opt$infile, header=F, sep="\t", dec=".", row.names=1)
 colnames(data) <- substr(rownames(data), 1, 25) -> rownames(data)
 postChecking(args, data)
 
@@ -696,19 +697,18 @@ plotPca(classif_type, optimal_nb_clusters, classif, data)
 
 #Advanced indexes
 if (advanced == TRUE){
-  
   contribution = round(1000 * getCtrVar(classif_type, optimal_nb_clusters, classif, data) / 10)
   discriminant_power = getIndexPerPartition(classif_type, max_cluster, classif, data, "pdis")
   
   for (i in c("contribution", "discriminant_power"))
     writeTsv(i)
-  
-
 }
-if(classif_type >= 2 | advanced == TRUE){
+
+
+if(classif_type <= 2 | isTRUE(advanced)){
   heatMap(data, sil, text=TRUE)
 }else{
-  heatMap(data, c=classif, text=TRUE)
+  heatMap(data, c=classif, cl=clusters, text=TRUE)
 }
 
 #Final outputs
