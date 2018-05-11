@@ -94,14 +94,14 @@ getDistance = function(d, t, k=NULL){
 #Inputs: x : a matrix
 #filename of the saved file
 #Prints the matrix, save the matrix
-writeTsv = function(x, h=TRUE){
+writeTsv = function(x, cl=TRUE){
   #print on stdout
   if (isTRUE(verbose)) cat(paste("\n", gsub("_", " ", toupper(x)), ":", sep=""))
   #disabling warning
   options(warn = -1)
   #get variable
   tab = get(x)
-  if(isTRUE(h)) output=as.matrix(rbind(c("", colnames(tab)), cbind(rownames(tab),tab)))
+  if(isTRUE(cl)) output=as.matrix(rbind(c("", colnames(tab)), cbind(rownames(tab),tab)))
   else output = tab
   #discard empty rows
   output = output[rowSums(is.na(output)) != ncol(output),]
@@ -109,7 +109,16 @@ writeTsv = function(x, h=TRUE){
   #output = output[,colSums(is.na(output)) != nrow(output)]
   output[is.na(output)] = ""
   colnames(output)=rep("", ncol(output)); rownames(output)=rep("", nrow(output))
-  if (isTRUE(verbose))  print(output, row.names=FALSE, col.names=FALSE, quote=F)
+  if (isTRUE(verbose)){
+    if (isTRUE(cl)){
+    printed = round(apply(output[-1,-1],2,as.numeric),2)
+    rownames(printed) = rownames(tab)
+    colnames(printed) = colnames(tab)
+    }else{
+      printed = output
+    }
+    print(printed, quote=F)
+  }
   write(t(output), paste(x,".tsv",sep=""), ncolumns=ncol(output), sep="\t")
   #write.table(x, f, na = "",col.names = colnames(x),row.names = rownames(x),append = F,sep = "\t")
   options(warn = 0)
@@ -244,7 +253,7 @@ writeClusters = function(cl, r=FALSE){
   #dirty way to force saving a local variable
   # (because writeTsv use only global variables)
   assign("clusters", clusters,.GlobalEnv)
-  writeTsv("clusters", h=FALSE)
+  writeTsv("clusters", F)
 }
 
 ############################################################
@@ -313,7 +322,7 @@ getRelativeBetweenPerPart = function(t, n, c=NULL, d=NULL){
 }
 
 getBetweenDifferences = function(t, n, c=NULL, d=NULL){
-  between = round(getRelativeBetweenPerPart(t, n, c, d),2)
+  between = getRelativeBetweenPerPart(t, n, c, d)
   diff = rep(0,length(between))
   #The difference between a uniq cluster and 2 is by default, the first inertia value
   diff[1] = between[1]
@@ -365,7 +374,7 @@ plotSilhouettePerPart = function(t, n, c=NULL, d=NULL){
   savePdf("average_silhouettes.pdf")
   optimal_nb_clusters = which.max(mean_silhouette)+1
   plot(2:(n-1), mean_silhouette, type="b", xlim=c(2,n), ylim=c(0,max(mean_silhouette)+0.1), col="grey", xlab="Nb. of clusters", ylab="Average silhouette width", axes=F)
-  printBestClustering("Silhouette method", mean_silhouette,"n average silhouette width", optimal_nb_clusters, 0.1)
+  printBestClustering("Silhouette method", mean_silhouette,"n average width", optimal_nb_clusters, 0.1)
   suprLog = dev.off()
   return (optimal_nb_clusters)
 }
@@ -650,7 +659,7 @@ if(!is.null(nb_clusters)) optimal_nb_clusters = nb_clusters
 sil = getSilhouette(classif_type, optimal_nb_clusters, classif, data)
 plotSilhouette(sil)
 if(classif_type > 1){ 
-  summary = round(printSummary(classif_type, max_cluster, classif, data),2)
+  summary = printSummary(classif_type, max_cluster, classif, data)
   writeTsv("summary")
 }
 
