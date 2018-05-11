@@ -483,13 +483,13 @@ plotDendrogram = function(t, k, c, d, adv=FALSE){
   #having relative inertia instead of raw cophenetic distance
   #rev() beacause in cah function, the vector is inversed
   if (isTRUE(adv)){
-    c$height = rev(getBetweenDifferences(t, nrow(d), c, d))
+    c$height = rev(classif$height^2/sum(classif$height^2)*100)
     subtitle =  "Relative inertia (%)"
   }else{
     subtitle =  "Cophenetic distance"
   }
   
-  plot(c, hang=-1, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), sub="", cex=0.8, font=3, ylab="Between-cluster differences", main="Dendrogram", axes=F)
+  plot(c, hang=-1, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), sub="", cex=0.8, font=3, ylab="Within-cluster differences", main="Dendrogram", axes=F)
   par(new=TRUE);mtext(text=subtitle, font=3, cex=1.2, line = 0)
   #text(-0.5, 0:(ncol(matrix)-1)+1, rev(labels), xpd=NA, adj=1, cex=0.7)
   printAxis(2, 0, max(c$height))
