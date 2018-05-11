@@ -475,15 +475,22 @@ heatMap = function(d, s=NULL, c=NULL, cl=NULL, text=FALSE){
 
 # Inputs:
 # k: number of clusters
-plotDendrogram = function(t, k, c, d, i=FALSE){
+plotDendrogram = function(t, k, c, d, adv=FALSE){
 
   pdf("dendrogram.pdf")
   setGraphicBasic()
   par(mar=c(2,5,5,1))
   #having relative inertia instead of raw cophenetic distance
   #rev() beacause in cah function, the vector is inversed
-  if (isTRUE(i)) c$height = rev(getBetweenDifferences(t, nrow(d), c, d))
-  plot(c, hang=-1, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), sub="", cex=0.8, font=3, ylab="Between-cluster differences (%)", main="Dendrogram", axes=F)
+  if (isTRUE(adv)){
+    c$height = rev(getBetweenDifferences(t, nrow(d), c, d))
+    subtitle =  "Relative inertia (%)"
+  }else{
+    subtitle =  "Cophenetic distance"
+  }
+  
+  plot(c, hang=-1, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), sub="", cex=0.8, font=3, ylab="Between-cluster differences", main="Dendrogram", axes=F)
+  par(new=TRUE);mtext(text=subtitle, font=3, cex=1.2, line = 0)
   #text(-0.5, 0:(ncol(matrix)-1)+1, rev(labels), xpd=NA, adj=1, cex=0.7)
   printAxis(2, 0, max(c$height))
   #projection of the clusters
@@ -656,7 +663,7 @@ if (isTRUE(advanced)){
 }
 
 #Plots
-if(classif_type > 2) plotDendrogram(classif_type, optimal_nb_clusters, classif, data, T)
+if(classif_type > 2) plotDendrogram(classif_type, optimal_nb_clusters, classif, data, advanced)
 plotPca(classif_type, optimal_nb_clusters, classif, data)
 if(classif_type <= 2 | isTRUE(advanced)){
   heatMap(data, sil, text=T)
