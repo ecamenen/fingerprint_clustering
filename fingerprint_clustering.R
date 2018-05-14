@@ -83,7 +83,7 @@ colPers = colorRampPalette(c(rgb(0.6,0.1,0.5,1), rgb(1,0,0,1), rgb(0.9,0.6,0,1),
 scalecenter = function(d) {
   #output scale function: for each column, mean=0, sd=1
   return(scale(d) * sqrt(nrow(d)/(nrow(d)-1)))
-  # ponderation for sampling index
+  # ponderation for sampling index (var use n-1)
   # without this constante, for advanced outputs, total (max_cluster=nrow(data)) will be different from 1
 }
 
@@ -326,7 +326,7 @@ plotFusionLevels = function(t, n, c=NULL, d=NULL) {
   optimal_nb_clusters = which.max(between_diff)+1
   savePdf("fusion_levels.pdf")
   plot(2:n, between_diff, type="b", ylim=c(round(min(between_diff))-1,round(max(between_diff))+1), xlim=c(2,n+1), xlab="Nb. of clusters", ylab="Between-cluster differences (%)", col="grey", axes=F)
-  printBestClustering("Inertia gap method", between_diff, " difference with the previous partitionning (%)", optimal_nb_clusters)
+  printBestClustering("Inertia differences method", between_diff, " difference with the previous partitionning (%)", optimal_nb_clusters)
   suprLog = dev.off()
 }
 
@@ -483,7 +483,7 @@ plotDendrogram = function(t, k, c, d, adv=FALSE){
   #having relative inertia instead of raw cophenetic distance
   #rev() beacause in cah function, the vector is inversed
   if (isTRUE(adv)){
-    c$height = rev(classif$height^2/sum(classif$height^2)*100)
+    c$height = classif$height/sum(classif$height)*100
     subtitle =  "Relative inertia (%)"
   }else{
     subtitle =  "Cophenetic distance"
@@ -628,7 +628,7 @@ verbose= !("quiet" %in% names(opt))
 ranked = !("ranked" %in% names(opt))
 if (!is.null(opt$workdir)) setwd(opt$workdir)
 #to work under Rstudio
-setwd("~/bin/fingerprint_clustering/")
+#setwd("~/bin/fingerprint_clustering/")
 
 #Loading data
 data = read.table(opt$infile, header=F, sep="\t", dec=".", row.names=1)
