@@ -83,7 +83,7 @@ colPers = colorRampPalette(c(rgb(0.6,0.1,0.5,1), rgb(1,0,0,1), rgb(0.9,0.6,0,1),
 scalecenter = function(d) {
   #output scale function: for each column, mean=0, sd=1
   return(scale(d) * sqrt(nrow(d)/(nrow(d)-1)))
-  # ponderation for sampling index
+  # ponderation for sampling index (var use n-1)
   # without this constante, for advanced outputs, total (max_cluster=nrow(data)) will be different from 1
 }
 
@@ -324,9 +324,9 @@ plotFusionLevels = function(t, n, c=NULL, d=NULL) {
   between_diff = getBetweenDifferences(t, n, c, d)
 
   optimal_nb_clusters = which.max(between_diff)+1
-  savePdf("fusion_levels.pdf")
-  plot(2:n, between_diff, type="b", ylim=c(round(min(between_diff))-1,round(max(between_diff))+1), xlim=c(2,n+1), xlab="Nb. of clusters", ylab="Between-cluster differences (%)", col="grey", axes=F)
-  printBestClustering("Inertia gap method", between_diff, " difference with the previous partitionning (%)", optimal_nb_clusters)
+  savePdf("between_differences.pdf")
+  plot(2:n, between_diff, type="b", ylim=c(round(min(between_diff))-1,round(max(between_diff))+1), xlim=c(2,n+1), xlab="Nb. of clusters", ylab="Between-cluster variation (%)", col="grey", axes=F)
+  printBestClustering("Inertia variation method", between_diff, " variation with the previous partitionning (%)", optimal_nb_clusters)
   suprLog = dev.off()
 }
 
@@ -379,9 +379,9 @@ plotSilhouette = function(s){
 printSummary = function(t, n, c=NULL, d=NULL){ 
   #TODO: no n = nrow(data)
   between = getRelativeBetweenPerPart(t, n, c, d)
-  summary = cbind(between, getBetweenDifferences(t, n, c, d), getSilhouettePerPart(t,n+1,c,d))
+  summary = cbind(between, getBetweenDifferences(t, n, c, d), 100- getRelativeBetweenPerPart(4,n,classif, data), getSilhouettePerPart(t,n+1,c,d))
   rownames(summary) = seq(2, n) 
-  colnames(summary) = c("Between-inertia (%)", "Between-differences (%)", "Silhouette index") 
+  colnames(summary) = c("Between-inertia (%)", "Between-differences (%)", "Within-inertia (%)", "Silhouette index") 
   return (summary)
 }
 
@@ -391,11 +391,9 @@ printSummary = function(t, n, c=NULL, d=NULL){
 
 #Inputs:
 # cl_size: vector of size for each clusters
-printRect = function (cl_sizes){
+printRect = function (cl_sizes, colors){
   # size of each clusters
   temp_size = 0
-  #vector of color: one by cluster
-  colors = colPers(length(cl_sizes))
   for (i in 1:length(cl_sizes)){
     #y begin at the top, so sum(cl_sizes) must be substracted to y coord.
     #rect(xleft, ybottom, xright, ytop)
@@ -433,10 +431,12 @@ heatMap = function(d, s=NULL, c=NULL, cl=NULL, text=FALSE){
     order = attr(s,"iOrd")
     cl_sizes = summary(s)$clus.size
     title = "silhouette\'s scores"
+    colors = colPers(length(levels(as.factor(sil[,1]))))
   }else{
     order = c$order
     cl_sizes = getOrderedClusterSize(cl[order])
-    title="CAH\'s distances"
+    title="dendrogram"
+    colors = orderColors(c, cl)
   }
 
   matrix=as.matrix(d)
@@ -454,7 +454,7 @@ heatMap = function(d, s=NULL, c=NULL, cl=NULL, text=FALSE){
   mtext(paste('Distance matrix ordered by', title), 3, line=6, font=4, cex=1.5)
   text(-0.5, 0:(ncol(matrix)-1)+1, rev(labels), xpd=NA, adj=1, cex=0.7)
   text(0.5:(ncol(matrix)-0.5), ncol(matrix)+1, substr(labels, 0, 20), xpd=NA, cex=0.7, srt=65, pos=4)
-  printRect(cl_sizes)
+  printRect(cl_sizes, colors)
   if (isTRUE(text)) text(expand.grid(1:ncol(matrix), ncol(matrix):1), sprintf("%d", matrix), cex=0.4)
 
   par(fig=c(0.85,1,0.3,0.8),new=TRUE)
@@ -475,20 +475,32 @@ heatMap = function(d, s=NULL, c=NULL, cl=NULL, text=FALSE){
 
 # Inputs:
 # k: number of clusters
-plotDendrogram = function(t, k, c, d, i=FALSE){
+plotDendrogram = function(t, k, c, d, adv=FALSE){
 
   pdf("dendrogram.pdf")
   setGraphicBasic()
   par(mar=c(2,5,5,1))
-  #having relative inertia instead of raw cophenetic distance
-  #rev() beacause in cah function, the vector is inversed
-  if (isTRUE(i)) c$height = rev(getBetweenDifferences(t, nrow(d), c, d))
-  plot(c, hang=-1, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), sub="", cex=0.8, font=3, ylab="Between-cluster differences (%)", main="Dendrogram", axes=F)
-  #text(-0.5, 0:(ncol(matrix)-1)+1, rev(labels), xpd=NA, adj=1, cex=0.7)
+  plot(c, hang=-1, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), sub="", cex=0.8, font=3, ylab="Cophenetic distance", main="Dendrogram", axes=F)
   printAxis(2, 0, max(c$height))
   #projection of the clusters
-  rect.hclust(c, k=as.numeric(k), border=colPers(k))
+  rect.hclust(c, k=as.numeric(k), border=orderColors(c, clusters))
   suprLog = dev.off()
+}
+
+# Get colors ordered for dendrogram
+orderColors = function(c, cl){
+  col_in = colorClusters(cl)[c$order]
+  j = 1
+  col_ordered = rep(NA, length(table(clusters)))
+  col_ordered[1] = col_in[1]
+  for (i in 2:length(col_in)){
+    if (col_in[i] != col_in[i-1]){
+      j = j + 1
+      col_ordered[j] = col_in[i]
+    }
+  }
+  #vector of color: one by cluster
+  return (col_ordered)
 }
 
 ################################
@@ -620,8 +632,6 @@ advanced = "advanced" %in% names(opt)
 verbose= !("quiet" %in% names(opt))
 ranked = !("ranked" %in% names(opt))
 if (!is.null(opt$workdir)) setwd(opt$workdir)
-#to work under Rstudio
-setwd("~/bin/fingerprint_clustering/")
 
 #Loading data
 data = read.table(opt$infile, header=F, sep="\t", dec=".", row.names=1)
@@ -656,7 +666,7 @@ if (isTRUE(advanced)){
 }
 
 #Plots
-if(classif_type > 2) plotDendrogram(classif_type, optimal_nb_clusters, classif, data, T)
+if(classif_type > 2) plotDendrogram(classif_type, optimal_nb_clusters, classif, data, advanced)
 plotPca(classif_type, optimal_nb_clusters, classif, data)
 if(classif_type <= 2 | isTRUE(advanced)){
   heatMap(data, sil, text=T)
