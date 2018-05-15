@@ -379,7 +379,7 @@ plotSilhouette = function(s){
 printSummary = function(t, n, c=NULL, d=NULL){ 
   #TODO: no n = nrow(data)
   between = getRelativeBetweenPerPart(t, n, c, d)
-  summary = cbind(between, getBetweenDifferences(t, n, c, d), 100- getRelativeBetweenPerPart(t, n,classif, data), getSilhouettePerPart(t,n+1,c,d))
+  summary = cbind(between, getBetweenDifferences(t, n, c, d), 100- getRelativeBetweenPerPart(4,n,classif, data), getSilhouettePerPart(t,n+1,c,d))
   rownames(summary) = seq(2, n) 
   colnames(summary) = c("Between-inertia (%)", "Between-differences (%)", "Within-inertia (%)", "Silhouette index") 
   return (summary)
