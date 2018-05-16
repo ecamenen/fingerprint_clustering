@@ -7,8 +7,8 @@ getArgs = function(){
                 help="Fingerprint file name [default: %default]"),
     make_option(c("-m", "--maxCluster"), type="integer", default=6, metavar="integer",
                 help="Maximum number of clusters [default: %default]"),
-    make_option(c("-t", "--classif_type"), type="integer", default=4, metavar="integer",
-                help="Type of classifation [default: Complete links] (1: K-menoids; 2: K-means; 3: Ward; 4: Complete links; 5: UPGMA; 6: WPGMA"),
+    make_option(c("-t", "--classif_type"), type="integer", default=0, metavar="integer",
+                help="Type of classifation [default: automatic selection of best CAH] (1: K-menoids; 2: K-means; 3: Ward; 4: Complete links; 5: Single links; 6: UPGMA; 7: WPGMA; 8: WPGMC; 9: UPGMC)"),
     make_option(c("-adv", "--advanced"), type="logical", action="store_true", 
                 help="Activate advanced mode (print more outputs)"),
     make_option(c("-q", "--quiet"), type="logical", action="store_true",
@@ -38,7 +38,7 @@ checkArg = function(a){
   checkMinCluster("maxCluster"," [by default: 6]")
   if(!is.null(opt$nbCluster)) checkMinCluster("nbCluster")
   
-  if ((opt$classif_type < 1) || (opt$classif_type > 6)){
+  if ((opt$classif_type < 0) || (opt$classif_type > 9)){
     print_help(a)
     stop("--classif_type must be comprise between 1 and 6 [by default: 2].\n", call.=FALSE)
   }
@@ -173,19 +173,41 @@ getCAH = function(d, t){
     #dis: distance matrix
     dis = dist(d, method = "euclidian")
     #cah: classification hierarchic ascending
-    cah = hclust(dis, method=getclassif_type(t))
+    cah = hclust(dis, method=getClassifType(t))
   #automaticly ordering by clusters
   return (reorder.hclust(cah, d))
   }
 }
 
+# Selects best algo based on cophenetic calculation
+# d: data (or distance matrix for hierarchic)
+selectBestCAH = function (d, v=F){
+  dis = getDistance(d, 2)
+  temp = 0
+  for (i in 3:9){
+    cah = getCAH(data, i)
+    res = cor(dis, cophenetic(cah))
+    if (isTRUE(v)) cat(paste(getClassifType(i), ":",round(res,3), "\n"))
+    if (res > temp){ 
+      temp = res
+      t = i
+    }
+  }
+  cat(paste("Selected:", getClassifType(t),"\n"))
+  return (t)
+}
+
 #Inputs:
 # t: number of type of classification
-getclassif_type = function(t){
+getClassifType = function(t){
   if (t==3) "ward.D2"
   else if (t==4) "complete"
-  else if (t==5) "average"
-  else if (t==6) "mcquitty"
+  else if (t==5) "single"
+  else if (t==6) "average"
+  else if (t==7) "mcquitty"
+  else if (t==8) "median"
+  else if (t==9) "centroid"
+
 }
 
 #Inputs: 
@@ -264,7 +286,7 @@ writeClusters = function(cl, r=FALSE){
 #Inputs:
 # d : data
 # cah : hierarchical classification
-plotCohenetic=function(t, d,cah){
+plotCohenetic=function(t, d, cah){
   dis = getDistance(d, t)
   coph_matrix = cophenetic(cah)
   cor_coph = cor(dis, coph_matrix)
@@ -379,7 +401,7 @@ plotSilhouette = function(s){
 printSummary = function(t, n, c=NULL, d=NULL){ 
   #TODO: no n = nrow(data)
   between = getRelativeBetweenPerPart(t, n, c, d)
-  summary = cbind(between, getBetweenDifferences(t, n, c, d), 100- getRelativeBetweenPerPart(4,n,classif, data), getSilhouettePerPart(t,n+1,c,d))
+  summary = cbind(between, getBetweenDifferences(t, n, c, d), 100- getRelativeBetweenPerPart(t,n,classif, data), getSilhouettePerPart(t,n+1,c,d))
   rownames(summary) = seq(2, n) 
   colnames(summary) = c("Between-inertia (%)", "Between-differences (%)", "Within-inertia (%)", "Silhouette index") 
   return (summary)
@@ -639,7 +661,10 @@ colnames(data) <- substr(rownames(data), 1, 25) -> rownames(data)
 postChecking(args, data)
 
 #Perform classification
+if(classif_type == 0) classif_type = selectBestCAH(data, verbose)
 classif = getCAH(data, classif_type)
+
+
 if(classif_type>2) plotCohenetic(classif_type, data, classif)
 plotFusionLevels(classif_type, max_cluster, classif, data)
 
@@ -676,4 +701,4 @@ if(classif_type <= 2 | isTRUE(advanced)){
 
 #Final outputs
 writeClusters(clusters, ranked)
-if (!isTRUE(verbose)) cat(paste("Clustering done.\nOptimal number of clusters choosen:", optimal_nb_clusters,"\n"))
+if (!isTRUE(verbose)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
