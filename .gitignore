@@ -1,40 +1,10 @@
 
-discriminant_power\.tsv
+*.tsv
 
-excentricity\.tsv
+*.txt
 
-relative_ctr\.tsv
+*.pdf
 
-cumulated_between\.pdf
-
-cluster_sizes\.tsv
-
-summary_between\.tsv
+*.png
 
 \.Rhistory
-
-average_silhouettes\.pdf
-
-dendrogram\.pdf
-
-fingerprint_clustering\.zip
-
-fusion_levels\.pdf
-
-heat_map\.pdf
-
-matrix\.txt
-
-matrix2\.txt
-
-pca\.pdf
-
-shepard_graph\.pdf
-
-silhouette\.pdf
-
-clusters
-
-clusters\.tsv
-
-*.tsv
