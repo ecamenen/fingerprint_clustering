@@ -346,10 +346,10 @@ plotFusionLevels = function(t, n, c=NULL, d=NULL) {
   between_diff = getBetweenDifferences(t, n, c, d)
 
   optimal_nb_clusters = which.max(between_diff)+1
-  savePdf("between_differences.pdf")
+  #savePdf("between_differences.pdf")
   plot(2:n, between_diff, type="b", ylim=c(round(min(between_diff))-1,round(max(between_diff))+1), xlim=c(2,n+1), xlab="Nb. of clusters", ylab="Between-cluster variation (%)", col="grey", axes=F)
   printBestClustering("Inertia variation method", between_diff, " variation with the previous partitionning (%)", optimal_nb_clusters)
-  suprLog = dev.off()
+  #suprLog = dev.off()
 }
 
 ################################
@@ -675,7 +675,6 @@ sil = getSilhouette(classif_type, optimal_nb_clusters, classif, data)
 plotSilhouette(sil)
 summary = printSummary(classif_type, max_cluster, classif, data)
 writeTsv("summary")
-
 
 #Global variables settings
 dis = getDistance(data, classif_type, optimal_nb_clusters)

@@ -15,13 +15,13 @@ shinyUI( pageWithSidebar(
   
   mainPanel(
     #titre donne a la partie presentant les sorties
-    h3("Silhouette plot: "),
+    #h3("Summary: "),
     
     #va permettre d'afficher une sortie de type 'texte'
     #le contenu sera defini dans la partie server avec comme nom de variable
     #'sortie de texte'
-    #plotOutput("silhouette")
-    tableOutput("silhouette")
+    tableOutput("summary"),
+    plotOutput("fusion_levels")
     #en sortie, tu attend du texte
   )
   
