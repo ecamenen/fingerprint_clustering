@@ -7,7 +7,7 @@ getArgs = function(){
                 help="Fingerprint file name [default: %default]"),
     make_option(c("-m", "--maxCluster"), type="integer", default=6, metavar="integer",
                 help="Maximum number of clusters [default: %default]"),
-    make_option(c("-t", "--classif_type"), type="integer", default=0, metavar="integer",
+    make_option(c("-t", "--classif_type"), type="integer", default=4, metavar="integer",
                 help="Type of classifation [default: automatic selection of best CAH] (1: K-menoids; 2: K-means; 3: Ward; 4: Complete links; 5: Single links; 6: UPGMA; 7: WPGMA; 8: WPGMC; 9: UPGMC)"),
     make_option(c("-adv", "--advanced"), type="logical", action="store_true", 
                 help="Activate advanced mode (print more outputs)"),
@@ -171,7 +171,7 @@ savePdf = function (f){
 getCAH = function(d, t){
   if(t>2){
     #dis: distance matrix
-    dis = dist(d, method = "euclidian")
+    dis = getDistance(d, t)
     #cah: classification hierarchic ascending
     cah = hclust(dis, method=getClassifType(t))
   #automaticly ordering by clusters
@@ -207,8 +207,11 @@ getClassifType = function(t){
   else if (t==7) "mcquitty"
   else if (t==8) "median"
   else if (t==9) "centroid"
-
 }
+
+#Agglomerative coefficient ()
+getCoefAggl = function(c)
+  coef.hclust(c)
 
 #Inputs: 
 # t: number of type of classification
@@ -665,7 +668,10 @@ if(classif_type == 0) classif_type = selectBestCAH(data, verbose)
 classif = getCAH(data, classif_type)
 
 
-if(classif_type>2) plotCohenetic(classif_type, data, classif)
+if(classif_type>2){
+  plotCohenetic(classif_type, data, classif)
+  cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
+}
 plotFusionLevels(classif_type, max_cluster, classif, data)
 
 #Silhouette analysis
