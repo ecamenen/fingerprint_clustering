@@ -19,7 +19,7 @@ getArgs = function(){
                 help="Fix the number of clusters"),
     make_option(c("-r", "--ranked"), type="logical", action="store_true", 
                 help="Rank the metabolites in clusters by silhouette scores instead of alphabetically"),
-    make_option(c("-b", "--boostrap"), type="integer", default=500, metavar="integer",
+    make_option(c("-b", "--bootstrap"), type="integer", default=500, metavar="integer",
                 help="Number of bootstraps for Gap statistic (advanced mode)")
     
     )
@@ -34,6 +34,10 @@ checkArg = function(a){
   opt = parse_args(a)
   # o: one argument from the list of arguments
   # def: defaul message
+  if(opt$bootstrap < 100 || opt$bootstrap > 1000){
+    print_help(a)
+    stop("--bootstrap comprise between 100 and 1000", call.=FALSE)
+  }
   
   checkMinCluster = function (o, def="")
   if (opt[[o]] < 2){
@@ -43,7 +47,7 @@ checkArg = function(a){
   checkMinCluster("maxCluster"," [by default: 6]")
   if(!is.null(opt$nbCluster)) checkMinCluster("nbCluster")
   
-  if ((opt$classif_type < 0) || (opt$classif_type > 9)){
+  if ((opt$classif_type < 1) || (opt$classif_type > 9)){
     print_help(a)
     stop("--classif_type must be comprise between 1 and 6 [by default: 2].\n", call.=FALSE)
   }
@@ -444,7 +448,9 @@ getGapBest = function (g, M="Tibs2001SEmax"){
 # Plot the gap statistics width for all clustering possible
 plotGapPerPart = function(t, n, d, B){
   if (isTRUE(verbose)) cat("\nGAP STATISTICS:\n")
-  if(t==2 | nrow(d)>=100 ) cat("Could take a minute...")
+  if(t==2 & (max_cluster > 10 | nrow(d)>=100)) plural=c("few ", "s")
+  else plural=c("","")
+  if(t==2 | nrow(d)>=100 ) cat(paste("It could take a ",plural[1], "minute",plural[2],"...\n",sep=""))
   gap = getGapPerPart(d, n, B)
   savePdf("gap_statistics.pdf")
   optimal_nb_clusters = getGapBest(gap)
@@ -730,7 +736,7 @@ opt = parse_args(args)
 nb_clusters = opt$nbCluster
 max_cluster = opt$maxCluster
 classif_type = opt$classif_type
-boostrap = opt$boostrap
+bootstrap = opt$bootstrap
 advanced = "advanced" %in% names(opt)
 verbose= !("quiet" %in% names(opt))
 ranked = !("ranked" %in% names(opt))
@@ -743,9 +749,7 @@ colnames(data) <- substr(rownames(data), 1, 25) -> rownames(data)
 postChecking(args, data)
 
 #Perform classification
-if(classif_type == 0) classif_type = selectBestCAH(data, verbose)
 classif = getCAH(data, classif_type)
-
 if(classif_type>2){
   plotCohenetic(classif_type, data, classif)
   if(isTRUE(advanced)) cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
@@ -759,16 +763,16 @@ if(!is.null(nb_clusters)) optimal_nb_clusters = nb_clusters
 sil = getSilhouette(classif_type, optimal_nb_clusters, classif, data)
 plotSilhouette(sil)
 
-
 #Global variables settings
 dis = getDistance(data, classif_type, optimal_nb_clusters)
-clusters = getClusters(classif_type, optimal_nb_clusters, classif, data)
+#cl_temp, because writeTsv(clusters) recreate an object
+clusters <- getClusters(classif_type, optimal_nb_clusters, classif, data) -> cl_temp
 
 #Advanced indexes
 if (isTRUE(advanced)){
   
   elbow_k = plotElbow(classif_type, max_cluster, classif, data)
-  gap = plotGapPerPart(classif_type, max_cluster, data, boostrap)
+  gap = plotGapPerPart(classif_type, max_cluster, data, bootstrap)
   plotGapPerPart2(gap, max_cluster)
   
   contribution = 100 * getCtrVar(classif_type, optimal_nb_clusters, classif, data)
@@ -783,7 +787,7 @@ if (isTRUE(advanced)){
 #Plots
 if(classif_type > 2) plotDendrogram(classif_type, optimal_nb_clusters, classif, data, advanced)
 plotPca(classif_type, optimal_nb_clusters, classif, data)
-if(classif_type <= 2 | isTRUE(advanced)){
+if(classif_type <= 2 || isTRUE(advanced)){
   heatMap(data, sil, text=T)
 }else{
   heatMap(data, c=classif, cl=clusters, text=T)
@@ -794,3 +798,7 @@ summary = printSummary(classif_type, max_cluster, advanced, classif, data)
 writeTsv("summary")
 writeClusters(clusters, ranked)
 if (!isTRUE(verbose)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
+
+#errors
+if (optimal_nb_clusters==max_cluster) message("\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found.")
+if(min(table(cl_temp))==1) message("\n[WARNING] A cluster with an only singleton biased the silhouette score.")
