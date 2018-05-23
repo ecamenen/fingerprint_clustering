@@ -141,20 +141,22 @@ plotAxis = function (side, min, max, interval = 1){
   axis(side, seq(min,max, interval), lwd=3)
 }
 
-plotBestClustering = function(sub_title, values, values_type, optimal_nb_clusters, interval = 1, min_x=2){
+plotBestClustering = function(sub_title, values, values_type, optimal_nb_clusters, interval = 1, min_x=2, best=NULL){
   plotAxis(1, 2, max_cluster)
   if (interval >= 1) axisSeq=round(values)
   else axisSeq = c(0, max(values) +0.1)
   #case of plotting gap statistics
   if (min_x < 2) best_y=values[optimal_nb_clusters]
   else best_y = max(values)
+  #for non-elbow plots
+  if (is.null(best)) best = round(max(values),2)
   plotAxis(2, min(axisSeq), max(axisSeq), interval)
   title(main="Optimal number of clusters", line=2, cex.main=2)
   mtext(text=sub_title, font=3, cex=1.2, line = 0.5)
   abline(v=optimal_nb_clusters, col="red", lty=2, lwd=2)
   points(optimal_nb_clusters, best_y, pch=19, col="red", cex=2)
   text(y=values, x=min_x:max_cluster, labels=round(values,2), cex=1.2, pos=4, col="red")
-  if (isTRUE(verbose)) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a", values_type, " of ", round(max(values),2), "\n", sep="")
+  if (isTRUE(verbose)) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a", values_type, " of ", best, "\n", sep="")
 }
 
 #f: filename
@@ -363,10 +365,11 @@ plotFusionLevels = function(t, n, c=NULL, d=NULL) {
 plotElbow = function(t, n, c=NULL, d=NULL) {
   if (isTRUE(verbose)) cat("\nELBOW:\n")
   within = c(100, 100 - getRelativeBetweenPerPart(t, n, c, d))
-  optimal_nb_clusters = which.min(within[1:(n-1)] / within [2:n])
+  ratio = within[1:(n-1)] / within[2:n]
+  best = round(min(ratio),2); optimal_nb_clusters = which.min(ratio)
   savePdf("elbow.pdf")
   plot(1:n, within, type="b", ylim=c(-1,101), xlim=c(1,n+1), xlab="Nb. of clusters", ylab="Relative within inertia (%)", col="grey", axes=F)
-  plotBestClustering("Elbow method", within, " variation with the previous partitionning (%)", optimal_nb_clusters, 5, 1)
+  plotBestClustering("Elbow method", within, " Wk/Wk+1 ratio ", optimal_nb_clusters, 5, 1, best)
   suprLog = dev.off()
 }
 
@@ -734,7 +737,11 @@ postChecking(args, data)
 if(classif_type == 0) classif_type = selectBestCAH(data, verbose)
 classif = getCAH(data, classif_type)
 
-if(classif_type>2) plotCohenetic(classif_type, data, classif)
+if(classif_type>2){
+  plotCohenetic(classif_type, data, classif)
+  if(isTRUE(advanced)) cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
+}
+
 plotFusionLevels(classif_type, max_cluster, classif, data)
 
 #Silhouette analysis
@@ -751,7 +758,6 @@ clusters = getClusters(classif_type, optimal_nb_clusters, classif, data)
 #Advanced indexes
 if (isTRUE(advanced)){
   
-  if(classif_type>2) cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
   elbow_k = plotElbow(classif_type, max_cluster, classif, data)
   gap = plotGapPerPart(classif_type, max_cluster, data)
   plotGapPerPart2(gap, max_cluster)
@@ -759,8 +765,10 @@ if (isTRUE(advanced)){
   contribution = 100 * getCtrVar(classif_type, optimal_nb_clusters, classif, data)
   discriminant_power = 100 * getPdisPerPartition(classif_type, max_cluster, classif, data)
   
+  verbose = F
   for (i in c("contribution", "discriminant_power"))
     writeTsv(i)
+  verbose = !("quiet" %in% names(opt))
 }
 
 #Plots
