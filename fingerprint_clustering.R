@@ -437,18 +437,20 @@ getGapPerPart = function(d, n, B=500){
 }
 
 #g: gap object
-getGapBest = function (g, M="firstSEmax"){
+getGapBest = function (g, M="Tibs2001SEmax"){
   with(g, maxSE(Tab[,"gap"], Tab[,"SE.sim"], method=M))
 }
 
 # Plot the gap statistics width for all clustering possible
 plotGapPerPart = function(t, n, d, B){
   if (isTRUE(verbose)) cat("\nGAP STATISTICS:\n")
+  if(t==2 | nrow(d)>=100 ) cat("Could take a minute...")
   gap = getGapPerPart(d, n, B)
   savePdf("gap_statistics.pdf")
   optimal_nb_clusters = getGapBest(gap)
-  plot(gap, arrowArgs = list(col="gray", length=1/30, lwd=2, angle=90, code=3), type="b", xlim=c(1,n+1), ylim=c(0,max(gap$Tab[,"gap"])+0.1), col="grey", xlab="Nb. of clusters", ylab="Average silhouette width", main="",axes=F)
+  plot(gap, arrowArgs = list(col="gray", length=1/15, lwd=2, angle=90, code=3), type="b", xlim=c(1,n+1), ylim=c(0,max(gap$Tab[,"gap"])+0.1), col="grey", xlab="Nb. of clusters", ylab=expression(Gap[k]), main="",axes=F)
   plotBestClustering("Gap statistics method", gap$Tab[,"gap"]," gap value", optimal_nb_clusters, 0.1, 1)
+  #cat(paste("With a corrected index, optimal number of clusters k =",getGapBest(gap,"firstSEmax"), "\n"))
   suprLog = dev.off()
   return (gap)
 }
@@ -458,7 +460,7 @@ plotGapPerPart2 = function(g, n){
   savePdf("gap_statistics2.pdf")
   min_y=round(min(g$Tab[,c(1,2)]),1)
   max_y=round(max(g$Tab[,c(1,2)]),1)
-  plot(0,0, xlim=c(1,n), ylim=c(min_y-0.1,max_y+0.1),type="n", xlab="Nb. of clusters", ylab="log(Within-inertia)", axes=F)
+  plot(0,0, xlim=c(1,n), ylim=c(min_y-0.1,max_y+0.1),type="n", xlab="Nb. of clusters", ylab="log(within-inertia)", axes=F)
   title(main="Optimal number of clusters", line=2, cex.main=2)
   mtext(text="Gap statistics method", font=3, cex=1.2, line = 0.5)
   optimal_nb_clusters = getGapBest(g)
@@ -467,7 +469,7 @@ plotGapPerPart2 = function(g, n){
   lines(seq(1:n),g$Tab[,2],type="b", col="blue")
   plotAxis(1,1,n)
   plotAxis(2,min_y, max_y,0.1)
-  legend("topright",c("logW", "E.logW"), col=c("red","blue"), lty=1, box.lwd=-1, bg = "white")
+  legend("topright",c("log(W)", "E.log(W)"), col=c("red","blue"), lty=1, box.lwd=-1, bg = "white")
   suprLog = dev.off()
 }
 
