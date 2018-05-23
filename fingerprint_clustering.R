@@ -410,6 +410,7 @@ plotSilhouette = function(s){
 #          GAP STATISTICS
 ###################################
 
+#B: nb of bootstrap
 getGapPerPart = function(d, n, B=500){
   #FUN mus have only two args in this order and return a list with an object cluster
   if(classif_type>2) gapFun = function(x,k) list(cluster = getClusters(classif_type, k, getCAH(x,classif_type)))
@@ -417,36 +418,52 @@ getGapPerPart = function(d, n, B=500){
   clusGap(d,FUN=gapFun,K.max=n, verbose=F, B=B)
 }
 
+#g: gap object
+getGapBest = function (g, M="firstSEmax"){
+  with(g, maxSE(Tab[,"gap"], Tab[,"SE.sim"], method=M))
+}
+
 # Plot the gap statistics width for all clustering possible
 plotGapPerPart = function(t, n, d){
   if (isTRUE(verbose)) cat("\nGAP STATISTICS:\n")
   gap = getGapPerPart(d, n)
   savePdf("gap_statistics.pdf")
-  optimal_nb_clusters = with(gap, maxSE(Tab[,"gap"], Tab[,"SE.sim"], method="firstSEmax"))
+  optimal_nb_clusters = getGapBest(gap)
   plot(gap,type="b", xlim=c(1,n+1), ylim=c(0,max(gap$Tab[,"gap"])+0.1), col="grey", xlab="Nb. of clusters", ylab="Average silhouette width", main="",axes=F)
   printBestClustering("Gap statistics method", gap$Tab[,"gap"]," gap value", optimal_nb_clusters, 0.1, 1)
   suprLog = dev.off()
-  return (optimal_nb_clusters)
+  return (gap)
 }
 
 #Plot the gap between the two function: within and random within average
-plotGap2 = function(g, n){
+plotGapPerPart2 = function(g, n){
+  savePdf("gap_statistics2.pdf")
   min_y=round(min(g$Tab[,c(1,2)]),1)
   max_y=round(max(g$Tab[,c(1,2)]),1)
   plot(0,0, xlim=c(1,n), ylim=c(min_y-0.1,max_y+0.1),type="n", xlab="Nb. of clusters", ylab="log(Within-inertia)", axes=F)
+  title(main="Optimal number of clusters", line=2, cex.main=2)
+  mtext(text="Gap statistics method", font=3, cex=1.2, line = 0.5)
+  optimal_nb_clusters = getGapBest(g)
+  abline(v=optimal_nb_clusters, col="gray", lty=2, lwd=2)
   lines(seq(1:n),g$Tab[,1],type="b", col="red")
   lines(seq(1:n),g$Tab[,2],type="b", col="blue")
   plotAxis(1,1,n)
   plotAxis(2,min_y, max_y,0.1)
-  legend("topright",c("logW", "E.logW"), col=c("red","blue"), lty=1, box.lwd=0)
+  legend("topright",c("logW", "E.logW"), col=c("red","blue"), lty=1, box.lwd=-1, bg = "white")
+  suprLog = dev.off()
 }
 
-printSummary = function(t, n, c=NULL, d=NULL){ 
+printSummary = function(t, n, adv=F, c=NULL, d=NULL){ 
   #TODO: no n = nrow(data)
   between = getRelativeBetweenPerPart(t, n, c, d)
   summary = cbind(between, getBetweenDifferences(t, n, c, d), 100- getRelativeBetweenPerPart(t,n,classif, data), getSilhouettePerPart(t,n+1,c,d))
+  names = c("Between-inertia (%)", "Between-differences (%)", "Within-inertia (%)", "Silhouette index") 
+  if(isTRUE(adv)) {
+    summary = cbind(summary, gap$Tab[,"gap"][-1], gap$Tab[,"SE.sim"][-1])
+    names=c(names, "Gap statistics", "Gap SE")
+  }
   rownames(summary) = seq(2, n) 
-  colnames(summary) = c("Between-inertia (%)", "Between-differences (%)", "Within-inertia (%)", "Silhouette index") 
+  colnames(summary) = names  
   return (summary)
 }
 
@@ -707,7 +724,6 @@ postChecking(args, data)
 if(classif_type == 0) classif_type = selectBestCAH(data, verbose)
 classif = getCAH(data, classif_type)
 
-
 if(classif_type>2)  plotCohenetic(classif_type, data, classif)
 plotFusionLevels(classif_type, max_cluster, classif, data)
 
@@ -716,8 +732,6 @@ optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, class
 if(!is.null(nb_clusters)) optimal_nb_clusters = nb_clusters
 sil = getSilhouette(classif_type, optimal_nb_clusters, classif, data)
 plotSilhouette(sil)
-summary = printSummary(classif_type, max_cluster, classif, data)
-writeTsv("summary")
 
 
 #Global variables settings
@@ -727,7 +741,8 @@ clusters = getClusters(classif_type, optimal_nb_clusters, classif, data)
 #Advanced indexes
 if (isTRUE(advanced)){
   if(classif_type>2) cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
-  gap_k = plotGapPerPart(classif_type, max_cluster, data)
+  gap = plotGapPerPart(classif_type, max_cluster, data)
+  plotGapPerPart2(gap, max_cluster)
   contribution = 100 * getCtrVar(classif_type, optimal_nb_clusters, classif, data)
   discriminant_power = 100 * getPdisPerPartition(classif_type, max_cluster, classif, data)
   
@@ -745,5 +760,7 @@ if(classif_type <= 2 | isTRUE(advanced)){
 }
 
 #Final outputs
+summary = printSummary(classif_type, max_cluster, advanced, classif, data)
+writeTsv("summary")
 writeClusters(clusters, ranked)
 if (!isTRUE(verbose)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
