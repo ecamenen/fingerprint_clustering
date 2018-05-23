@@ -137,20 +137,23 @@ setGraphicBasic = function(){
   par(cex.lab=1.5, font.lab=3, font.axis=3, cex.axis=0.8, cex.main=2, cex=1, lwd=3)
 }
 
-printAxis = function (side, min, max, interval = 1){
+plotAxis = function (side, min, max, interval = 1){
   axis(side, seq(min,max, interval), lwd=3)
 }
 
-printBestClustering = function(sub_title, values, values_type, optimal_nb_clusters, interval = 1){
-  printAxis(1, 2, max_cluster)
-  if (interval >= 1){ axisSeq=round(values)
-  }else{ axisSeq = c(0, max(values) +0.1)}
-  printAxis(2, min(axisSeq), max(axisSeq), interval)
-  title(main="Optimal number of clusters", line=1, cex.main=2)
-  mtext(text=sub_title, font=3, cex=1.2, line = -1)
+printBestClustering = function(sub_title, values, values_type, optimal_nb_clusters, interval = 1, min_x=2){
+  plotAxis(1, 2, max_cluster)
+  if (interval >= 1) axisSeq=round(values)
+  else axisSeq = c(0, max(values) +0.1)
+  #case of plotting gap statistics
+  if (min_x < 2) best_y=values[optimal_nb_clusters]
+  else best_y = max(values)
+  plotAxis(2, min(axisSeq), max(axisSeq), interval)
+  title(main="Optimal number of clusters", line=2, cex.main=2)
+  mtext(text=sub_title, font=3, cex=1.2, line = 0.5)
   abline(v=optimal_nb_clusters, col="red", lty=2, lwd=2)
-  points(optimal_nb_clusters, max(values), pch=19, col="red", cex=2)
-  text(y=values, x=2:max_cluster, labels=round(values,2), cex=1.2, pos=4, col="red")
+  points(optimal_nb_clusters, best_y, pch=19, col="red", cex=2)
+  text(y=values, x=min_x:max_cluster, labels=round(values,2), cex=1.2, pos=4, col="red")
   if (isTRUE(verbose)) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a", values_type, " of ", round(max(values),2), "\n", sep="")
 }
 
@@ -297,8 +300,8 @@ plotCohenetic=function(t, d, cah){
 
   savePdf("shepard_graph.pdf")
   plot(dis, coph_matrix, pch=19, col=alpha("red",0.2), axes=F, xlim=c(0,max(dis)), ylim=c(0,max(coph_matrix)), xlab="Distance between metabolites",ylab="Cophenetic distance", asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
-  printAxis(2, 0, max(coph_matrix))
-  printAxis(1, 0, max(dis))
+  plotAxis(2, 0, max(coph_matrix))
+  plotAxis(1, 0, max(dis))
   abline(0, 1, col="grey", lwd=3, lty=2)
   suprLog = dev.off()
 }
@@ -347,11 +350,13 @@ getBetweenDifferences = function(t, n, c=NULL, d=NULL){
 plotFusionLevels = function(t, n, c=NULL, d=NULL) {
   if (isTRUE(verbose)) cat("\nBETWEEN DIFFERENCES:\n")
   between_diff = getBetweenDifferences(t, n, c, d)
-
+  #between_diff = 100 - getRelativeBetweenPerPart(t, n, c, d)
+  #relative.loss = intra[2:(nrow(data)-1)]/intra[1:(nrow(data) - 2)]
+  
   optimal_nb_clusters = which.max(between_diff)+1
   savePdf("between_differences.pdf")
   plot(2:n, between_diff, type="b", ylim=c(round(min(between_diff))-1,round(max(between_diff))+1), xlim=c(2,n+1), xlab="Nb. of clusters", ylab="Between-cluster variation (%)", col="grey", axes=F)
-  printBestClustering("Inertia variation method", between_diff, " variation with the previous partitionning (%)", optimal_nb_clusters)
+  printBestClustering("Fusion level method", between_diff, " variation with the previous partitionning (%)", optimal_nb_clusters)
   suprLog = dev.off()
 }
 
@@ -397,8 +402,43 @@ plotSilhouette = function(s){
   par(mar=c(4, 12, 3, 2))
   plot(s, max.strlen=25, main=" ", sub= "", do.clus.stat=TRUE, xlab="Silhouette width", cex.names=0.8, col=colorClusters(s[,1]), nmax.lab=100, do.n.k = FALSE, axes=F)
   mtext(paste("Average silhouette width:", round(summary(s)$avg.width,3)), font=2, cex=1.5, line=1)
-  printAxis(1, 0, 1, 0.2)
+  plotAxis(1, 0, 1, 0.2)
   suprLog = dev.off()
+}
+
+###################################
+#          GAP STATISTICS
+###################################
+
+getGapPerPart = function(d, n, B=500){
+  #FUN mus have only two args in this order and return a list with an object cluster
+  if(classif_type>2) gapFun = function(x,k) list(cluster = getClusters(classif_type, k, getCAH(x,classif_type)))
+  else gapFun = function(x,k) getCNH(classif_type,x,k)
+  clusGap(d,FUN=gapFun,K.max=n, verbose=F, B=B)
+}
+
+# Plot the gap statistics width for all clustering possible
+plotGapPerPart = function(t, n, d){
+  if (isTRUE(verbose)) cat("\nGAP STATISTICS:\n")
+  gap = getGapPerPart(d, n)
+  savePdf("gap_statistics.pdf")
+  optimal_nb_clusters = with(gap, maxSE(Tab[,"gap"], Tab[,"SE.sim"], method="firstSEmax"))
+  plot(gap,type="b", xlim=c(1,n+1), ylim=c(0,max(gap$Tab[,"gap"])+0.1), col="grey", xlab="Nb. of clusters", ylab="Average silhouette width", main="",axes=F)
+  printBestClustering("Gap statistics method", gap$Tab[,"gap"]," gap value", optimal_nb_clusters, 0.1, 1)
+  suprLog = dev.off()
+  return (optimal_nb_clusters)
+}
+
+#Plot the gap between the two function: within and random within average
+plotGap2 = function(g, n){
+  min_y=round(min(g$Tab[,c(1,2)]),1)
+  max_y=round(max(g$Tab[,c(1,2)]),1)
+  plot(0,0, xlim=c(1,n), ylim=c(min_y-0.1,max_y+0.1),type="n", xlab="Nb. of clusters", ylab="log(Within-inertia)", axes=F)
+  lines(seq(1:n),g$Tab[,1],type="b", col="red")
+  lines(seq(1:n),g$Tab[,2],type="b", col="blue")
+  plotAxis(1,1,n)
+  plotAxis(2,min_y, max_y,0.1)
+  legend("topright",c("logW", "E.logW"), col=c("red","blue"), lty=1, box.lwd=0)
 }
 
 printSummary = function(t, n, c=NULL, d=NULL){ 
@@ -506,7 +546,7 @@ plotDendrogram = function(t, k, c, d, adv=FALSE){
   setGraphicBasic()
   par(mar=c(2,5,5,1))
   plot(c, hang=-1, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), sub="", cex=0.8, font=3, ylab="Cophenetic distance", main="Dendrogram", axes=F)
-  printAxis(2, 0, max(c$height))
+  plotAxis(2, 0, max(c$height))
   #projection of the clusters
   rect.hclust(c, k=as.numeric(k), border=orderColors(c, clusters))
   suprLog = dev.off()
@@ -668,10 +708,7 @@ if(classif_type == 0) classif_type = selectBestCAH(data, verbose)
 classif = getCAH(data, classif_type)
 
 
-if(classif_type>2){
-  plotCohenetic(classif_type, data, classif)
-  cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
-}
+if(classif_type>2)  plotCohenetic(classif_type, data, classif)
 plotFusionLevels(classif_type, max_cluster, classif, data)
 
 #Silhouette analysis
@@ -689,6 +726,8 @@ clusters = getClusters(classif_type, optimal_nb_clusters, classif, data)
 
 #Advanced indexes
 if (isTRUE(advanced)){
+  if(classif_type>2) cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
+  gap_k = plotGapPerPart(classif_type, max_cluster, data)
   contribution = 100 * getCtrVar(classif_type, optimal_nb_clusters, classif, data)
   discriminant_power = 100 * getPdisPerPartition(classif_type, max_cluster, classif, data)
   
