@@ -12,11 +12,16 @@ getArgs = function(){
     make_option(c("-adv", "--advanced"), type="logical", action="store_true", 
                 help="Activate advanced mode (print more outputs)"),
     make_option(c("-q", "--quiet"), type="logical", action="store_true",
-                help="Activate quiet mode"), 
+                help="Activate quiet mode"),
+    make_option(c("-T", "--text"), type="logical", action="store_true",
+                help="DO NOT print values on graph"), 
     make_option(c("-n", "--nbCluster"), type="integer", metavar="integer",
                 help="Fix the number of clusters"),
     make_option(c("-r", "--ranked"), type="logical", action="store_true", 
-                help="Rank the metabolites in clusters by silhouette scores instead of alphabetically")
+                help="Rank the metabolites in clusters by silhouette scores instead of alphabetically"),
+    make_option(c("-b", "--boostrap"), type="integer", default=500, metavar="integer",
+                help="Number of bootstraps for Gap statistic (advanced mode)")
+    
     )
   
   return (OptionParser(option_list=option_list))
@@ -155,7 +160,7 @@ plotBestClustering = function(sub_title, values, values_type, optimal_nb_cluster
   mtext(text=sub_title, font=3, cex=1.2, line = 0.5)
   abline(v=optimal_nb_clusters, col="red", lty=2, lwd=2)
   points(optimal_nb_clusters, best_y, pch=19, col="red", cex=2)
-  text(y=values, x=min_x:max_cluster, labels=round(values,2), cex=1.2, pos=4, col="red")
+  if(isTRUE(text)) text(y=values, x=min_x:max_cluster, labels=round(values,2), cex=1.2, pos=4, col="red")
   if (isTRUE(verbose)) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a", values_type, " of ", best, "\n", sep="")
 }
 
@@ -437,12 +442,12 @@ getGapBest = function (g, M="firstSEmax"){
 }
 
 # Plot the gap statistics width for all clustering possible
-plotGapPerPart = function(t, n, d){
+plotGapPerPart = function(t, n, d, B){
   if (isTRUE(verbose)) cat("\nGAP STATISTICS:\n")
-  gap = getGapPerPart(d, n)
+  gap = getGapPerPart(d, n, B)
   savePdf("gap_statistics.pdf")
   optimal_nb_clusters = getGapBest(gap)
-  plot(gap,type="b", xlim=c(1,n+1), ylim=c(0,max(gap$Tab[,"gap"])+0.1), col="grey", xlab="Nb. of clusters", ylab="Average silhouette width", main="",axes=F)
+  plot(gap, arrowArgs = list(col="gray", length=1/30, lwd=2, angle=90, code=3), type="b", xlim=c(1,n+1), ylim=c(0,max(gap$Tab[,"gap"])+0.1), col="grey", xlab="Nb. of clusters", ylab="Average silhouette width", main="",axes=F)
   plotBestClustering("Gap statistics method", gap$Tab[,"gap"]," gap value", optimal_nb_clusters, 0.1, 1)
   suprLog = dev.off()
   return (gap)
@@ -723,9 +728,11 @@ opt = parse_args(args)
 nb_clusters = opt$nbCluster
 max_cluster = opt$maxCluster
 classif_type = opt$classif_type
+boostrap = opt$boostrap
 advanced = "advanced" %in% names(opt)
 verbose= !("quiet" %in% names(opt))
 ranked = !("ranked" %in% names(opt))
+text = !("text" %in% names(opt))
 if (!is.null(opt$workdir)) setwd(opt$workdir)
 
 #Loading data
@@ -759,7 +766,7 @@ clusters = getClusters(classif_type, optimal_nb_clusters, classif, data)
 if (isTRUE(advanced)){
   
   elbow_k = plotElbow(classif_type, max_cluster, classif, data)
-  gap = plotGapPerPart(classif_type, max_cluster, data)
+  gap = plotGapPerPart(classif_type, max_cluster, data, boostrap)
   plotGapPerPart2(gap, max_cluster)
   
   contribution = 100 * getCtrVar(classif_type, optimal_nb_clusters, classif, data)
