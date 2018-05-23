@@ -141,7 +141,7 @@ plotAxis = function (side, min, max, interval = 1){
   axis(side, seq(min,max, interval), lwd=3)
 }
 
-printBestClustering = function(sub_title, values, values_type, optimal_nb_clusters, interval = 1, min_x=2){
+plotBestClustering = function(sub_title, values, values_type, optimal_nb_clusters, interval = 1, min_x=2){
   plotAxis(1, 2, max_cluster)
   if (interval >= 1) axisSeq=round(values)
   else axisSeq = c(0, max(values) +0.1)
@@ -356,7 +356,17 @@ plotFusionLevels = function(t, n, c=NULL, d=NULL) {
   optimal_nb_clusters = which.max(between_diff)+1
   savePdf("between_differences.pdf")
   plot(2:n, between_diff, type="b", ylim=c(round(min(between_diff))-1,round(max(between_diff))+1), xlim=c(2,n+1), xlab="Nb. of clusters", ylab="Between-cluster variation (%)", col="grey", axes=F)
-  printBestClustering("Fusion level method", between_diff, " variation with the previous partitionning (%)", optimal_nb_clusters)
+  plotBestClustering("Fusion level method", between_diff, " variation with the previous partitionning (%)", optimal_nb_clusters)
+  suprLog = dev.off()
+}
+
+plotElbow = function(t, n, c=NULL, d=NULL) {
+  if (isTRUE(verbose)) cat("\nELBOW:\n")
+  within = c(100, 100 - getRelativeBetweenPerPart(t, n, c, d))
+  optimal_nb_clusters = which.min(within[1:(n-1)] / within [2:n])
+  savePdf("elbow.pdf")
+  plot(1:n, within, type="b", ylim=c(-1,101), xlim=c(1,n+1), xlab="Nb. of clusters", ylab="Relative within inertia (%)", col="grey", axes=F)
+  plotBestClustering("Elbow method", within, " variation with the previous partitionning (%)", optimal_nb_clusters, 5, 1)
   suprLog = dev.off()
 }
 
@@ -390,7 +400,7 @@ plotSilhouettePerPart = function(t, n, c=NULL, d=NULL){
   savePdf("average_silhouettes.pdf")
   optimal_nb_clusters = which.max(mean_silhouette)+1
   plot(2:(n-1), mean_silhouette, type="b", xlim=c(2,n), ylim=c(0,max(mean_silhouette)+0.1), col="grey", xlab="Nb. of clusters", ylab="Average silhouette width", axes=F)
-  printBestClustering("Silhouette method", mean_silhouette,"n average width", optimal_nb_clusters, 0.1)
+  plotBestClustering("Silhouette method", mean_silhouette,"n average width", optimal_nb_clusters, 0.1)
   suprLog = dev.off()
   return (optimal_nb_clusters)
 }
@@ -430,7 +440,7 @@ plotGapPerPart = function(t, n, d){
   savePdf("gap_statistics.pdf")
   optimal_nb_clusters = getGapBest(gap)
   plot(gap,type="b", xlim=c(1,n+1), ylim=c(0,max(gap$Tab[,"gap"])+0.1), col="grey", xlab="Nb. of clusters", ylab="Average silhouette width", main="",axes=F)
-  printBestClustering("Gap statistics method", gap$Tab[,"gap"]," gap value", optimal_nb_clusters, 0.1, 1)
+  plotBestClustering("Gap statistics method", gap$Tab[,"gap"]," gap value", optimal_nb_clusters, 0.1, 1)
   suprLog = dev.off()
   return (gap)
 }
@@ -473,7 +483,7 @@ printSummary = function(t, n, adv=F, c=NULL, d=NULL){
 
 #Inputs:
 # cl_size: vector of size for each clusters
-printRect = function (cl_sizes, colors){
+plotRect = function (cl_sizes, colors){
   # size of each clusters
   temp_size = 0
   for (i in 1:length(cl_sizes)){
@@ -536,7 +546,7 @@ heatMap = function(d, s=NULL, c=NULL, cl=NULL, text=FALSE){
   mtext(paste('Distance matrix ordered by', title), 3, line=6, font=4, cex=1.5)
   text(-0.5, 0:(ncol(matrix)-1)+1, rev(labels), xpd=NA, adj=1, cex=0.7)
   text(0.5:(ncol(matrix)-0.5), ncol(matrix)+1, substr(labels, 0, 20), xpd=NA, cex=0.7, srt=65, pos=4)
-  printRect(cl_sizes, colors)
+  plotRect(cl_sizes, colors)
   if (isTRUE(text)) text(expand.grid(1:ncol(matrix), ncol(matrix):1), sprintf("%d", matrix), cex=0.4)
 
   par(fig=c(0.85,1,0.3,0.8),new=TRUE)
@@ -724,7 +734,7 @@ postChecking(args, data)
 if(classif_type == 0) classif_type = selectBestCAH(data, verbose)
 classif = getCAH(data, classif_type)
 
-if(classif_type>2)  plotCohenetic(classif_type, data, classif)
+if(classif_type>2) plotCohenetic(classif_type, data, classif)
 plotFusionLevels(classif_type, max_cluster, classif, data)
 
 #Silhouette analysis
@@ -740,9 +750,12 @@ clusters = getClusters(classif_type, optimal_nb_clusters, classif, data)
 
 #Advanced indexes
 if (isTRUE(advanced)){
+  
   if(classif_type>2) cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
+  elbow_k = plotElbow(classif_type, max_cluster, classif, data)
   gap = plotGapPerPart(classif_type, max_cluster, data)
   plotGapPerPart2(gap, max_cluster)
+  
   contribution = 100 * getCtrVar(classif_type, optimal_nb_clusters, classif, data)
   discriminant_power = 100 * getPdisPerPartition(classif_type, max_cluster, classif, data)
   
