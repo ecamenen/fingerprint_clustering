@@ -334,17 +334,21 @@ getRelativeBetweenPerPart = function(t, n, c = NULL, d = NULL){
   TSS = sum(scale(d, scale = FALSE)^2)
   for (i in 2:n) {
     cl = as.factor(getClusters(t, i, c, d))
-    # tapply(data[,i], Cla, mean) :
-    # centroids of each clusters for a column i
-    # sapply(1:ncol(data), function(i) tapply(data[,i], Cla, mean)) :
-    # centroids of each clusters for each column
     # apply(d, 2, mean) : centroids for each column
     # as.vector(table(cl) : size of each clusters
     # t : vector rotation for arithmetic with other row or column vectors
-    between[i-1] = sum(t((t(sapply(1:ncol(d), function(i) tapply(d[,i], cl, mean)))-
-                            apply(d, 2, mean))^2) * as.vector(table(cl)))/TSS
+    between[i-1] = sum(t((t(getClusterCentroids(d,cl))-apply(d, 2, mean))^2) * as.vector(table(cl)))/TSS
   }
   return (100*between)
+}
+
+
+# tapply(data[,i], Cla, mean) :
+# centroids of each clusters for a column i
+# sapply(1:ncol(data), function(i) tapply(data[,i], Cla, mean)) :
+# centroids of each clusters for each column
+getClusterCentroids = function(d, cl){
+  sapply(1:ncol(d), function(i) tapply(d[,i], cl, mean))
 }
 
 # Difference between each case of a vector
@@ -355,6 +359,25 @@ getBetweenDifferences = function(t, n, c=NULL, d=NULL){
   return (as.vector(cbind(between[1], t(diff[-(n-1)]))))
   #-n-1 to remove the last NA value (pairwise comparison)
   #between[1] to get the difference with 1 cluster
+}
+
+getWithin = function(d, cl, k) {
+  nk = length(cl[cl==k]) #number of individuals in the cluster
+  d1 = scalecenter(d)
+  return( nk * sum(getClusterCentroids(d1,cl)[k,]^2) / nrow(d))
+}
+
+getWithinPerCluster = function(t, n, c, d) {
+  within = matrix(NA, n-1, n)
+  rownames(within) = seq(2, n)
+  colnames(within) = paste("G", seq(1, n), sep="")
+  for (k in 2:n){
+    cl = getClusters(t, k, c, d)
+    for (i in 1:length(table(cl)) ){
+      within[k-1, i] = getWithin(d, cl, i)
+    }
+  }
+  return (within)
 }
 
 # Between inertia differences between a partionning and the previous
@@ -794,9 +817,10 @@ if (isTRUE(advanced)){
   
   contribution = 100 * getCtrVar(classif_type, optimal_nb_clusters, classif, data)
   discriminant_power = 100 * getPdisPerPartition(classif_type, max_cluster, classif, data)
+  within = getWithinPerCluster(classif_type, max_cluster, classif, data)
   
   verbose = F
-  for (i in c("contribution", "discriminant_power"))
+  for (i in c("contribution", "discriminant_power", "within"))
     writeTsv(i)
   verbose = !("quiet" %in% names(opt))
 }
