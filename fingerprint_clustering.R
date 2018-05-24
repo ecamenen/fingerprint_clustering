@@ -367,7 +367,7 @@ getWithin = function(d, cl, k) {
   return( nk * sum(getClusterCentroids(d1,cl)[k,]^2) / nrow(d))
 }
 
-getWithinPerCluster = function(t, n, c, d) {
+getRelativeWithinPerCluster = function(t, n, c, d) {
   within = matrix(NA, n-1, n)
   rownames(within) = seq(2, n)
   colnames(within) = paste("G", seq(1, n), sep="")
@@ -376,6 +376,7 @@ getWithinPerCluster = function(t, n, c, d) {
     for (i in 1:length(table(cl)) ){
       within[k-1, i] = getWithin(d, cl, i)
     }
+    within[k-1,] = within[k-1,] / sum(as.numeric(na.omit(within[k-1,])))
   }
   return (within)
 }
@@ -817,7 +818,7 @@ if (isTRUE(advanced)){
   
   contribution = 100 * getCtrVar(classif_type, optimal_nb_clusters, classif, data)
   discriminant_power = 100 * getPdisPerPartition(classif_type, max_cluster, classif, data)
-  within = getWithinPerCluster(classif_type, max_cluster, classif, data)
+  within = getRelativeWithinPerCluster(classif_type, max_cluster, classif, data)
   
   for (i in c("contribution", "discriminant_power", "within"))
     writeTsv(i, v=F)
