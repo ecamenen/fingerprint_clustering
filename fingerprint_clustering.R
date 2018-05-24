@@ -104,9 +104,9 @@ getDistance = function(d, t, k=NULL){
 #Inputs: x : a matrix
 #filename of the saved file
 #Prints the matrix, save the matrix
-writeTsv = function(x, cl=TRUE){
+writeTsv = function(x, cl=T, v=T){
   #print on stdout
-  if (isTRUE(verbose)) cat(paste("\n", gsub("_", " ", toupper(x)), ":\n", sep=""))
+  if (isTRUE(v)) cat(paste("\n", gsub("_", " ", toupper(x)), ":\n", sep=""))
   #disabling warning
   options(warn = -1)
   #get variable
@@ -119,7 +119,7 @@ writeTsv = function(x, cl=TRUE){
   #output = output[,colSums(is.na(output)) != nrow(output)]
   output[is.na(output)] = ""
   colnames(output)=rep("", ncol(output)); rownames(output)=rep("", nrow(output))
-  if (isTRUE(verbose)){
+  if (isTRUE(v)){
     if (isTRUE(cl)){
     printed = round(apply(output[-1,-1],2,as.numeric),2)
     rownames(printed) = rownames(tab)
@@ -819,10 +819,8 @@ if (isTRUE(advanced)){
   discriminant_power = 100 * getPdisPerPartition(classif_type, max_cluster, classif, data)
   within = getWithinPerCluster(classif_type, max_cluster, classif, data)
   
-  verbose = F
   for (i in c("contribution", "discriminant_power", "within"))
-    writeTsv(i)
-  verbose = !("quiet" %in% names(opt))
+    writeTsv(i, v=F)
 }
 
 #Plots
