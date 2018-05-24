@@ -617,18 +617,33 @@ orderColors = function(c, cl){
 #            PCA
 ################################
 
-plotPca = function(t, k, c, d){
-  pca = dudi.pca(d, scannf=F)
+#nf: number of factorial axis
+plotPca = function(t, k, c, d, nf=2){
+  pca = dudi.pca(d, scannf=F, nf=nf)
   pdf("pca.pdf")
   par(mar=c(0,0,4.1,0))
   clusters = getClusters(t, k, c, d)
-  title = paste("Cumulated inertia:", round((pca$eig[1]+pca$eig[2])/sum(pca$eig),4)*100, "%")
-  s.class(addaxes=F, pca$li ,ylim=c(min(pca$li[,2])-3, max(pca$li[,2])+3), xlim=c(min(pca$li[,1])-3, max(pca$li[,1])+3), csub=1.5, as.factor(clusters), grid=F, col=colPers(optimal_nb_clusters))
+  title = paste("Cumulated inertia:", round((pca$eig[nf-1]+pca$eig[nf])/sum(pca$eig),4)*100, "%")
+  s.class(addaxes=F, cbind(pca$li[,nf-1] , pca$li[,nf]), ylim=c(min(pca$li[,nf])-3, max(pca$li[,nf])+3), xlim=c(min(pca$li[,nf-1])-3, max(pca$li[,nf-1])+3), csub=1.5, as.factor(clusters), grid=F, col=colPers(k))
   mtext(title, font=2, cex=1.5, line=1)
   abline(h=0, v=0, lty=2, lwd=2, col="grey")
-  text(x=pca$li[,1], y=pca$li[,2], labels=rownames(pca$li), col=colorClusters(clusters), cex=0.6)
+  text(x=pca$li[,nf-1], y=pca$li[,nf], labels=rownames(pca$li), col=colorClusters(clusters), cex=0.6)
+  par(fig=c(0.8,1,0.82,1),new=TRUE)
+  if(isTRUE(advanced)) plotInertiaPca(pca)
   suprLog = dev.off()
 }
+
+# nf: number of inertia bar plot corresponding to factorial axis
+plotInertiaPca = function (pca, nf=4){
+  inertia = round(pca$eig/sum(pca$eig)*100, 1)
+  par(mar=c(2, 0, 1, 1) + 0.1)
+  plot(inertia, type="h", lwd=10, lend=1, xlim=c(0,nf+0.2),ylim=c(0,max(inertia+7)),col="grey75",font=2, axes=F, xlab="", ylab="")
+  title(sub="Inertia (in %)", line=0, cex.sub=0.7, font.sub=3)
+  text(1:nf,inertia[1:nf]+5, inertia[1:nf], cex = 0.6)
+  par(new=TRUE); par(mar=c(0,0,0,0)) ; plot(0:1,0:1, axes=F, type="n")
+  rect(0,0.1,0.9,0.9, border="grey65")
+}
+
 
 #########################################
 #            Variables contribution
@@ -746,7 +761,7 @@ text = !("text" %in% names(opt))
 if (!is.null(opt$workdir)) setwd(opt$workdir)
 
 #Loading data
-data = read.table(opt$infile, header=F, sep="\t", dec=".", row.names=1)
+data = read.table("matrix2.txt", header=F, sep="\t", dec=".", row.names=1)
 colnames(data) <- substr(rownames(data), 1, 25) -> rownames(data)
 postChecking(args, data)
 
@@ -789,6 +804,8 @@ if (isTRUE(advanced)){
 #Plots
 if(classif_type > 2) plotDendrogram(classif_type, optimal_nb_clusters, classif, data, advanced)
 plotPca(classif_type, optimal_nb_clusters, classif, data)
+# uncomment to have (3,4 axis projection)
+# plotPca(classif_type, optimal_nb_clusters, classif, data, 4)
 if(classif_type <= 2 || isTRUE(advanced)){
   heatMap(data, sil, text=T)
 }else{
