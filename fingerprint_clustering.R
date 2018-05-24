@@ -454,8 +454,10 @@ plotGapPerPart = function(t, n, d, B){
   gap = getGapPerPart(d, n, B)
   savePdf("gap_statistics.pdf")
   optimal_nb_clusters = getGapBest(gap)
+  gap_k=round(gap$Tab,3)
+  best = paste(gap_k[,"gap"][optimal_nb_clusters], ">",gap_k[,"gap"][optimal_nb_clusters+1],"-",gap_k[,"SE.sim"][optimal_nb_clusters])
   plot(gap, arrowArgs = list(col="gray", length=1/15, lwd=2, angle=90, code=3), type="b", xlim=c(1,n+1), ylim=c(0,max(gap$Tab[,"gap"])+0.1), col="grey", xlab="Nb. of clusters", ylab=expression(Gap[k]), main="",axes=F)
-  plotBestClustering("Gap statistics method", gap$Tab[,"gap"]," gap value", optimal_nb_clusters, 0.1, 1)
+  plotBestClustering("Gap statistics method", gap$Tab[,"gap"]," gap value", optimal_nb_clusters, 0.1, 1, best)
   #cat(paste("With a corrected index, optimal number of clusters k =",getGapBest(gap,"firstSEmax"), "\n"))
   suprLog = dev.off()
   return (gap)
@@ -486,7 +488,7 @@ printSummary = function(t, n, adv=F, c=NULL, d=NULL){
   names = c("Between-inertia (%)", "Between-differences (%)", "Within-inertia (%)", "Silhouette index") 
   if(isTRUE(adv)) {
     summary = cbind(summary, gap$Tab[,"gap"][-1], gap$Tab[,"SE.sim"][-1])
-    names=c(names, "Gap statistics", "Gap SE")
+    names=c(names, "Gap", "Gap SE")
   }
   rownames(summary) = seq(2, n) 
   colnames(summary) = names  
