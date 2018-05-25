@@ -150,21 +150,32 @@ plotAxis = function (side, min, max, interval = 1){
   axis(side, seq(min,max, interval), lwd=3)
 }
 
-plotBestClustering = function(sub_title, values, values_type, optimal_nb_clusters, interval = 1, min_x=2, best=NULL){
+plotBestClustering = function(sub_title, values, values_type, optimal_nb_clusters, interval = 1, min_x=2, best=NULL, val2=NULL){
   plotAxis(1, 2, max_cluster)
+  
   if (interval >= 1) axisSeq=round(values)
   else axisSeq = c(0, max(values) +0.1)
+  
   #case of plotting gap statistics
   if (min_x < 2) best_y=values[optimal_nb_clusters]
+  #case of fusion levels
+  else if (!is.null(val2)) best_y=values[optimal_nb_clusters -1]
   else best_y = max(values)
+  
   #for non-elbow plots
-  if (is.null(best)) best = round(max(values),2)
+  if (!is.null(val2)) best = round(max(val2),2)
+  else if (is.null(best)) best = round(max(values),2)
+  
   plotAxis(2, min(axisSeq), max(axisSeq), interval)
   title(main="Optimal number of clusters", line=2, cex.main=2)
   mtext(text=sub_title, font=3, cex=1.2, line = 0.5)
   abline(v=optimal_nb_clusters, col="red", lty=2, lwd=2)
   points(optimal_nb_clusters, best_y, pch=19, col="red", cex=2)
-  if(isTRUE(text)) text(y=values, x=min_x:max_cluster, labels=round(values,2), cex=1.2, pos=4, col="red")
+  
+  if (!is.null(val2)) t_values = val2
+  else t_values = values
+  
+  if(isTRUE(text)) text(y=values, x=min_x:max_cluster, labels=round(t_values,2), cex=1.2, pos=4, col="red")
   if (isTRUE(verbose)) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a", values_type, " of ", best, "\n", sep="")
 }
 
@@ -382,16 +393,25 @@ getRelativeWithinPerCluster = function(t, n, c, d) {
 }
 
 # Between inertia differences between a partionning and the previous
-plotFusionLevels = function(t, n, c=NULL, d=NULL) {
+plotBetweenDiff = function(t, n, c=NULL, d=NULL) {
   if (isTRUE(verbose)) cat("\nBETWEEN DIFFERENCES:\n")
   between_diff = getBetweenDifferences(t, n, c, d)
-  #between_diff = 100 - getRelativeBetweenPerPart(t, n, c, d)
-  #relative.loss = intra[2:(nrow(data)-1)]/intra[1:(nrow(data) - 2)]
-  
   optimal_nb_clusters = which.max(between_diff)+1
   savePdf("between_differences.pdf")
   plot(2:n, between_diff, type="b", ylim=c(round(min(between_diff))-1,round(max(between_diff))+1), xlim=c(2,n+1), xlab="Nb. of clusters", ylab="Between-cluster variation (%)", col="grey", axes=F)
-  plotBestClustering("Fusion level method", between_diff, " variation with the previous partitionning (%)", optimal_nb_clusters)
+  plotBestClustering("Largest between differences method", between_diff, " variation with the previous partitionning (%)", optimal_nb_clusters)
+  suprLog = dev.off()
+}
+
+plotFusionLevels = function(t, n, c=NULL) {
+  if (isTRUE(verbose)) cat("\nFUSION LEVELS:\n")
+  fusion = rev(c$height)
+  diff = unlist(sapply(1:n, function(i) fusion[i-1]-fusion[i]))
+  fusion = fusion[1:(n-1)]
+  optimal_nb_clusters = which.max(diff)+1
+  savePdf("fusion_levels.pdf")
+  plot(2:n, fusion, type="b", ylim=c(round(min(fusion))-1,round(max(fusion))+1), xlim=c(2,n+1), xlab="Nb. of clusters", ylab="Cophenetic distance", col="grey", axes=F)
+  plotBestClustering("Fusion level method", fusion, " gain with the previous fusion level", optimal_nb_clusters, val2=diff)
   suprLog = dev.off()
 }
 
@@ -399,9 +419,10 @@ plotElbow = function(t, n, c=NULL, d=NULL) {
   if (isTRUE(verbose)) cat("\nELBOW:\n")
   within = c(100, 100 - getRelativeBetweenPerPart(t, n, c, d))
   ratio = within[1:(n-1)] / within[2:n]
-  best = round(min(ratio),2); optimal_nb_clusters = which.min(ratio)
+  best = round(min(ratio),2)
+  optimal_nb_clusters = which.min(ratio)
   savePdf("elbow.pdf")
-  plot(1:n, within, type="b", ylim=c(-1,101), xlim=c(1,n+1), xlab="Nb. of clusters", ylab="Relative within inertia (%)", col="grey", axes=F)
+  plot(1:n, within, type="b", ylim=c(min(within)-1,101), xlim=c(1,n+1), xlab="Nb. of clusters", ylab="Relative within inertia (%)", col="grey", axes=F)
   plotBestClustering("Elbow method", within, " Wk/Wk+1 ratio ", optimal_nb_clusters, 5, 1, best)
   suprLog = dev.off()
 }
@@ -609,13 +630,14 @@ heatMap = function(d, s=NULL, c=NULL, cl=NULL, text=FALSE){
 
 # Inputs:
 # k: number of clusters
-plotDendrogram = function(t, k, c, d, adv=FALSE){
+plotDendrogram = function(t, k, c, d, n){
 
   pdf("dendrogram.pdf")
   setGraphicBasic()
   par(mar=c(2,5,5,1))
   plot(c, hang=-1, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), sub="", cex=0.8, font=3, ylab="Cophenetic distance", main="Dendrogram", axes=F)
   plotAxis(2, 0, max(c$height))
+  abline(h=rev(c$height)[1:n], col="gray", lty=2, lwd=1)
   #projection of the clusters
   rect.hclust(c, k=as.numeric(k), border=orderColors(c, clusters))
   suprLog = dev.off()
@@ -794,9 +816,9 @@ classif = getCAH(data, classif_type)
 if(classif_type>2){
   plotCohenetic(classif_type, data, classif)
   if(isTRUE(advanced)) cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
+  plotFusionLevels(classif_type, max_cluster, classif)
 }
-
-plotFusionLevels(classif_type, max_cluster, classif, data)
+plotElbow(classif_type, max_cluster, classif, data)
 
 #Silhouette analysis
 optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
@@ -812,7 +834,6 @@ clusters <- getClusters(classif_type, optimal_nb_clusters, classif, data) -> cl_
 #Advanced indexes
 if (isTRUE(advanced)){
   
-  elbow_k = plotElbow(classif_type, max_cluster, classif, data)
   gap = plotGapPerPart(classif_type, max_cluster, data, bootstrap)
   plotGapPerPart2(gap, max_cluster)
   
@@ -825,7 +846,7 @@ if (isTRUE(advanced)){
 }
 
 #Plots
-if(classif_type > 2) plotDendrogram(classif_type, optimal_nb_clusters, classif, data, advanced)
+if(classif_type > 2) plotDendrogram(classif_type, optimal_nb_clusters, classif, data, max_cluster)
 plotPca(classif_type, optimal_nb_clusters, classif, data)
 # uncomment to have (3,4 axis projection)
 # plotPca(classif_type, optimal_nb_clusters, classif, data, 4)
