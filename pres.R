@@ -7,18 +7,38 @@ x = c(0, 3, 5, 8)
 y = c(2, 0, 2, 6)
 d_test = cbind(x, y)
 
-names = paste("M", seq(1,nb_met-1),sep="")
+
 
 #Plotting data
-plot(d_test, xlim=c(0,max_node), ylim=c(0,max_node), font.lab=3, type='n',axes=F)
-title(main="Metabolite network")
-axis(1, seq(0,max_node), lwd=3, font.axis=3); axis(2, seq(0,max_node), lwd=3, font.axis=3);
-abline(h=seq(0,max_node), v=seq(0,max_node), col="grey")
-text(d_test, labels=names)
-points(0,0,pch=21, col="red", cex=1.5, bg="yellow")
+plotNetwork = function (d, m, n){
+  names = paste("M", seq(1,n-1),sep="")
+  plot(d_test, xlim=c(0,m), ylim=c(0,m), font.lab=3, type='n',axes=F)
+  title(main="Metabolite network")
+  axis(1, seq(0,m), lwd=3, font.axis=3); axis(2, seq(0,m), lwd=3, font.axis=3);
+  abline(h=seq(0,m), v=seq(0,m), col="grey")
+  text(d_test, labels=names)
+  points(0,0,pch=21, col="red", cex=1.5, bg="yellow")
+
+}
+
+pdf("cou.pdf", width=7,height = 5)
+plotNetwork(d_test, max_node, nb_met)
+text(0.3,0.3, "M0")
+dev.off()
 
 d_test = rbind(c(0,0), d_test)
 names = paste("M", seq(0, nb_met-1), sep="")
+
+pdf("cou2.pdf", width=7,height = 5)
+par(mar=c(2, 5, 4, 2) + 0.1 )
+plot(0:14, 0:14, axes=F, type="n", ylab="")
+title(ylab = "Distance between metabolites", font.lab=3, cex.lab=1.4)
+axis(2,seq(0,14, 2), lwd=3, font.axis=3)
+axis(2,seq(0,14, 1), lwd=3, font.axis=3, labels=rep("",15))
+axis(1,seq(0,14, 3), lwd=3, font.axis=3,labels=names)
+abline(h=seq(0,14, 2),col="grey")
+dev.off()
+
 
 #Distance matrix
 dist_matrix = matrix(NA, nb_met, nb_met)
