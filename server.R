@@ -22,12 +22,12 @@ shinyServer(function(input,output){
   output$summary = renderTable({
     data = loadData(input$infile)
     classif = getCAH(data, getClassifValue(input$classif_type))
-    printSummary(classif_type, max_cluster, classif, data)
+    printSummary(getClassifValue(input$classif_type), max_cluster, classif, data)
   })
   
   output$fusion_levels = renderPlot({
     data = loadData(input$infile)
     classif = getCAH(data, getClassifValue(input$classif_type))
-    plotFusionLevels(classif_type, max_cluster, classif, data)
+    plotFusionLevels(getClassifValue(input$classif_type), max_cluster, classif, data)
   })
 })
