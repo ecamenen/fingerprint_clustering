@@ -7,7 +7,7 @@ getArgs = function(){
                 help="Fingerprint file name [default: %default]"),
     make_option(c("-m", "--maxCluster"), type="integer", default=6, metavar="integer",
                 help="Maximum number of clusters [default: %default]"),
-    make_option(c("-t", "--classif_type"), type="integer", default=0, metavar="integer",
+    make_option(c("-t", "--classif_type"), type="integer", default=4, metavar="integer",
                 help="Type of classifation [default: automatic selection of best CAH] (1: K-menoids; 2: K-means; 3: Ward; 4: Complete links; 5: Single links; 6: UPGMA; 7: WPGMA; 8: WPGMC; 9: UPGMC)"),
     make_option(c("-adv", "--advanced"), type="logical", action="store_true", 
                 help="Activate advanced mode (print more outputs)"),
@@ -292,12 +292,12 @@ plotCohenetic=function(t, d, cah){
   cor_coph = cor(dis, coph_matrix)
   if (isTRUE(verbose)) cat(paste("\nCOPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation with the data:",round(cor_coph,3),"\n"))
 
-  savePdf("shepard_graph.pdf")
+  #savePdf("shepard_graph.pdf")
   plot(dis, coph_matrix, pch=19, col=alpha("red",0.2), axes=F, xlim=c(0,max(dis)), ylim=c(0,max(coph_matrix)), xlab="Distance between metabolites",ylab="Cophenetic distance", asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
   printAxis(2, 0, max(coph_matrix))
   printAxis(1, 0, max(dis))
   abline(0, 1, col="grey", lwd=3, lty=2)
-  suprLog = dev.off()
+  #suprLog = dev.off()
 }
 
 ##############################################
@@ -379,23 +379,23 @@ plotSilhouettePerPart = function(t, n, c=NULL, d=NULL){
   if (isTRUE(verbose)) cat("\nSILHOUETTE:\n")
   mean_silhouette = getSilhouettePerPart(t, n, c, d)
   
-  savePdf("average_silhouettes.pdf")
+  #savePdf("average_silhouettes.pdf")
   optimal_nb_clusters = which.max(mean_silhouette)+1
   plot(2:(n-1), mean_silhouette, type="b", xlim=c(2,n), ylim=c(0,max(mean_silhouette)+0.1), col="grey", xlab="Nb. of clusters", ylab="Average silhouette width", axes=F)
   printBestClustering("Silhouette method", mean_silhouette,"n average width", optimal_nb_clusters, 0.1)
-  suprLog = dev.off()
+  #suprLog = dev.off()
   return (optimal_nb_clusters)
 }
 
 #TODO: here: setParam
 plotSilhouette = function(s){
-  pdf("silhouette.pdf")
+  #pdf("silhouette.pdf")
   setGraphicBasic()
   par(mar=c(4, 12, 3, 2))
   plot(s, max.strlen=25, main=" ", sub= "", do.clus.stat=TRUE, xlab="Silhouette width", cex.names=0.8, col=colorClusters(s[,1]), nmax.lab=100, do.n.k = FALSE, axes=F)
   mtext(paste("Average silhouette width:", round(summary(s)$avg.width,3)), font=2, cex=1.5, line=1)
   printAxis(1, 0, 1, 0.2)
-  suprLog = dev.off()
+  #suprLog = dev.off()
 }
 
 printSummary = function(t, n, c=NULL, d=NULL){ 
@@ -468,7 +468,7 @@ heatMap = function(d, s=NULL, c=NULL, cl=NULL, text=FALSE){
   #image(1:ncol(matrix), 1:ncol(matrix), t(matrix), axes=F, xlab="", ylab="")
 
   options(warn = -1)
-  pdf("heat_map.pdf")
+  #pdf("heat_map.pdf")
   
   par(fig=c(0,0.9,0,1), new=TRUE)
   par(mar=c(1, 8, 8, 1))
@@ -485,10 +485,11 @@ heatMap = function(d, s=NULL, c=NULL, cl=NULL, text=FALSE){
   plot(c(0,1),c(0,1),type = 'n', axes = F,xlab = '', ylab = '', main = '')
   rasterImage(legend_image, 0.4, 0, 0.5, 1)
   mtext('   Distance', 3, line=0.5, cex=0.85, font=2)
+  options(warn = 0)
   text(x=0.5, y = seq(0,1,l=3), labels = round(seq(max(matrix),0,l=3)),cex=0.7,pos=4)
   
-  options(warn = 0)
-  suprLog = dev.off()
+
+  #suprLog = dev.off()
 }
 
 ################################
@@ -499,21 +500,22 @@ heatMap = function(d, s=NULL, c=NULL, cl=NULL, text=FALSE){
 # k: number of clusters
 plotDendrogram = function(t, k, c, d, adv=FALSE){
 
-  pdf("dendrogram.pdf")
+  #pdf("dendrogram.pdf")
   setGraphicBasic()
   par(mar=c(2,5,5,1))
   plot(c, hang=-1, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), sub="", cex=0.8, font=3, ylab="Cophenetic distance", main="Dendrogram", axes=F)
   printAxis(2, 0, max(c$height))
   #projection of the clusters
-  rect.hclust(c, k=as.numeric(k), border=orderColors(c, clusters))
-  suprLog = dev.off()
+  cl = getClusters(t, k, c, d)
+  rect.hclust(c, k=as.numeric(k), border=orderColors(c, cl))
+  #suprLog = dev.off()
 }
 
 # Get colors ordered for dendrogram
 orderColors = function(c, cl){
   col_in = colorClusters(cl)[c$order]
   j = 1
-  col_ordered = rep(NA, length(table(clusters)))
+  col_ordered = rep(NA, length(table(cl)))
   col_ordered[1] = col_in[1]
   for (i in 2:length(col_in)){
     if (col_in[i] != col_in[i-1]){
@@ -531,15 +533,15 @@ orderColors = function(c, cl){
 
 plotPca = function(t, k, c, d){
   pca = dudi.pca(d, scannf=F)
-  pdf("pca.pdf")
+  #pdf("pca.pdf")
   par(mar=c(0,0,4.1,0))
   clusters = getClusters(t, k, c, d)
   title = paste("Cumulated inertia:", round((pca$eig[1]+pca$eig[2])/sum(pca$eig),4)*100, "%")
-  s.class(addaxes=F, pca$li ,ylim=c(min(pca$li[,2])-3, max(pca$li[,2])+3), xlim=c(min(pca$li[,1])-3, max(pca$li[,1])+3), csub=1.5, as.factor(clusters), grid=F, col=colPers(optimal_nb_clusters))
+  s.class(addaxes=F, pca$li ,ylim=c(min(pca$li[,2])-3, max(pca$li[,2])+3), xlim=c(min(pca$li[,1])-3, max(pca$li[,1])+3), csub=1.5, as.factor(clusters), grid=F, col=colPers(k))
   mtext(title, font=2, cex=1.5, line=1)
   abline(h=0, v=0, lty=2, lwd=2, col="grey")
   text(x=pca$li[,1], y=pca$li[,2], labels=rownames(pca$li), col=colorClusters(clusters), cex=0.6)
-  suprLog = dev.off()
+  #suprLog = dev.off()
 }
 
 #########################################
@@ -651,9 +653,11 @@ nb_clusters = opt$nbCluster
 max_cluster = opt$maxCluster
 classif_type = opt$classif_type
 advanced = "advanced" %in% names(opt)
-verbose= !("quiet" %in% names(opt))
+#verbose= !("quiet" %in% names(opt))
+verbose = F
 ranked = !("ranked" %in% names(opt))
 if (!is.null(opt$workdir)) setwd(opt$workdir)
+optimal_nb_clusters = 3
 
 #Loading data
 data = read.table(opt$infile, header=F, sep="\t", dec=".", row.names=1)
@@ -661,24 +665,24 @@ colnames(data) <- substr(rownames(data), 1, 25) -> rownames(data)
 postChecking(args, data)
 
 #Perform classification
-if(classif_type == 0) classif_type = selectBestCAH(data, verbose)
+#if(classif_type == 0) classif_type = selectBestCAH(data, verbose)
 classif = getCAH(data, classif_type)
 
 
-if(classif_type>2) plotCohenetic(classif_type, data, classif)
-plotFusionLevels(classif_type, max_cluster, classif, data)
+#if(classif_type>2) plotCohenetic(classif_type, data, classif)
+#plotFusionLevels(classif_type, max_cluster, classif, data)
 
 #Silhouette analysis
-optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
-if(!is.null(nb_clusters)) optimal_nb_clusters = nb_clusters
-sil = getSilhouette(classif_type, optimal_nb_clusters, classif, data)
-plotSilhouette(sil)
+#optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
+#if(!is.null(nb_clusters)) optimal_nb_clusters = nb_clusters
+#sil = getSilhouette(classif_type, optimal_nb_clusters, classif, data)
+#plotSilhouette(sil)
 summary = printSummary(classif_type, max_cluster, classif, data)
 writeTsv("summary")
 
 #Global variables settings
-dis = getDistance(data, classif_type, optimal_nb_clusters)
-clusters = getClusters(classif_type, optimal_nb_clusters, classif, data)
+#dis = getDistance(data, classif_type, optimal_nb_clusters)
+#clusters = getClusters(classif_type, optimal_nb_clusters, classif, data)
 
 #Advanced indexes
 if (isTRUE(advanced)){
@@ -690,14 +694,14 @@ if (isTRUE(advanced)){
 }
 
 #Plots
-if(classif_type > 2) plotDendrogram(classif_type, optimal_nb_clusters, classif, data, advanced)
-plotPca(classif_type, optimal_nb_clusters, classif, data)
+#if(classif_type > 2) plotDendrogram(classif_type, optimal_nb_clusters, classif, data, advanced)
+#plotPca(classif_type, optimal_nb_clusters, classif, data)
 if(classif_type <= 2 | isTRUE(advanced)){
-  heatMap(data, sil, text=T)
+  #heatMap(data, sil, text=T)
 }else{
-  heatMap(data, c=classif, cl=clusters, text=T)
+  #heatMap(data, c=classif, cl=clusters, text=T)
 }
 
 #Final outputs
-writeClusters(clusters, ranked)
-if (!isTRUE(verbose)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
+#writeClusters(clusters, ranked)
+#if (!isTRUE(verbose)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
