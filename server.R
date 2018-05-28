@@ -39,7 +39,8 @@ shinyServer(function(input,output){
     nb_clusters = input$nb_clusters
     classif = getCAH(data, classif_type)
 
-    plotFusionLevels(getClassifValue(input$classif_type), max_cluster, classif, data)
+    plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
+    #plotFusionLevels(getClassifValue(input$classif_type), max_cluster, classif, data)
   })
   
   output$silhouette = renderPlot({
@@ -49,10 +50,12 @@ shinyServer(function(input,output){
     classif_type = getClassifValue(input$classif_type)
     max_cluster = input$max_clusters
     nb_clusters = input$nb_clusters
-    #optimal_nb_clusters = nb_clusters
     classif = getCAH(data, classif_type)
     
-    sil = getSilhouette(classif_type, nb_clusters, classif, data)
+    optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
+    if(nb_clusters > 1) optimal_nb_clusters = nb_clusters
+
+    sil = getSilhouette(classif_type, optimal_nb_clusters, classif, data)
     plotSilhouette(sil)
   })
   
@@ -64,8 +67,10 @@ shinyServer(function(input,output){
     max_cluster = input$max_clusters
     nb_clusters = input$nb_clusters
     classif = getCAH(data, classif_type)
+    optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
+    if(nb_clusters > 1) optimal_nb_clusters = nb_clusters
     
-    plotPca(classif_type, nb_clusters, classif, data)
+    plotPca(classif_type, optimal_nb_clusters, classif, data)
   })
   
   output$heatmap = renderPlot({
@@ -76,12 +81,16 @@ shinyServer(function(input,output){
     max_cluster = input$max_clusters
     nb_clusters = input$nb_clusters
     classif = getCAH(data, classif_type)
+    optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
+    if(nb_clusters > 1) optimal_nb_clusters = nb_clusters
+    #delete sil plot
+    par(mar=c(0,0,0,0)) ; plot(0:1,0:1, axes=F, type="n")
     
     if(classif_type <= 2 | isTRUE(advanced)){
-      sil = getSilhouette(classif_type, nb_clusters, classif, data)
+      sil = getSilhouette(classif_type, optimal_nb_clusters, classif, data)
       heatMap(data, sil, text=T)
     }else{
-      clusters = getClusters(classif_type, nb_clusters, classif, data)
+      clusters = getClusters(classif_type, optimal_nb_clusters, classif, data)
       heatMap(data, c=classif, cl=clusters, text=T)
     }
   })
@@ -108,9 +117,11 @@ shinyServer(function(input,output){
     max_cluster = input$max_clusters
     nb_clusters = input$nb_clusters
     classif = getCAH(data, classif_type)
+    optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
+    if(nb_clusters > 1) optimal_nb_clusters = nb_clusters
     
     if(classif_type > 2){
-      plotDendrogram(classif_type, nb_clusters, classif, data, advanced)
+      plotDendrogram(classif_type, optimal_nb_clusters, classif, data, advanced)
     }
   })
   

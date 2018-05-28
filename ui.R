@@ -24,7 +24,7 @@ shinyUI( pageWithSidebar(
                  choices = list(`Partitionning clustering` =  getClassifKeys(1,2), `Hierarchical clustering` = getClassifKeys(3,9))),
     
     sliderInput("max_clusters", h4("Maximum number of clusters allowed: "), min=2, max= 100, value=6),
-    sliderInput("nb_clusters", h4("Number of clusters: "), min=2, max= 100, value=2)
+    sliderInput("nb_clusters", h4("Number of clusters: "), min=0, max= 10, value=0)
   ),
   
   mainPanel(
