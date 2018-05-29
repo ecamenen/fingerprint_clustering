@@ -25,21 +25,32 @@ shinyUI( pageWithSidebar(
     
     sliderInput("max_clusters", h5("Maximum number of clusters: "), min=2, max= 100, value=6),
     sliderInput("nb_clusters", h5("Number of clusters: "), min=0, max= 10, value=0),
-    checkboxInput("advanced", "Advanced mode", value=F)
+    checkboxInput("advanced", "Advanced mode", value=T),
+    actionButton("save_all","Save all")
   ),
   
   mainPanel(
     tabsetPanel(
       type = "tabs",
-      tabPanel("Summary",tableOutput("summary")),
-      tabPanel("Best clustering", plotOutput("best_cluster")),
-      tabPanel("Silhouette", plotOutput("silhouette")),
-      tabPanel("PCA", plotOutput("pca")),
-      tabPanel("Heatmap", plotOutput("heatmap")),
-      tabPanel("Cophenetic", plotOutput("cophenetic")),
-      tabPanel("Dendrogram", plotOutput("dendrogram")),
-      tabPanel("Contribution per cluster",tableOutput("ctr_clus")),
-      tabPanel("Contribution per partition",tableOutput("ctr_part"))
+      
+      tabPanel("Summary",tableOutput("summary"),
+               actionButton("summary_save","Save")),
+      tabPanel("Best clustering", plotOutput("best_cluster"),
+               actionButton("best_save","Save")),
+      tabPanel("Silhouette", plotOutput("silhouette"),
+               actionButton("sil_save","Save")),
+      tabPanel("PCA", plotOutput("pca"),
+               actionButton("pca_save","Save")),
+      tabPanel("Heatmap", plotOutput("heatmap"),
+               actionButton("heatmap_save","Save")),
+      tabPanel("Cophenetic", plotOutput("cophenetic"),
+               actionButton("coph_save","Save")),
+      tabPanel("Dendrogram", plotOutput("dendrogram"),
+               actionButton("dendr_save","Save")),
+      tabPanel("Partition contributions",tableOutput("ctr_part"),
+               actionButton("ctr_part_save","Save")),
+      tabPanel("Cluster contributions",tableOutput("ctr_clus"),
+               actionButton("ctr_clus_save","Save"))
     )
   )
   

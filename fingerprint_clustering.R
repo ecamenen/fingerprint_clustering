@@ -311,6 +311,7 @@ plotCohenetic=function(t, d, cah){
 # c: hierarchical classification
 # d: dataframe
 getRelativeBetweenPerPart = function(t, n, c = NULL, d = NULL){
+
   d=as.matrix(d)
   between = rep(0, n-1)
   # total sum of square
@@ -660,13 +661,13 @@ if (!is.null(opt$workdir)) setwd(opt$workdir)
 
 
 #Loading data
-#data = read.table(opt$infile, header=F, sep="\t", dec=".", row.names=1)
+data = read.table(opt$infile, header=F, sep="\t", dec=".", row.names=1)
 #colnames(data) <- substr(rownames(data), 1, 25) -> rownames(data)
 #postChecking(args, data)
 
 #Perform classification
 #if(classif_type == 0) classif_type = selectBestCAH(data, verbose)
-#classif = getCAH(data, classif_type)
+classif = getCAH(data, classif_type)
 
 
 #if(classif_type>2) plotCohenetic(classif_type, data, classif)
@@ -677,7 +678,7 @@ if (!is.null(opt$workdir)) setwd(opt$workdir)
 #if(!is.null(nb_clusters)) optimal_nb_clusters = nb_clusters
 #sil = getSilhouette(classif_type, optimal_nb_clusters, classif, data)
 #plotSilhouette(sil)
-#summary = printSummary(classif_type, max_cluster, classif, data)
+summary = printSummary(classif_type, max_cluster, classif, data)
 #writeTsv("summary")
 
 #Global variables settings
