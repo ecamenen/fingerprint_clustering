@@ -29,7 +29,7 @@ shinyServer(function(input,output){
     printSummary(getClassifValue(input$classif_type), max_cluster, classif, data)
   })
   
-  output$fusion_levels = renderPlot({
+  output$best_cluster = renderPlot({
     
     data = loadData(input$infile)
     
@@ -96,33 +96,55 @@ shinyServer(function(input,output){
   })
   
   output$cophenetic = renderPlot({
-
-    data = loadData(input$infile)
-    
-    classif_type = getClassifValue(input$classif_type)
-    max_cluster = input$max_clusters
-    nb_clusters = input$nb_clusters
-    classif = getCAH(data, classif_type)
-    
     if(classif_type > 2){
+      data = loadData(input$infile)
+      classif_type = getClassifValue(input$classif_type)
+      classif = getCAH(data, classif_type)
+    
       plotCohenetic(classif_type, data, classif)
     }
   })
   
   output$dendrogram = renderPlot({
-    
-    data = loadData(input$infile)
-    
-    classif_type = getClassifValue(input$classif_type)
-    max_cluster = input$max_clusters
-    nb_clusters = input$nb_clusters
-    classif = getCAH(data, classif_type)
-    optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
-    if(nb_clusters > 1) optimal_nb_clusters = nb_clusters
-    
     if(classif_type > 2){
+      data = loadData(input$infile)
+      
+      classif_type = getClassifValue(input$classif_type)
+      max_cluster = input$max_clusters
+      classif = getCAH(data, classif_type)
+      nb_clusters = input$nb_clusters
+      optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
+      if(nb_clusters > 1) optimal_nb_clusters = nb_clusters
+    
       plotDendrogram(classif_type, optimal_nb_clusters, classif, data, advanced)
     }
   })
+  
+  output$ctr_part = renderTable({
+    if(isTRUE(input$advanced)){
+      data = loadData(input$infile)
+      classif_type = getClassifValue(input$classif_type)
+      classif = getCAH(data, getClassifValue(classif_type))
+      max_cluster = input$max_clusters
+      
+      100 * getPdisPerPartition(classif_type, max_cluster, classif, data)
+    }
+  })
+  
+  output$ctr_clus = renderTable({
+    if(isTRUE(input$advanced)){
+      data = loadData(input$infile)
+      classif_type = getClassifValue(input$classif_type)
+      classif = getCAH(data, getClassifValue(classif_type))
+      max_cluster = input$max_clusters
+      
+      nb_clusters = input$nb_clusters
+      optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
+      if(nb_clusters > 1) optimal_nb_clusters = nb_clusters
+      
+      100 * getCtrVar(classif_type, optimal_nb_clusters, classif, data)
+    }
+  })
+  
   
 })

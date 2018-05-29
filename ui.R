@@ -15,29 +15,32 @@ shinyUI( pageWithSidebar(
     
     textInput(inputId="infile", #nom (ou ID) associee a cet element de controle,
                  #sera utilisee dans la partie 'server'
-                 label=h4("Name of the dataset: "), #libellé associee a cet element 
+                 label=h5("Name of the dataset: "), #libellé associee a cet element 
                  #(apparait au dessus de l'input)
                  value="matrix.txt"),
     
     #checkValues and checkNames do not works on selectInput but only on checkbox
-    selectInput("classif_type",h4("Classification method: "),  selected = "Complete links",
+    selectInput("classif_type",h5("Classification method: "),  selected = "Complete links",
                  choices = list(`Partitionning clustering` =  getClassifKeys(1,2), `Hierarchical clustering` = getClassifKeys(3,9))),
     
-    sliderInput("max_clusters", h4("Maximum number of clusters allowed: "), min=2, max= 100, value=6),
-    sliderInput("nb_clusters", h4("Number of clusters: "), min=0, max= 10, value=0)
+    sliderInput("max_clusters", h5("Maximum number of clusters: "), min=2, max= 100, value=6),
+    sliderInput("nb_clusters", h5("Number of clusters: "), min=0, max= 10, value=0),
+    checkboxInput("advanced", "Advanced mode", value=F)
   ),
   
   mainPanel(
-    #titre donne a la partie presentant les sorties
-    #h3("Summary: ")
-    #le contenu sera defini dans la partie server
-    tableOutput("summary"),
-    plotOutput("fusion_levels"),
-    plotOutput("silhouette"),
-    plotOutput("pca"),
-    plotOutput("heatmap"),
-    plotOutput("cophenetic"),
-    plotOutput("dendrogram")
+    tabsetPanel(
+      type = "tabs",
+      tabPanel("Summary",tableOutput("summary")),
+      tabPanel("Best clustering", plotOutput("best_cluster")),
+      tabPanel("Silhouette", plotOutput("silhouette")),
+      tabPanel("PCA", plotOutput("pca")),
+      tabPanel("Heatmap", plotOutput("heatmap")),
+      tabPanel("Cophenetic", plotOutput("cophenetic")),
+      tabPanel("Dendrogram", plotOutput("dendrogram")),
+      tabPanel("Contribution per cluster",tableOutput("ctr_clus")),
+      tabPanel("Contribution per partition",tableOutput("ctr_part"))
+    )
   )
   
 ))
