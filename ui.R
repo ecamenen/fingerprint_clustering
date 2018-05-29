@@ -1,5 +1,3 @@
-library(shiny)
-
 classif_methods = list("K-menoids" = 1,  "K-means" = 2, "Ward"=3, "Complete links"=4, "Single links"=5, "UPGMA"=6, "WPGMA"=7, "WPGMC"=8, "UPGMC"=9)
 
 #min-max: minimum and maximum position number in the list
@@ -7,7 +5,7 @@ getClassifKeys = function(min, max)
   #similar to for i in min:max
   unlist(sapply(min:max, function(i) names(classif_methods)[i]))
 
-shinyUI( pageWithSidebar(
+ui = pageWithSidebar(
   headerPanel("Fingerprint clustering"), #titre appl
   
   #pannel de cote
@@ -54,4 +52,4 @@ shinyUI( pageWithSidebar(
     )
   )
   
-))
+)

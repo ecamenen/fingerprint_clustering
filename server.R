@@ -1,16 +1,22 @@
-rm(list=ls())
-library(shiny)
 source("fingerprint_clustering.R")
-classif_methods = list("K-menoids" = 1,  "K-means" = 2, "Ward"=3, "Complete links"=4, "Single links"=5, "UPGMA"=6, "WPGMA"=7, "WPGMC"=8, "UPGMC"=9)
+classif_methods <- list("K-menoids" = 1,  "K-means" = 2, "Ward"=3, "Complete links"=4, "Single links"=5, "UPGMA"=6, "WPGMA"=7, "WPGMC"=8, "UPGMC"=9)
 
-shinyServer(function(input,output){ 
+loadData = function(f){
+  d = read.table(f, header=F, sep="\t", dec=".", row.names=1)
+  colnames(d) <- substr(rownames(d), 1, 25) -> rownames(d)
+  #postChecking(args, d)
+  return (d)
+}
 
-  loadData = function(f){
-    d = read.table(f, header=F, sep="\t", dec=".", row.names=1)
-    colnames(d) <- substr(rownames(d), 1, 25) -> rownames(d)
-    postChecking(args, d)
-    return (d)
-  }
+vars = c("data", "classif_type", "classif", "max_cluster", "nb_clusters", "verbose")
+vals = c(loadData("matrix.txt"), 4, getCAH(data, classif_type), 6, 0, F, F)
+
+#data creation and initialization (need to be created before call in server func)
+for (i in 1:length(vars)){
+  assign(vars[i], vals[i])
+}
+
+server = function(input, output, session){ 
   
   performClassif = function(input){
     data = loadData(input$infile)
@@ -20,8 +26,12 @@ shinyServer(function(input,output){
   getClassifValue = function(key)  unlist(classif_methods[key])
   
   setVariables = function(input){
-    max_cluster = input$max_clusters
-    nb_clusters = input$nb_clusters
+    data <<- loadData(input$infile)
+    classif_type <<- getClassifValue(input$classif_type)
+    classif <<- getCAH(data, classif_type)
+    max_cluster <<- input$max_clusters
+    nb_clusters <<- input$nb_clusters
+    advanced <<- input$advanced
   }
   
   savePlot = function(filename, plot, adv=F){
@@ -33,28 +43,14 @@ shinyServer(function(input,output){
   }
   
   output$summary = renderTable({
-    data = loadData(input$infile)
-
-    #setVariables(input)
-    classif_type = getClassifValue(input$classif_type)
-    classif = getCAH(data, classif_type)
-    max_cluster = input$max_clusters
-    nb_clusters = input$nb_clusters
-
-    assign("summary",printSummary(classif_type, max_cluster, classif, data))
+    setVariables(input)
+    assign("summary",printSummary(classif_type, max_cluster, classif, data),.GlobalEnv)
     observeEvent(input$summary_save, writeTsv("summary")); summary
   })
   
   output$best_cluster = renderPlot({
     
-    data = loadData(input$infile)
-    
-    #setVariables(input)
-    classif_type = getClassifValue(input$classif_type)
-    max_cluster = input$max_clusters
-    nb_clusters = input$nb_clusters
-    classif = getCAH(data, classif_type)
-
+    setVariables(input)
     best = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
     #plotFusionLevels(getClassifValue(input$classif_type), max_cluster, classif, data)
     
@@ -69,12 +65,7 @@ shinyServer(function(input,output){
   
   output$silhouette = renderPlot({
     
-    data = loadData(input$infile)
-    
-    classif_type =  getClassifValue(input$classif_type)
-    max_cluster = input$max_clusters
-    nb_clusters = input$nb_clusters
-    classif = getCAH(data, classif_type)
+    setVariables(input)
     
     optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
     if(nb_clusters > 1) optimal_nb_clusters = nb_clusters
@@ -86,12 +77,7 @@ shinyServer(function(input,output){
   
   output$pca = renderPlot({
     
-    data = loadData(input$infile)
-    
-    classif_type =  getClassifValue(input$classif_type)
-    max_cluster = input$max_clusters
-    nb_clusters = input$nb_clusters
-    classif = getCAH(data, classif_type)
+    setVariables(input)
     optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
     if(nb_clusters > 1) optimal_nb_clusters = nb_clusters
     
@@ -100,12 +86,7 @@ shinyServer(function(input,output){
   
   output$heatmap = renderPlot({
     
-    data = loadData(input$infile)
-    
-    classif_type =  getClassifValue(input$classif_type)
-    max_cluster = input$max_clusters
-    nb_clusters = input$nb_clusters
-    classif = getCAH(data, classif_type)
+    setVariables(input)
     optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
     if(nb_clusters > 1) optimal_nb_clusters = nb_clusters
     #delete sil plot
@@ -122,22 +103,14 @@ shinyServer(function(input,output){
   
   output$cophenetic = renderPlot({
     if(classif_type > 2){
-      data = loadData(input$infile)
-      classif_type = getClassifValue(input$classif_type)
-      classif = getCAH(data, classif_type)
-    
+      setVariables(input)
       plotCohenetic(classif_type, data, classif)
     }
   })
   
   output$dendrogram = renderPlot({
     if(classif_type > 2){
-      data = loadData(input$infile)
-      
-      classif_type = classif_methods[input$classif_type]
-      max_cluster = input$max_clusters
-      classif = getCAH(data, classif_type)
-      nb_clusters = input$nb_clusters
+      setVariables(input)
       optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
       if(nb_clusters > 1) optimal_nb_clusters = nb_clusters
     
@@ -147,10 +120,7 @@ shinyServer(function(input,output){
   
   output$ctr_part = renderTable({
     if(isTRUE(input$advanced)){
-      data = loadData(input$infile)
-      classif_type =  getClassifValue(input$classif_type)
-      classif = getCAH(data, getClassifValue(classif_type))
-      max_cluster = input$max_clusters
+      setVariables(input)
       
       100 * getPdisPerPartition(classif_type, max_cluster, classif, data)
     }
@@ -158,13 +128,7 @@ shinyServer(function(input,output){
   
   output$ctr_clus = renderTable({
     if(isTRUE(input$advanced)){
-      data = loadData(input$infile)
-      head(data)
-      classif_type =  getClassifValue(input$classif_type)
-      classif = getCAH(data, getClassifValue(classif_type))
-      max_cluster = input$max_clusters
-      
-      nb_clusters = input$nb_clusters
+      setVariables(input)
       optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
       if(nb_clusters > 1) optimal_nb_clusters = nb_clusters
       
@@ -173,4 +137,4 @@ shinyServer(function(input,output){
   }, rownames=T, hover=T, striped=T, digits=2, width="100cm", align="c", size=200)
   
   
-})
+}
