@@ -1,8 +1,9 @@
 source("fingerprint_clustering.R")
 classif_methods <- list("K-menoids" = 1,  "K-means" = 2, "Ward"=3, "Complete links"=4, "Single links"=5, "UPGMA"=6, "WPGMA"=7, "WPGMC"=8, "UPGMC"=9)
 
-loadData = function(f){
-  d = read.table(f, header=F, sep="\t", dec=".", row.names=1)
+loadData = function(f, s){
+  if(is.null(f)) f = "matrix.txt"
+  d = read.table(f, header=F, sep=s, dec=".", row.names=1)
   colnames(d) <- substr(rownames(d), 1, 25) -> rownames(d)
   #postChecking(args, d)
   return (d)
@@ -15,7 +16,7 @@ server = function(input, output, session){
   #Each shiny server functions run in local environment
   #With assign, variables are forced to be in global env
   setVariables = function(input){
-    assign("data", loadData(input$infile), .GlobalEnv)
+    assign("data", loadData(input$infile$datapath, input$sep), .GlobalEnv)
     assign("classif_type", getClassifValue(input$classif_type), .GlobalEnv)
     assign("classif", getCAH(data, classif_type), .GlobalEnv)
     assign("max_cluster", input$max_clusters, .GlobalEnv)
@@ -25,6 +26,9 @@ server = function(input, output, session){
     assign("optimal_nb_clusters", 
            getOptimalNbClus(classif_type, max_cluster, classif, data, nb_clusters),
            .GlobalEnv)
+    
+    clusters = getClusters(classif_type, optimal_nb_clusters, classif, data)
+    writeClusters(clusters, T)
   }
   
   setPrintFuncs = function(){
@@ -90,6 +94,7 @@ server = function(input, output, session){
         suprLog = dev.off()
   }
   
+  #BUGED
   # e: event variable
   # f: filename
   # func: plot function

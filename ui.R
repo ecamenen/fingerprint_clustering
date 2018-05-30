@@ -11,43 +11,66 @@ ui = pageWithSidebar(
   #pannel de cote
   sidebarPanel( #elements de controle de l'apli
     
-    textInput(inputId="infile", #nom (ou ID) associee a cet element de controle,
+    fileInput(inputId="infile", #nom (ou ID) associee a cet element de controle,
                  #sera utilisee dans la partie 'server'
-                 label=h5("Name of the dataset: "), #libellé associee a cet element 
+                 label=h5("Choose a file: ") #libellé associee a cet element 
                  #(apparait au dessus de l'input)
-                 value="matrix.txt"),
-    
+              ),
+    radioButtons("sep", 
+                 "Separator",
+                 choices = c(Comma = ",",
+                             Semicolon = ";",
+                             Tab = "\t"),
+                 selected = "\t"),
     #checkValues and checkNames do not works on selectInput but only on checkbox
-    selectInput("classif_type",h5("Classification method: "),  selected = "Complete links",
-                 choices = list(`Partitionning clustering` =  getClassifKeys(1,2), `Hierarchical clustering` = getClassifKeys(3,9))),
-    
-    sliderInput("max_clusters", h5("Maximum number of clusters: "), min=2, max= 100, value=6),
-    sliderInput("nb_clusters", h5("Number of clusters: "), min=0, max= 10, value=0),
-    checkboxInput("advanced", "Advanced mode", value=T),
-    actionButton("save_all","Save all")
+    selectInput("classif_type",
+                h5("Classification method: "),
+                selected = "Complete links",
+                choices = list(`Partitionning clustering` =  getClassifKeys(1,2),
+                               `Hierarchical clustering` = getClassifKeys(3,9))),
+    sliderInput("max_clusters", 
+                h5("Maximum number of clusters: "), 
+                min=2, max= 100, value=6),
+    sliderInput("nb_clusters",
+                h5("Number of clusters: "),
+                min=0, max= 10, value=0),
+    checkboxInput("advanced",
+                  "Advanced mode",
+                  value=T),
+    actionButton("save_all",
+                 "Save all")
   ),
   
   mainPanel(
     tabsetPanel(
       type = "tabs",
       
-      tabPanel("Summary",tableOutput("summary"),
+      tabPanel("Summary",
+               tableOutput("summary"),
                actionButton("summary_save","Save")),
-      tabPanel("Best clustering", plotOutput("best_cluster"),
+      tabPanel("Best clustering", 
+               plotOutput("best_cluster"),
                actionButton("best_save","Save")),
-      tabPanel("Silhouette", plotOutput("silhouette"),
+      tabPanel("Silhouette",
+               plotOutput("silhouette"),
                actionButton("sil_save","Save")),
-      tabPanel("PCA", plotOutput("pca"),
+      tabPanel("PCA",
+               plotOutput("pca"),
                actionButton("pca_save","Save")),
-      tabPanel("Heatmap", plotOutput("heatmap"),
+      tabPanel("Heatmap",
+               plotOutput("heatmap"),
                actionButton("heatmap_save","Save")),
-      tabPanel("Cophenetic", plotOutput("cophenetic"),
+      tabPanel("Cophenetic",
+               plotOutput("cophenetic"),
                actionButton("coph_save","Save")),
-      tabPanel("Dendrogram", plotOutput("dendrogram"),
+      tabPanel("Dendrogram",
+               plotOutput("dendrogram"),
                actionButton("dendr_save","Save")),
-      tabPanel("Partition contributions",tableOutput("ctr_part"),
+      tabPanel("Partition contributions",
+               tableOutput("ctr_part"),
                actionButton("ctr_part_save","Save")),
-      tabPanel("Cluster contributions",tableOutput("ctr_clus"),
+      tabPanel("Cluster contributions",
+               tableOutput("ctr_clus"),
                actionButton("ctr_clus_save","Save"))
     )
   )
