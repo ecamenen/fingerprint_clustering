@@ -636,11 +636,11 @@ loadData = function(f){
   return (d)
 }
 
-data = loadData("matrix.txt")
-vars = c("classif_type", "classif", "max_cluster", "nb_clusters", "optimal_nb_clusters", "verbose", "advanced")
-vals = c(4, getCAH(data, 4), 6, 0, 0, F, F)
-
-#data creation and initialization (need to be created before call in server func)
-for (i in 1:length(vars)){
-  assign(vars[i], vals[i], .GlobalEnv)
-}
+# data = loadData("matrix.txt")
+# vars = c("classif_type", "classif", "max_cluster", "nb_clusters", "optimal_nb_clusters", "verbose", "advanced")
+# vals = c(4, getCAH(data, 4), 6, 0, 0, F, F)
+# 
+# #data creation and initialization (need to be created before call in server func)
+# for (i in 1:length(vars)){
+#   assign(vars[i], vals[i], .GlobalEnv)
+# }
