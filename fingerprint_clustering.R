@@ -454,7 +454,7 @@ heatMap = function(d, s=NULL, c=NULL, cl=NULL, text=FALSE){
     order = attr(s,"iOrd")
     cl_sizes = summary(s)$clus.size
     title = "silhouette\'s scores"
-    colors = colPers(length(levels(as.factor(sil[,1]))))
+    colors = colPers(length(levels(as.factor(s[,1]))))
   }else{
     order = c$order
     cl_sizes = getOrderedClusterSize(cl[order])
@@ -629,3 +629,18 @@ getPdisPerPartition = function(t, n, c, d){
   return (pdis_per_partition)
 }
 
+loadData = function(f){
+  d = read.table(f, header=F, sep="\t", dec=".", row.names=1)
+  colnames(d) <- substr(rownames(d), 1, 25) -> rownames(d)
+  #postChecking(args, d)
+  return (d)
+}
+
+data = loadData("matrix.txt")
+vars = c("classif_type", "classif", "max_cluster", "nb_clusters", "optimal_nb_clusters", "verbose", "advanced")
+vals = c(4, getCAH(data, 4), 6, 0, 0, F, F)
+
+#data creation and initialization (need to be created before call in server func)
+for (i in 1:length(vars)){
+  assign(vars[i], vals[i], .GlobalEnv)
+}

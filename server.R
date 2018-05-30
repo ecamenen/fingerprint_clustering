@@ -8,20 +8,7 @@ loadData = function(f){
   return (d)
 }
 
-vars = c("data", "classif_type", "classif", "max_cluster", "nb_clusters", "verbose")
-vals = c(loadData("matrix.txt"), 4, getCAH(data, classif_type), 6, 0, F, F)
-
-#data creation and initialization (need to be created before call in server func)
-for (i in 1:length(vars)){
-  assign(vars[i], vals[i])
-}
-
 server = function(input, output, session){ 
-  
-  performClassif = function(input){
-    data = loadData(input$infile)
-    return (getCAH(data, getClassifValue(input$classif_type)))
-  }
   
   getClassifValue = function(key)  unlist(classif_methods[key])
   
@@ -87,17 +74,15 @@ server = function(input, output, session){
   output$heatmap = renderPlot({
     
     setVariables(input)
-    optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
-    if(nb_clusters > 1) optimal_nb_clusters = nb_clusters
+    optimal_nb_clusters <<- plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
+    if(nb_clusters > 1) optimal_nb_clusters <<- nb_clusters
     #delete sil plot
     par(mar=c(0,0,0,0)) ; plot(0:1,0:1, axes=F, type="n")
     
     if(classif_type <= 2 | isTRUE(advanced)){
-      sil = getSilhouette(classif_type, optimal_nb_clusters, classif, data)
-      heatMap(data, sil, text=T)
+      heatMap(data, getSilhouette(classif_type, optimal_nb_clusters, classif, data), text=T)
     }else{
-      clusters = getClusters(classif_type, optimal_nb_clusters, classif, data)
-      heatMap(data, c=classif, cl=clusters, text=T)
+      heatMap(data, c=classif, cl=getClusters(classif_type, optimal_nb_clusters, classif, data), text=T)
     }
   })
   
@@ -135,6 +120,5 @@ server = function(input, output, session){
       100 * getCtrVar(classif_type, optimal_nb_clusters, classif, data)
     }
   }, rownames=T, hover=T, striped=T, digits=2, width="100cm", align="c", size=200)
-  
   
 }
