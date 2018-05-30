@@ -1,3 +1,10 @@
+#Loading librairies
+librairies = c("shiny","cluster", "optparse", "gclus", "ade4", "scales")
+for (l in librairies){
+  if (! (l %in% installed.packages()[,"Package"])) install.packages(l, repos = "http://cran.us.r-project.org", quiet = T)
+  library(l, character.only = TRUE) #to work with "l"
+}
+
 getArgs = function(){
   option_list = list(
     make_option(c("-w", "--workdir"), type="character", metavar="character",
@@ -381,6 +388,7 @@ plotSilhouettePerPart = function(t, n, c=NULL, d=NULL){
   mean_silhouette = getSilhouettePerPart(t, n, c, d)
   
   #savePdf("average_silhouettes.pdf")
+  setGraphic()
   optimal_nb_clusters = which.max(mean_silhouette)+1
   plot(2:(n-1), mean_silhouette, type="b", xlim=c(2,n), ylim=c(0,max(mean_silhouette)+0.1), col="grey", xlab="Nb. of clusters", ylab="Average silhouette width", axes=F)
   printBestClustering("Silhouette method", mean_silhouette,"n average width", optimal_nb_clusters, 0.1)
@@ -535,7 +543,7 @@ orderColors = function(c, cl){
 plotPca = function(t, k, c, d){
   pca = dudi.pca(d, scannf=F)
   #pdf("pca.pdf")
-  par(mar=c(0,0,4.1,0))
+  par(mar=c(0,0,4.1,0), lwd=1)
   clusters = getClusters(t, k, c, d)
   title = paste("Cumulated inertia:", round((pca$eig[1]+pca$eig[2])/sum(pca$eig),4)*100, "%")
   s.class(addaxes=F, pca$li ,ylim=c(min(pca$li[,2])-3, max(pca$li[,2])+3), xlim=c(min(pca$li[,1])-3, max(pca$li[,1])+3), csub=1.5, as.factor(clusters), grid=F, col=colPers(k))
@@ -635,12 +643,3 @@ loadData = function(f){
   #postChecking(args, d)
   return (d)
 }
-
-# data = loadData("matrix.txt")
-# vars = c("classif_type", "classif", "max_cluster", "nb_clusters", "optimal_nb_clusters", "verbose", "advanced")
-# vals = c(4, getCAH(data, 4), 6, 0, 0, F, F)
-# 
-# #data creation and initialization (need to be created before call in server func)
-# for (i in 1:length(vars)){
-#   assign(vars[i], vals[i], .GlobalEnv)
-# }
