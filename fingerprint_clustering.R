@@ -8,7 +8,7 @@ getArgs = function(){
     make_option(c("-m", "--maxCluster"), type="integer", default=6, metavar="integer",
                 help="Maximum number of clusters [default: %default]"),
     make_option(c("-t", "--classif_type"), type="integer", default=4, metavar="integer",
-                help="Type of classifation [default: automatic selection of best CAH] (1: K-menoids; 2: K-means; 3: Ward; 4: Complete links; 5: Single links; 6: UPGMA; 7: WPGMA; 8: WPGMC; 9: UPGMC)"),
+                help="Type of classification [default: Complete links] (1: K-menoids; 2: K-means; 3: Ward; 4: Complete links; 5: Single links; 6: UPGMA; 7: WPGMA; 8: WPGMC; 9: UPGMC)"),
     make_option(c("-adv", "--advanced"), type="logical", action="store_true", 
                 help="Activate advanced mode (print more outputs)"),
     make_option(c("-q", "--quiet"), type="logical", action="store_true",
@@ -20,10 +20,14 @@ getArgs = function(){
     make_option(c("-r", "--ranked"), type="logical", action="store_true", 
                 help="Rank the metabolites in clusters by silhouette scores instead of alphabetically"),
     make_option(c("-b", "--bootstrap"), type="integer", default=500, metavar="integer",
-                help="Number of bootstraps for Gap statistic (advanced mode)")
-    
+                help="Number of bootstraps for Gap statistic (advanced mode)"),
+    make_option(c("-D", "--distance"), type="integer", default=1, metavar="integer",
+                help="Type of distance [default: Euclidian] (1: Euclidian, 2: Manhattan, 3: Jaccard, 4: Sokal & Michener, 5 Sorensen (Dice), 6: Ochiai)"),
+    make_option(c("-H", "--header"), type="logical", action="store_true",
+                help="Consider first row as header of columns"),
+    make_option(c("-s", "--separator"), type="character", metavar="character", default="\t",
+                help="Type of separator (default: tabulation)")
     )
-  
   return (OptionParser(option_list=option_list))
 }
 
@@ -39,10 +43,11 @@ checkArg = function(a){
     stop("--bootstrap comprise between 100 and 1000", call.=FALSE)
   }
   
-  checkMinCluster = function (o, def="")
-  if (opt[[o]] < 2){
-    print_help(a)
-    stop(paste("--",o ," must be upper or equal to 2",def,".\n",sep=""), call.=FALSE)
+  checkMinCluster = function (o, def=""){
+    if (opt[[o]] < 2){
+      print_help(a)
+      stop(paste("--",o ," must be upper or equal to 2",def,".\n",sep=""), call.=FALSE)
+    }
   }
   checkMinCluster("maxCluster"," [by default: 6]")
   if(!is.null(opt$nbCluster)) checkMinCluster("nbCluster")
@@ -51,6 +56,12 @@ checkArg = function(a){
     print_help(a)
     stop("--classif_type must be comprise between 1 and 6 [by default: 2].\n", call.=FALSE)
   }
+  
+  if ((opt$distance < 1) || (opt$distance > 6)){
+    print_help(a)
+    stop("--distance must be comprise between 1 and 6 [by default: 1 for Euclidian].\n", call.=FALSE)
+  }
+  
   
   checkFile = function (o){
     if(!file.exists(opt[[o]])){
@@ -96,9 +107,15 @@ scalecenter = function(d) {
   # without this constante, for advanced outputs, total (max_cluster=nrow(data)) will be different from 1
 }
 
-getDistance = function(d, t, k=NULL){
-  if (t > 1) dist(d, method = "euclidian")
-  else getCNH(t,d,k)$diss
+#df: dataframe
+#d: distance type
+getDistance = function(df, t, d, k=NULL){
+  dists=c("euclidian", "manhattan", 1, 2, 5, 7)
+  if (t > 1) {
+      if(d < 3) dist(df, method = dists[d])
+      else dist.binary(df, method = dists[d])
+  }
+  else getCNH(t,df,k)$diss
 }
 
 #Inputs: x : a matrix
@@ -121,9 +138,9 @@ writeTsv = function(x, cl=T, v=T){
   colnames(output)=rep("", ncol(output)); rownames(output)=rep("", nrow(output))
   if (isTRUE(v)){
     if (isTRUE(cl)){
-    printed = round(apply(output[-1,-1],2,as.numeric),2)
-    rownames(printed) = rownames(tab)
-    colnames(printed) = colnames(tab)
+      printed = round(apply(output[-1,-1],2,as.numeric),2)
+      rownames(printed) = rownames(tab)
+      colnames(printed) = colnames(tab)
     }else{
       printed = output
     }
@@ -191,23 +208,24 @@ savePdf = function (f){
 
 #Inputs:
 # t: number of type of classification
-# d: data (or distance matrix for hierarchic)
+# df: data
+# d: type of distance
 #Ouput: Hierarchical classification
-getCAH = function(d, t){
+getCAH = function(df, t, d){
   if(t>2){
     #dis: distance matrix
-    dis = getDistance(d, t)
+    dis = getDistance(df, t, d)
     #cah: classification hierarchic ascending
     cah = hclust(dis, method=getClassifType(t))
   #automaticly ordering by clusters
-  return (reorder.hclust(cah, d))
+  return (reorder.hclust(cah, df))
   }
 }
 
 # Selects best algo based on cophenetic calculation
-# d: data (or distance matrix for hierarchic)
-selectBestCAH = function (d, v=F){
-  dis = getDistance(d, 2)
+# df: data (or distance matrix for hierarchic)
+selectBestCAH = function (df, d, v=F){
+  dis = getDistance(df, 2, d)
   temp = 0
   for (i in 3:9){
     cah = getCAH(data, i)
@@ -277,7 +295,7 @@ colorClusters = function(cl){
 # cl: clusters
 # f : filename
 # r: ordered alphabetically
-writeClusters = function(cl, r=FALSE){
+writeClusters = function(cl, r=FALSE, v=FALSE){
   nb_cl = length(levels(as.factor(cl)))
   clusters = matrix(NA, length(cl), nb_cl)
   for (i in 1:nb_cl ){
@@ -303,7 +321,7 @@ writeClusters = function(cl, r=FALSE){
   #dirty way to force saving a local variable
   # (because writeTsv use only global variables)
   assign("clusters", clusters,.GlobalEnv)
-  writeTsv("clusters", F)
+  writeTsv("clusters", F, v=v)
 }
 
 ############################################################
@@ -314,8 +332,8 @@ writeClusters = function(cl, r=FALSE){
 #Inputs:
 # d : data
 # cah : hierarchical classification
-plotCohenetic=function(t, d, cah){
-  dis = getDistance(d, t)
+plotCohenetic=function(t, df, d, cah){
+  dis = getDistance(df, t, d)
   coph_matrix = cophenetic(cah)
   cor_coph = cor(dis, coph_matrix)
   if (isTRUE(verbose)) cat(paste("\nCOPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation with the data:",round(cor_coph,3),"\n"))
@@ -432,27 +450,27 @@ plotElbow = function(t, n, c=NULL, d=NULL) {
 ################################
 
 #Ouput: an ordered silhouette object
-getSilhouette = function(t, k , c, d){
-  clusters = getClusters(t, k , c, d)
-  diss = getDistance(d,t,k)
+getSilhouette = function(t, k , c, df, d){
+  clusters = getClusters(t, k , c, df)
+  diss = getDistance(df,t,d,k)
   sil = sortSilhouette(silhouette(clusters, diss))
-  rownames(sil) = row.names(d)[attr(sil,"iOrd")]
+  rownames(sil) = row.names(df)[attr(sil,"iOrd")]
   return (sil)
 }
 
-getSilhouettePerPart =function(t, n, c=NULL, d=NULL){
+getSilhouettePerPart =function(t, n, c, df, d){
   mean_silhouette = numeric(n - 1)
   for (k in 2:(n - 1)) {
-    si = getSilhouette(t, k , c, d)
+    si = getSilhouette(t, k , c, df, d)
     mean_silhouette[k] = summary(si)$avg.width
   }
   return(mean_silhouette[-1])
 }
 
 # Plot the best average silhouette width for all clustering possible
-plotSilhouettePerPart = function(t, n, c=NULL, d=NULL){
+plotSilhouettePerPart = function(t, n, c, df, d){
   if (isTRUE(verbose)) cat("\nSILHOUETTE:\n")
-  mean_silhouette = getSilhouettePerPart(t, n, c, d)
+  mean_silhouette = getSilhouettePerPart(t, n, c, df, d)
   
   savePdf("average_silhouettes.pdf")
   optimal_nb_clusters = which.max(mean_silhouette)+1
@@ -478,11 +496,11 @@ plotSilhouette = function(s){
 ###################################
 
 #B: nb of bootstrap
-getGapPerPart = function(d, n, B=500){
+getGapPerPart = function(df, d, n, B=500){
   #FUN mus have only two args in this order and return a list with an object cluster
-  if(classif_type>2) gapFun = function(x,k) list(cluster = getClusters(classif_type, k, getCAH(x,classif_type)))
+  if(classif_type>2) gapFun = function(x,k) list(cluster = getClusters(classif_type, k, getCAH(x, classif_type, d)))
   else gapFun = function(x,k) getCNH(classif_type,x,k)
-  clusGap(d,FUN=gapFun,K.max=n, verbose=F, B=B)
+  clusGap(df,FUN=gapFun,K.max=n, verbose=F, B=B)
 }
 
 #g: gap object
@@ -491,12 +509,12 @@ getGapBest = function (g, M="Tibs2001SEmax"){
 }
 
 # Plot the gap statistics width for all clustering possible
-plotGapPerPart = function(t, n, d, B){
+plotGapPerPart = function(t, n, df, d, B=500){
   if (isTRUE(verbose)) cat("\nGAP STATISTICS:\n")
-  if(t==2 & (max_cluster > 10 | nrow(d)>=100)) plural=c("few ", "s")
+  if(t==2 & (max_cluster > 10 | nrow(df)>=100)) plural=c("few ", "s")
   else plural=c("","")
-  if(t==2 | nrow(d)>=100 ) cat(paste("It could take a ",plural[1], "minute",plural[2],"...\n",sep=""))
-  gap = getGapPerPart(d, n, B)
+  if(t==2 | nrow(df)>=100 ) cat(paste("It could take a ",plural[1], "minute",plural[2],"...\n",sep=""))
+  gap = getGapPerPart(df, d, n, B)
   savePdf("gap_statistics.pdf")
   optimal_nb_clusters = getGapBest(gap)
   gap_k=round(gap$Tab,3)
@@ -526,10 +544,10 @@ plotGapPerPart2 = function(g, n){
   suprLog = dev.off()
 }
 
-printSummary = function(t, n, adv=F, c=NULL, d=NULL){ 
+printSummary = function(t, n, adv=F, c=NULL, df=NULL, d=1){ 
   #TODO: no n = nrow(data)
-  between = getRelativeBetweenPerPart(t, n, c, d)
-  summary = cbind(between, getBetweenDifferences(t, n, c, d), 100- getRelativeBetweenPerPart(t,n,classif, data), getSilhouettePerPart(t,n+1,c,d))
+  between = getRelativeBetweenPerPart(t, n, c, df)
+  summary = cbind(between, getBetweenDifferences(t, n, c, df), 100- getRelativeBetweenPerPart(t,n,classif, df), getSilhouettePerPart(t,n+1,c,df,d))
   names = c("Between-inertia (%)", "Between-differences (%)", "Within-inertia (%)", "Silhouette index") 
   if(isTRUE(adv)) {
     summary = cbind(summary, gap$Tab[,"gap"][-1], gap$Tab[,"SE.sim"][-1])
@@ -804,37 +822,39 @@ advanced = "advanced" %in% names(opt)
 verbose= !("quiet" %in% names(opt))
 ranked = !("ranked" %in% names(opt))
 text = !("text" %in% names(opt))
+header = ("header" %in% names(opt))
 if (!is.null(opt$workdir)) setwd(opt$workdir)
 
 #Loading data
-data = read.table("matrix2.txt", header=F, sep="\t", dec=".", row.names=1)
-colnames(data) <- substr(rownames(data), 1, 25) -> rownames(data)
+data = read.table(opt$infile, header=header, sep=opt$separator, dec=".", row.names=1)
+#colnames(data) <- 
+substr(rownames(data), 1, 25) -> rownames(data)
 postChecking(args, data)
 
 #Perform classification
-classif = getCAH(data, classif_type)
+classif = getCAH(data, classif_type, opt$distance)
 if(classif_type>2){
-  plotCohenetic(classif_type, data, classif)
-  if(isTRUE(advanced)) cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
+  plotCohenetic(classif_type, data, opt$distance, classif)
+  if(isTRUE(advanced) & isTRUE(verbose)) cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
   plotFusionLevels(classif_type, max_cluster, classif)
 }
 plotElbow(classif_type, max_cluster, classif, data)
 
 #Silhouette analysis
-optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data)
+optimal_nb_clusters = plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data, opt$distance)
 if(!is.null(nb_clusters)) optimal_nb_clusters = nb_clusters
-sil = getSilhouette(classif_type, optimal_nb_clusters, classif, data)
+sil = getSilhouette(classif_type, optimal_nb_clusters, classif, data, opt$distance)
 plotSilhouette(sil)
 
 #Global variables settings
-dis = getDistance(data, classif_type, optimal_nb_clusters)
+dis = getDistance(data, classif_type, optimal_nb_clusters, opt$distance)
 #cl_temp, because writeTsv(clusters) recreate an object
 clusters <- getClusters(classif_type, optimal_nb_clusters, classif, data) -> cl_temp
 
 #Advanced indexes
 if (isTRUE(advanced)){
   
-  gap = plotGapPerPart(classif_type, max_cluster, data, bootstrap)
+  gap = plotGapPerPart(classif_type, max_cluster, data, opt$distance, bootstrap)
   plotGapPerPart2(gap, max_cluster)
   
   contribution = 100 * getCtrVar(classif_type, optimal_nb_clusters, classif, data)
@@ -857,9 +877,9 @@ if(classif_type <= 2 || isTRUE(advanced)){
 }
 
 #Final outputs
-summary = printSummary(classif_type, max_cluster, advanced, classif, data)
-writeTsv("summary")
-writeClusters(clusters, ranked)
+summary = printSummary(classif_type, max_cluster, advanced, classif, data, opt$distance)
+writeTsv("summary", v=verbose)
+writeClusters(clusters, ranked, v=verbose)
 if (!isTRUE(verbose)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
 
 #errors
