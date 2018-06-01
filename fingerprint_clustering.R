@@ -14,7 +14,7 @@ getArgs = function(){
     make_option(c("-q", "--quiet"), type="logical", action="store_true",
                 help="Activate quiet mode"),
     make_option(c("-T", "--text"), type="logical", action="store_true",
-                help="DO NOT print values on graph"), 
+                help="DO NOT print values on graph"),
     make_option(c("-n", "--nb_clusters"), type="integer", metavar="integer",
                 help="Fix the number of clusters"),
     make_option(c("-r", "--ranked"), type="logical", action="store_true", 
@@ -100,6 +100,39 @@ postChecking = function (a, d){
   if(!is.null(opt$nb_clusters)) checkMaxCluster("nb_clusters")
 }
 
+
+#avoid doublets in row names
+#r: row names vector
+renameRowDoublets = function(r){
+  j=1
+  for (i in 2:length(names.row)){
+    if (names.row[i] == names.row[i-1]){
+      j = j+1
+      print(paste(names.row[i], names.row[i-1]))
+      names.row[i] = paste(names.row[i], ".", j, sep="")
+    }else{
+      j = 1
+    }
+  }
+}
+
+#rename row and avoid doublets errors
+renameRow = function(data){
+  names.row = as.character(data[,1])
+  data=data[,-1]
+  renameRowDoublets(names.row)
+  tryCatch({
+    substr(names.row, 1, 25) -> rownames(data)
+    return(data)
+  }, warning = function(w) {
+    names.row = renameRowDoublets(substr(names.row, 1, 25))
+    names.row -> rownames(data)
+    return(data)
+  }, error = function(e) {
+    return(data)
+  })
+}
+
 #Usage: colPers(x), x a number of colours in output
 #Gradient of color
 colPers = colorRampPalette(c(rgb(0.6,0.1,0.5,1), rgb(1,0,0,1), rgb(0.9,0.6,0,1), rgb(0.1,0.6,0.3,1), rgb(0.1,0.6,0.5,1), rgb(0,0,1,1)), alpha = TRUE)
@@ -116,13 +149,10 @@ scalecenter = function(d) {
 
 #df: dataframe
 #d: distance type
-getDistance = function(df, t, d){
+getDistance = function(df, d){
   dists=c("euclidian", "manhattan", 1, 2, 5, 7)
-  if (t > 1) {
-      if(d < 3) dist(df, method = dists[d])
-      else dist.binary(df, method = dists[d])
-  }
-  else getCNH(t,df,2)$diss
+  if(d < 3) dist(df, method = dists[d])
+  else dist.binary(df, method = dists[d])
 }
 
 #Inputs: x : a matrix
@@ -273,7 +303,7 @@ getClassif = function(t, n, d, dis){
   if(t>2) getCAH(t, d, dis)
   else {
     list_cnh = list("method"=getClassifType(t))
-    for (k in 2:n) list_cnh[[k]] = getCNH(t, d, dis, k)
+    for (k in 2:(n+1)) list_cnh[[k]] = getCNH(t, d, dis, k)
     return(list_cnh)
   }
 }
@@ -298,6 +328,7 @@ getClusters = function(k, c) {
 getClusterPerPart = function (n, c){
   cl = list()
   for (k in 2:n){
+    print(k)
     cl[[k-1]] = getClusters(k, c)
   }
   return (cl)
@@ -452,8 +483,11 @@ plotFusionLevels = function(n, c) {
   suprLog = dev.off()
 }
 
-plotElbow = function(n, within) {
+#x: vector of between inertia for k partitions
+plotElbow = function(x) {
   if (isTRUE(verbose)) cat("\nELBOW:\n")
+  n = length(between) +1
+  within = c(100, 100 - x)
   ratio = within[1:(n-1)] / within[2:n]
   best = round(min(ratio),2)
   optimal_nb_clusters = which.min(ratio)
@@ -482,13 +516,15 @@ getSilhouettePerPart =function(d, cl, dis){
   return(list_sil)
 }
 
+# sils: list of silhouettes objects per partition
+getMeanSilhouettePerPart = function(sils){
+  unlist(sapply(1:length(sil), function(i) summary(sil[[i]])$avg.width))
+}
+
 # Plot the best average silhouette width for all clustering possible
-# sil: list of silhouettes objects per partition
-plotSilhouettePerPart = function(sil){
+# mean_sils: vector of silhouette average width
+plotSilhouettePerPart = function(mean_silhouette){
   if (isTRUE(verbose)) cat("\nSILHOUETTE:\n")
-  
-  mean_silhouette = unlist(sapply(1:length(sil), function(i) summary(sil[[i]])$avg.width))
-  
   savePdf("average_silhouettes.pdf")
   optimal_nb_clusters = which.max(mean_silhouette)+1
   plot(2:(length(sil)+1), mean_silhouette, type="b", xlim=c(2,length(sil)+2), ylim=c(0,max(mean_silhouette)+0.1), col="grey", xlab="Nb. of clusters", ylab="Average silhouette width", axes=F)
@@ -561,9 +597,9 @@ plotGapPerPart2 = function(g, n){
   suprLog = dev.off()
 }
 
-printSummary = function(between, diff, within, sil, adv, gap=NULL){ 
+printSummary = function(between, diff, sil, adv, gap=NULL){ 
   #TODO: no n = nrow(data)
-  summary = cbind(between, diff, within, sil)
+  summary = cbind(between, diff, 100-between, sil)
   names = c("Between-inertia (%)", "Between-differences (%)", "Within-inertia (%)", "Silhouette index") 
   if(isTRUE(adv)) {
     summary = cbind(summary, gap$Tab[,"gap"][-1], gap$Tab[,"SE.sim"][-1])
@@ -843,37 +879,12 @@ if (!is.null(opt$workdir)) setwd(opt$workdir)
 #Loading data
 data = read.table(opt$infile, header=header, sep=opt$separator, dec=".")
 postChecking(args, data)
-
-#avoid doublets in row names
-#r: row names vector
-renameRowDoublets = function(r){
-  j=1
-  for (i in 2:length(names.row)){
-    if (names.row[i] == names.row[i-1]){
-      j = j+1
-      print(paste(names.row[i], names.row[i-1]))
-      names.row[i] = paste(names.row[i], ".", j, sep="")
-    }else{
-      j = 1
-    }
-  }
-}
-
-names.row = as.character(data[,1])
-data=data[,-1]
-renameRowDoublets(names.row)
-tryCatch({
-  substr(names.row, 1, 25) -> rownames(data)
-}, warning = function(w) {
-  names.row = renameRowDoublets(substr(names.row, 1, 25))
-  names.row -> rownames(data)
-}, error = function(e) {
-})
-
+#rename row and avoid doublets errors
+data = renameRow(data)
 
 #Perform classification
-dis = getDistance(data, classif_type, opt$distance)
-classif = getClassif(classif_type, max_clusters, data, dis)
+dis = getDistance(data, opt$distance)
+classif = getClassif(1, max_clusters, data, dis)
 list_clus = getClusterPerPart(max_clusters+1, classif)
 
 #Indexes
@@ -885,13 +896,13 @@ if(classif_type>2){
 
 #Inertia
 between = getRelativeBetweenPerPart(max_clusters, data, list_clus)
-within = c(100, 100 - between)
 diff = getBetweenDifferences(between)
-plotElbow(max_clusters, within)
+plotElbow(between)
 
 #Silhouette analysis
 sil = getSilhouettePerPart(data, list_clus, dis)
-optimal_nb_clusters = plotSilhouettePerPart(sil)
+mean_silhouette = getMeanSilhouettePerPart(sil)
+optimal_nb_clusters = plotSilhouettePerPart(mean_silhouette)
 if(!is.null(nb_clusters)) optimal_nb_clusters = nb_clusters
 sil_k = sil[[optimal_nb_clusters-1]]
 plotSilhouette(sil_k)
@@ -910,7 +921,7 @@ if (isTRUE(advanced)){
   discriminant_power = 100 * getPdisPerPartition(classif_type, max_clusters, list_clus, data)
   within_k = getRelativeWithinPerCluster(list_clus, data)
   
-  for (i in c("contribution", "discriminant_power", "within"))
+  for (i in c("contribution", "discriminant_power", "within_k"))
     writeTsv(i, v=F)
 }
 
@@ -924,7 +935,7 @@ if(classif_type <= 2 || isTRUE(advanced)){
 }
 
 #Final outputs
-summary = printSummary(between, diff, within, sil, advanced, gap)
+summary = printSummary(between, diff, mean_silhouette, advanced, gap)
 writeTsv("summary", v=verbose)
 writeClusters(clusters, ranked, v=verbose)
 if (!isTRUE(verbose)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
