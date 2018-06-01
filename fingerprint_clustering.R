@@ -13,6 +13,8 @@ getArgs = function(){
                 help="Activate advanced mode (print more outputs)"),
     make_option(c("-q", "--quiet"), type="logical", action="store_true",
                 help="Activate quiet mode"),
+    make_option(c("-V", "--verbose"), type="logical", action="store_true",
+                help="Activate quiet mode"),
     make_option(c("-T", "--text"), type="logical", action="store_true",
                 help="DO NOT print values on graph"),
     make_option(c("-n", "--nb_clusters"), type="integer", metavar="integer",
@@ -103,12 +105,11 @@ postChecking = function (a, d){
 
 #avoid doublets in row names
 #r: row names vector
-renameRowDoublets = function(r){
+renameRowDoublets = function(names.row){
   j=1
   for (i in 2:length(names.row)){
     if (names.row[i] == names.row[i-1]){
       j = j+1
-      print(paste(names.row[i], names.row[i-1]))
       names.row[i] = paste(names.row[i], ".", j, sep="")
     }else{
       j = 1
@@ -328,7 +329,6 @@ getClusters = function(k, c) {
 getClusterPerPart = function (n, c){
   cl = list()
   for (k in 2:n){
-    print(k)
     cl[[k-1]] = getClusters(k, c)
   }
   return (cl)
@@ -871,6 +871,9 @@ classif_type = opt$classif_type
 bootstrap = opt$bootstrap
 advanced = "advanced" %in% names(opt)
 verbose= !("quiet" %in% names(opt))
+if ("verbose" %in% names(opt)) {
+  verbose <- T -> verboseNiv2
+}
 ranked = !("ranked" %in% names(opt))
 text = !("text" %in% names(opt))
 header = ("header" %in% names(opt))
@@ -883,23 +886,29 @@ postChecking(args, data)
 data = renameRow(data)
 
 #Perform classification
+if(isTRUE(verboseNiv2)) cat("Distance calculation in progress...")
 dis = getDistance(data, opt$distance)
-classif = getClassif(1, max_clusters, data, dis)
+if(isTRUE(verboseNiv2)) cat("Classification in progress...")
+classif = getClassif(classif_type, max_clusters, data, dis)
+if(isTRUE(verboseNiv2)) cat("Clustering in progress...")
 list_clus = getClusterPerPart(max_clusters+1, classif)
 
 #Indexes
 if(classif_type>2){
+  if(isTRUE(verboseNiv2)) cat("Cophenetic calculation in progress...")
   plotCohenetic(dis, classif)
   if(isTRUE(advanced) & isTRUE(verbose)) cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
   plotFusionLevels(max_clusters, classif)
 }
 
 #Inertia
+if(isTRUE(verboseNiv2)) cat("Between inertia calculation in progress...")
 between = getRelativeBetweenPerPart(max_clusters, data, list_clus)
 diff = getBetweenDifferences(between)
 plotElbow(between)
 
 #Silhouette analysis
+if(isTRUE(verboseNiv2)) cat("Silhouette calculation in progress...")
 sil = getSilhouettePerPart(data, list_clus, dis)
 mean_silhouette = getMeanSilhouettePerPart(sil)
 optimal_nb_clusters = plotSilhouettePerPart(mean_silhouette)
@@ -927,6 +936,7 @@ if (isTRUE(advanced)){
 
 #Plots
 if(classif_type > 2) plotDendrogram(classif_type, optimal_nb_clusters, classif, data, max_clusters, clusters)
+if(isTRUE(verboseNiv2)) cat("PCA in progress...")
 plotPca(classif_type, optimal_nb_clusters, clusters, data, opt$nb_axis)
 if(classif_type <= 2 || isTRUE(advanced)){
   heatMap(data, sil_k, text=T)
