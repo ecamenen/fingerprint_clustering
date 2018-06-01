@@ -14,7 +14,7 @@ getArgs = function(){
     make_option(c("-q", "--quiet"), type="logical", action="store_true",
                 help="Activate quiet mode"),
     make_option(c("-V", "--verbose"), type="logical", action="store_true",
-                help="Activate quiet mode"),
+                help="Activate verbose mode"),
     make_option(c("-T", "--text"), type="logical", action="store_true",
                 help="DO NOT print values on graph"),
     make_option(c("-n", "--nb_clusters"), type="integer", metavar="integer",
@@ -105,7 +105,7 @@ postChecking = function (a, d){
 
 #avoid doublets in row names
 #r: row names vector
-renameRowDoublets = function(names.row){
+renameRownameDoublets = function(names.row){
   j=1
   for (i in 2:length(names.row)){
     if (names.row[i] == names.row[i-1]){
@@ -118,20 +118,41 @@ renameRowDoublets = function(names.row){
 }
 
 #rename row and avoid doublets errors
-renameRow = function(data){
+renameRowname = function(data){
   names.row = as.character(data[,1])
   data=data[,-1]
-  renameRowDoublets(names.row)
+  renameRownameDoublets(names.row)
   tryCatch({
     substr(names.row, 1, 25) -> rownames(data)
     return(data)
   }, warning = function(w) {
-    names.row = renameRowDoublets(substr(names.row, 1, 25))
+    names.row = renameRownameDoublets(substr(names.row, 1, 25))
     names.row -> rownames(data)
     return(data)
   }, error = function(e) {
     return(data)
   })
+}
+
+# Discard row from a reaction dataset that have the same conditions in each columns
+#x: dataframe
+discardRowCondDoublets = function(x){
+  row_doublets <- list() -> cond_row_doublets
+  j = 0
+  for (i in 1:nrow(x)){
+    if( (x[i,]==rep(0, ncol(x))) | (x[i,]==rep(1, ncol(x))) ){
+      #print(row.names(x[i,]))
+      j = j +1
+      row_doublets[[j]] = i
+    }
+  }
+  if(length(row_doublets)!=0){
+    removed_reacs = row.names(x[unlist(row_doublets),])
+    removed_conds = x[unlist(row_doublets), 1]
+    removed = cbind(removed_reacs, removed_conds)
+    writeTsv("removed", v=F)
+  }
+  return (x[-unlist(row_doublets),])
 }
 
 #Usage: colPers(x), x a number of colours in output
@@ -348,14 +369,14 @@ colorClusters = function(cl){
 # cl: clusters
 # f : filename
 # r: ordered alphabetically
-writeClusters = function(cl, r=FALSE, v=FALSE){
+writeClusters = function(d, cl, r=FALSE, v=FALSE){
   nb_cl = length(levels(as.factor(cl)))
   clusters = matrix(NA, length(cl), nb_cl)
   for (i in 1:nb_cl ){
     if (r == FALSE){
       #get metabolites from clusters and put into a column of the output matrix
       # from the begining of the column to the end of the vector of metabolites names
-      clusters[c(1:length(cl[cl==i])),i] = names(cl[cl==i])
+      clusters[c(1:length(cl[cl==i])),i] = row.names(d)
     }else if (r == TRUE){
       #ordering alphabetically
       clusters[c(1:length(cl[cl==i])),i] = sort(names(cl[cl==i]))
@@ -541,6 +562,10 @@ plotSilhouette = function(sil_k){
   plot(sil_k, max.strlen=25, main=" ", sub= "", do.clus.stat=TRUE, xlab="Silhouette width", cex.names=0.8, col=colorClusters(sil_k[,1]), nmax.lab=100, do.n.k = FALSE, axes=F)
   mtext(paste("Average silhouette width:", round(summary(sil_k)$avg.width,3)), font=2, cex=1.5, line=1)
   plotAxis(1, 0, 1, 0.2)
+  sil_scores = cbind(row.names(sil_k), sil_k[,1], sil_k[,3])
+  #colnames(sil_scores) = c("Chemicals", "Cluster", "Silhouette score")
+  assign("sil_scores", sil_scores, .GlobalEnv)
+  writeTsv("sil_scores", v=F)
   suprLog = dev.off()
 }
 
@@ -646,11 +671,12 @@ getOrderedClusterSize = function(cl){
 }
 
 #Inputs:
+# df: data frame
 # d: a distance object
 # s: an organised silhouette object
 # c: CAH
 # c: clusters from CAH
-heatMap = function(d, s=NULL, c=NULL, cl=NULL, text=FALSE){
+heatMap = function(df, d, s=NULL, c=NULL, cl=NULL, text=FALSE){
   
   if(!is.null(s)){
     order = attr(s,"iOrd")
@@ -666,7 +692,7 @@ heatMap = function(d, s=NULL, c=NULL, cl=NULL, text=FALSE){
 
   matrix=as.matrix(d)
   matrix=matrix[order, order]
-  rownames(matrix) <- rownames(d)[order] -> labels
+  rownames(matrix) <- rownames(df)[order] -> labels
   #if(tri == TRUE) matrix[!lower.tri(matrix)] = NA
   #image(1:ncol(matrix), 1:ncol(matrix), t(matrix), axes=F, xlab="", ylab="")
 
@@ -743,6 +769,10 @@ plotPca = function(t, k, cl, d, nf=2){
   mtext(title, font=2, cex=1.5, line=1)
   abline(h=0, v=0, lty=2, lwd=2, col="grey")
   text(x=pca$li[,nf-1], y=pca$li[,nf], labels=rownames(pca$li), col=colorClusters(cl), cex=0.6)
+  pca_coord = cbind(rownames(pca$li), pca$li[,1],pca$li[,2])
+  #colnames(pca_coord) = c("Chemicals", "Axis 1", "Axis 2")
+  assign("pca_coord", pca_coord, .GlobalEnv)
+  writeTsv("pca_coord", v=F)
   par(fig=c(0.8,1,0.82,1),new=TRUE)
   if(isTRUE(advanced)) plotInertiaPca(pca)
   suprLog = dev.off()
@@ -853,7 +883,7 @@ getPdisPerPartition = function(t, n, cls, d){
 set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
 
 #Loading librairies
-librairies = c("cluster", "optparse", "gclus", "ade4", "scales")
+librairies = c("cluster", "optparse", "gclus", "ade4", "scales", "beepr")
 for (l in librairies){
   if (! (l %in% installed.packages()[,"Package"])) install.packages(l, repos = "http://cran.us.r-project.org", quiet = T)
   library(l, character.only = TRUE)
@@ -879,36 +909,41 @@ text = !("text" %in% names(opt))
 header = ("header" %in% names(opt))
 if (!is.null(opt$workdir)) setwd(opt$workdir)
 
-#Loading data
+#Loading data "R_t03.2.csv"
 data = read.table(opt$infile, header=header, sep=opt$separator, dec=".")
 postChecking(args, data)
 #rename row and avoid doublets errors
-data = renameRow(data)
+data = renameRowname(data)
+#data2 = discardRowCondDoublets(data)
+
+printProgress = function (v, val){
+  if(isTRUE(v)) 
+    cat(paste("\n[", format(Sys.time(), "%X"), "] ", val ," in progress...\n"), sep="")
+}
 
 #Perform classification
-if(isTRUE(verboseNiv2)) cat("Distance calculation in progress...")
+printProgress(verboseNiv2, "Distance calculation")
 dis = getDistance(data, opt$distance)
-if(isTRUE(verboseNiv2)) cat("Classification in progress...")
+printProgress(verboseNiv2, "Classification")
 classif = getClassif(classif_type, max_clusters, data, dis)
-if(isTRUE(verboseNiv2)) cat("Clustering in progress...")
+printProgress(verboseNiv2, "Clustering")
 list_clus = getClusterPerPart(max_clusters+1, classif)
 
 #Indexes
 if(classif_type>2){
-  if(isTRUE(verboseNiv2)) cat("Cophenetic calculation in progress...")
+  printProgress(verboseNiv2, "Cophenetic calculation")
   plotCohenetic(dis, classif)
   if(isTRUE(advanced) & isTRUE(verbose)) cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
   plotFusionLevels(max_clusters, classif)
 }
 
 #Inertia
-if(isTRUE(verboseNiv2)) cat("Between inertia calculation in progress...")
 between = getRelativeBetweenPerPart(max_clusters, data, list_clus)
 diff = getBetweenDifferences(between)
 plotElbow(between)
 
 #Silhouette analysis
-if(isTRUE(verboseNiv2)) cat("Silhouette calculation in progress...")
+printProgress(verboseNiv2, "Silhouette calculation")
 sil = getSilhouettePerPart(data, list_clus, dis)
 mean_silhouette = getMeanSilhouettePerPart(sil)
 optimal_nb_clusters = plotSilhouettePerPart(mean_silhouette)
@@ -917,8 +952,9 @@ sil_k = sil[[optimal_nb_clusters-1]]
 plotSilhouette(sil_k)
 
 #cl_temp, because writeTsv(clusters) recreate a different object named clusters
-clusters <- list_clus[[optimal_nb_clusters-1]]  -> cl_temp
-gap=NULL
+clusters = list_clus[[optimal_nb_clusters-1]]
+cl_temp = clusters
+gap = NULL
 
 #Advanced indexes
 if (isTRUE(advanced)){
@@ -936,19 +972,21 @@ if (isTRUE(advanced)){
 
 #Plots
 if(classif_type > 2) plotDendrogram(classif_type, optimal_nb_clusters, classif, data, max_clusters, clusters)
-if(isTRUE(verboseNiv2)) cat("PCA in progress...")
+printProgress(verboseNiv2, "PCA")
 plotPca(classif_type, optimal_nb_clusters, clusters, data, opt$nb_axis)
+printProgress(verboseNiv2, "Heatmap calculation")
 if(classif_type <= 2 || isTRUE(advanced)){
-  heatMap(data, sil_k, text=T)
+  heatMap(data, dis, sil_k, text=T)
 }else{
-  heatMap(data, c=classif, cl=clusters, text=T)
+  heatMap(data, dis, c=classif, cl=clusters, text=T)
 }
 
 #Final outputs
 summary = printSummary(between, diff, mean_silhouette, advanced, gap)
 writeTsv("summary", v=verbose)
-writeClusters(clusters, ranked, v=verbose)
+#writeClusters(data, clusters, ranked, v=verbose)
 if (!isTRUE(verbose)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
+if (isTRUE(verboseNiv2)) beep("ping")
 
 #errors
 if (optimal_nb_clusters==max_clusters) message("\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found.")
