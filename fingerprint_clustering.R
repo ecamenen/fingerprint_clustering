@@ -19,8 +19,8 @@ getArgs = function(){
                 help="DO NOT print values on graph"),
     make_option(c("-n", "--nb_clusters"), type="integer", metavar="integer",
                 help="Fix the number of clusters"),
-    make_option(c("-r", "--ranked"), type="logical", action="store_true", 
-                help="Rank the metabolites in clusters by silhouette scores instead of alphabetically"),
+    make_option(c("-r", "--removeDoublets"), type="logical", action="store_true", 
+                help="Discard line containing the same information on all columns from analysis"),
     make_option(c("-b", "--bootstrap"), type="integer", default=500, metavar="integer",
                 help="Number of bootstraps for Gap statistic (advanced mode)"),
     make_option(c("-D", "--distance"), type="integer", default=1, metavar="integer",
@@ -137,10 +137,11 @@ renameRowname = function(data){
 # Discard row from a reaction dataset that have the same conditions in each columns
 #x: dataframe
 discardRowCondDoublets = function(x){
-  row_doublets <- list() -> cond_row_doublets
+  row_doublets <- list()
   j = 0
   for (i in 1:nrow(x)){
-    if( (x[i,]==rep(0, ncol(x))) | (x[i,]==rep(1, ncol(x))) ){
+    #uniq remove doublets in a vector, so return 1 only if there is only 1
+    if( (length(unique(as.integer(x[i,])))==1)){
       #print(row.names(x[i,]))
       j = j +1
       row_doublets[[j]] = i
@@ -150,6 +151,8 @@ discardRowCondDoublets = function(x){
     removed_reacs = row.names(x[unlist(row_doublets),])
     removed_conds = x[unlist(row_doublets), 1]
     removed = cbind(removed_reacs, removed_conds)
+    colnames(removed) = c("condition", "")
+    assign("removed", removed,.GlobalEnv)
     writeTsv("removed", v=F)
   }
   return (x[-unlist(row_doublets),])
@@ -276,7 +279,7 @@ getCAH = function(t, d, dis){
     #cah: classification hierarchic ascending
     cah = hclust(dis, method=getClassifType(t))
   #automaticly ordering by clusters
-  return (reorder.hclust(cah, d))
+  return (reorder.hclust(cah, dis))
   }
 }
 
@@ -376,7 +379,7 @@ writeClusters = function(d, cl, r=FALSE, v=FALSE){
     if (r == FALSE){
       #get metabolites from clusters and put into a column of the output matrix
       # from the begining of the column to the end of the vector of metabolites names
-      clusters[c(1:length(cl[cl==i])),i] = row.names(d)
+      clusters[c(1:length(cl[cl==i])),i] =  names(cl[cl==i])
     }else if (r == TRUE){
       #ordering alphabetically
       clusters[c(1:length(cl[cl==i])),i] = sort(names(cl[cl==i]))
@@ -900,21 +903,20 @@ max_clusters = opt$max_clusters
 classif_type = opt$classif_type
 bootstrap = opt$bootstrap
 advanced = "advanced" %in% names(opt)
-verbose= !("quiet" %in% names(opt))
-if ("verbose" %in% names(opt)) {
-  verbose <- T -> verboseNiv2
-}
-ranked = !("ranked" %in% names(opt))
+verbose = ( !("quiet" %in% names(opt)) | ("verbose" %in% names(opt)))
+verboseNiv2 = ("verbose" %in% names(opt))
+remove_doublets = ("removeDoublets" %in% names(opt))
 text = !("text" %in% names(opt))
 header = ("header" %in% names(opt))
 if (!is.null(opt$workdir)) setwd(opt$workdir)
 
 #Loading data "R_t03.2.csv"
-data = read.table(opt$infile, header=header, sep=opt$separator, dec=".")
+data = read.table("data/test.tsv", header=header, sep=opt$separator, dec=".")
 postChecking(args, data)
 #rename row and avoid doublets errors
 data = renameRowname(data)
-#data2 = discardRowCondDoublets(data)
+if(isTRUE(remove_doublets)) data = discardRowCondDoublets(data)
+row.names(data)
 
 printProgress = function (v, val){
   if(isTRUE(v)) 
@@ -984,7 +986,7 @@ if(classif_type <= 2 || isTRUE(advanced)){
 #Final outputs
 summary = printSummary(between, diff, mean_silhouette, advanced, gap)
 writeTsv("summary", v=verbose)
-#writeClusters(data, clusters, ranked, v=verbose)
+writeClusters(data, clusters, TRUE, v=verbose)
 if (!isTRUE(verbose)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
 if (isTRUE(verboseNiv2)) beep("ping")
 
