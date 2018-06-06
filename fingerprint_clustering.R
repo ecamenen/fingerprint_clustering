@@ -5,9 +5,9 @@ getArgs = function(){
     make_option(c("-i", "--infile"), type="character", default="data/matrix.txt", 
                 metavar="character",
                 help="Fingerprint file name [default: %default]"),
-    make_option(c("-m", "--max_clusters"), type="integer", default=6, metavar="integer",
+    make_option(c("-m", "--maxClusters"), type="integer", default=6, metavar="integer",
                 help="Maximum number of clusters [default: %default]"),
-    make_option(c("-t", "--classif_type"), type="integer", default=4, metavar="integer",
+    make_option(c("-t", "--classifType"), type="integer", default=4, metavar="integer",
                 help="Type of classification [default: Complete links] (1: K-menoids; 2: K-means; 3: Ward; 4: Complete links; 5: Single links; 6: UPGMA; 7: WPGMA; 8: WPGMC; 9: UPGMC)"),
     make_option(c("-adv", "--advanced"), type="logical", action="store_true", 
                 help="Activate advanced mode (print more outputs)"),
@@ -29,7 +29,7 @@ getArgs = function(){
                 help="Consider first row as header of columns"),
     make_option(c("-s", "--separator"), type="character", metavar="character", default="\t",
                 help="Type of separator (default: tabulation)"),
-    make_option(c("-N", "--nb_axis"), type="integer", default=2, metavar="integer",
+    make_option(c("-N", "--nbAxis"), type="integer", default=2, metavar="integer",
                 help="Number of axis for pca (default: 2)")
     )
   return (OptionParser(option_list=option_list))
@@ -53,17 +53,17 @@ checkArg = function(a){
       stop(paste("--",o ," must be upper or equal to 2",def,".\n",sep=""), call.=FALSE)
     }
   }
-  checkMinCluster("max_clusters"," [by default: 6]")
-  if(!is.null(opt$nb_clusters)) checkMinCluster("nb_clusters")
+  checkMinCluster("maxClusters"," [by default: 6]")
+  if(!is.null(opt$nb_clusters)) checkMinCluster("nbClusters")
   
-  if ((opt$classif_type < 1) || (opt$classif_type > 9)){
+  if ((opt$classifType < 1) || (opt$classifType > 9)){
     print_help(a)
-    stop("--classif_type must be comprise between 1 and 6 [by default: 2].\n", call.=FALSE)
+    stop("--classifType must be comprise between 1 and 6 [by default: 2].\n", call.=FALSE)
   }
   
-  if ((opt$nb_axis < 2) || (opt$nb_axis > 4)){
+  if ((opt$nbAxis < 2) || (opt$nbAxis > 4)){
     print_help(a)
-    stop("--nb_axis must be comprise between 2 and 4 [by default: 2].\n", call.=FALSE)
+    stop("--nbAxis must be comprise between 2 and 4 [by default: 2].\n", call.=FALSE)
   }
   
   if ((opt$distance < 1) || (opt$distance > 6)){
@@ -98,10 +98,25 @@ postChecking = function (a, d){
       stop(paste("--", o," must be lower or equal to the fingerprint",def,".\n",sep=""), call.=FALSE)
     }
   
-  checkMaxCluster("max_clusters"," [by default: 6]")
-  if(!is.null(opt$nb_clusters)) checkMaxCluster("nb_clusters")
+  checkMaxCluster("maxClusters"," [by default: 6]")
+  if(!is.null(opt$nbClusters)) checkMaxCluster("nbClusters")
 }
 
+printProgress = function (v, val){
+  if(isTRUE(v)) 
+    cat(paste("\n[", format(Sys.time(), "%X"), "] ", val ," in progress...\n"), sep="")
+}
+
+getTimeElapsed = function(start_time){
+  time = as.numeric(as.difftime(Sys.time()-start_time), units="secs")
+  secs = time %% 60
+  time = (time - secs) /60
+  mins = time %% 60
+  hours = time / 60
+  time = paste(mins, "min ", round(secs), "s\n", sep="")
+  if (hours >= 1)  time = paste(round(hours), "h ", time, sep="")
+  cat(paste("\nTime to run the process : ", time, sep=""))
+}
 
 #avoid doublets in row names
 #r: row names vector
@@ -408,14 +423,19 @@ writeClusters = function(d, cl, r=FALSE, v=FALSE){
 
 # Distance matrix between each leaf of the dendogramm
 #Inputs:
-# d : data
+# d : distance matrix
 # cah : hierarchical classification
 plotCohenetic=function(dis, cah){
   coph_matrix = cophenetic(cah)
   cor_coph = cor(dis, coph_matrix)
   if (isTRUE(verbose)) cat(paste("\nCOPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation with the data:",round(cor_coph,3),"\n"))
 
+  if(nrow(as.matrix(dis)) > NB_ROW_MAX ) {
+    png("shepard_graph.png", 2000, 2000)
+    setGraphic()
+  }else{
   savePdf("shepard_graph.pdf")
+  }
   plot(dis, coph_matrix, pch=19, col=alpha("red",0.2), axes=F, xlim=c(0,max(dis)), ylim=c(0,max(coph_matrix)), xlab="Distance between metabolites",ylab="Cophenetic distance", asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
   plotAxis(2, 0, max(coph_matrix))
   plotAxis(1, 0, max(dis))
@@ -701,7 +721,7 @@ heatMap = function(df, d, s=NULL, c=NULL, cl=NULL, text=FALSE){
   #image(1:ncol(matrix), 1:ncol(matrix), t(matrix), axes=F, xlab="", ylab="")
 
   options(warn = -1)
-  if(nrow(df) > 200 ) png("heat_map.png", 2000, 2000)
+  if(nrow(df) > NB_ROW_MAX ) png("heat_map.png", 2000, 2000)
   else pdf("heat_map.pdf")
   
   par(fig=c(0,0.9,0,1), new=TRUE)
@@ -767,8 +787,8 @@ orderColors = function(c, cl){
 #nf: number of factorial axis
 plotPca = function(t, k, cl, d, nf=2){
   pca = dudi.pca(d, scannf=F, nf=nf)
-  if(nrow(d) > 200 ) {
-    png("pca.png", 1000, 1000); cex = 1
+  if(nrow(d) > NB_ROW_MAX ) {
+    png("pca.png", 2000, 2000); cex = 1
   }else{
     pdf("pca.pdf"); cex = 0.6
   }
@@ -904,9 +924,9 @@ checkArg(args)
 opt = parse_args(args)
 
 #Global variables settings
-nb_clusters = opt$nb_clusters
-max_clusters = opt$max_clusters
-classif_type = opt$classif_type
+nb_clusters = opt$nbClusters
+max_clusters = opt$maxClusters
+classif_type = opt$classifType
 bootstrap = opt$bootstrap
 advanced = "advanced" %in% names(opt)
 verbose = ( !("quiet" %in% names(opt)) | ("verbose" %in% names(opt)))
@@ -915,25 +935,25 @@ remove_doublets = ("removeDoublets" %in% names(opt))
 text = !("text" %in% names(opt))
 header = ("header" %in% names(opt))
 if (!is.null(opt$workdir)) setwd(opt$workdir)
+if (isTRUE(verboseNiv2)) start_time = Sys.time()
+NB_ROW_MAX = 200 #max row to have pdf, otherwise, some plots are in png
 
-#Loading data "R_t03.2.csv"
+#Loading data
 data = read.table(opt$infile, header=header, sep=opt$separator, dec=".")
 postChecking(args, data)
 #rename row and avoid doublets errors
 data = renameRowname(data)
-#if(isTRUE(remove_doublets)) data = discardRowCondDoublets(data)
-
-printProgress = function (v, val){
-  if(isTRUE(v)) 
-    cat(paste("\n[", format(Sys.time(), "%X"), "] ", val ," in progress...\n"), sep="")
+if(isTRUE(remove_doublets)){
+  printProgress(verboseNiv2, "Loading data")
+  data = discardRowCondDoublets(data)
 }
-
+if ( (nrow(data) > 3000) & (classif_type > 2) ) stop("With more than 3000 rows to analyse, --classType must be 1: K-medoids or 2: K-means", call.=FALSE)
+ 
 #Perform classification
 printProgress(verboseNiv2, "Distance calculation")
 dis = getDistance(data, opt$distance)
 printProgress(verboseNiv2, "Classification")
 classif = getClassif(classif_type, max_clusters, data, dis)
-printProgress(verboseNiv2, "Clustering")
 list_clus = getClusterPerPart(max_clusters+1, classif)
 
 #Indexes
@@ -945,12 +965,12 @@ if(classif_type>2){
 }
 
 #Inertia
+printProgress(verboseNiv2, "Index calculation")
 between = getRelativeBetweenPerPart(max_clusters, data, list_clus)
 diff = getBetweenDifferences(between)
 plotElbow(between)
 
 #Silhouette analysis
-printProgress(verboseNiv2, "Silhouette calculation")
 sil = getSilhouettePerPart(data, list_clus, dis)
 mean_silhouette = getMeanSilhouettePerPart(sil)
 optimal_nb_clusters = plotSilhouettePerPart(mean_silhouette)
@@ -980,7 +1000,7 @@ if (isTRUE(advanced)){
 #Plots
 if(classif_type > 2) plotDendrogram(classif_type, optimal_nb_clusters, classif, data, max_clusters, clusters)
 printProgress(verboseNiv2, "PCA")
-plotPca(classif_type, optimal_nb_clusters, clusters, data, opt$nb_axis)
+plotPca(classif_type, optimal_nb_clusters, clusters, data, opt$nbAxis)
 printProgress(verboseNiv2, "Heatmap calculation")
 if(classif_type <= 2 || isTRUE(advanced)){
   heatMap(data, dis, sil_k, text=(nrow(data) < 100))
@@ -994,6 +1014,7 @@ writeTsv("summary", v=verbose)
 writeClusters(data, clusters, TRUE, v=( (verbose) & (nrow(data) < 100) ) )
 if (!isTRUE(verbose)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
 if (isTRUE(verboseNiv2)) beep("ping")
+if (isTRUE(verboseNiv2)) getTimeElapsed(start_time)
 
 #errors
 if (optimal_nb_clusters==max_clusters) message("\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found.")
