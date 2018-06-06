@@ -177,6 +177,20 @@ discardRowCondDoublets = function(x){
   else return (x)
 }
 
+isSymmetric = function (d){
+  if(nrow(d) == ncol(d)) {
+    isReflexivity = unique(d[cbind(1:nrow(d),1:nrow(d))] == 0)
+    
+    if ( length(isReflexivity)==1 & isTRUE(isReflexivity) ) {
+      isCommutativity = unique(d[lower.tri(d)] == t(d)[lower.tri(d)])
+      
+      if ( length(isCommutativity)==1 & isTRUE(isCommutativity) )
+        return (T)
+    }
+  }
+  return (F)
+}
+
 #Usage: colPers(x), x a number of colours in output
 #Gradient of color
 colPers = colorRampPalette(c(rgb(0.6,0.1,0.5,1), rgb(1,0,0,1), rgb(0.9,0.6,0,1), rgb(0.1,0.6,0.3,1), rgb(0.1,0.6,0.5,1), rgb(0,0,1,1)), alpha = TRUE)
@@ -244,8 +258,8 @@ setGraphicBasic = function(){
   par(cex.lab=1.5, font.lab=3, font.axis=3, cex.axis=0.8, cex.main=2, cex=1, lwd=3)
 }
 
-plotAxis = function (side, min, max, interval = 1){
-  axis(side, seq(min,max, interval), lwd=3)
+plotAxis = function (side, min, max, interval = 1, lwd=3){
+  axis(side, seq(min,max, interval), lwd=lwd)
 }
 
 plotBestClustering = function(sub_title, values, values_type, optimal_nb_clusters, interval = 1, min_x=2, best=NULL, val2=NULL){
@@ -435,15 +449,21 @@ plotCohenetic=function(dis, cah){
 
   if(nrow(as.matrix(dis)) > NB_ROW_MAX ) {
     png("shepard_graph.png", DIM_PNG, DIM_PNG)
-    par(cex.lab=1.5*4, font.lab=3*4, font.axis=3*4, cex.axis=0.8*4, cex.main=2*4, cex=1, lwd=3*4)
-    par(mar=c(5.1,5.1,5.1,2.1))
+    par(cex.lab=1.5*4, font.lab=3, font.axis=3, cex.axis=0.8*4, cex.main=2*4, cex=1, lwd=3*4)
+    par(mar=c(5.1,5.1,5.1,2.1)+7)
+    lwd=3*4
+    line.lab = 5
   }else{
-  savePdf("shepard_graph.pdf")
+    savePdf("shepard_graph.pdf")
+    lwd = 3
+    line.lab = 3
   }
-  plot(dis, coph_matrix, pch=19, col=alpha("red",0.2), axes=F, xlim=c(0,max(dis)), ylim=c(0,max(coph_matrix)), xlab="Distance between metabolites",ylab="Cophenetic distance", asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
-  plotAxis(2, 0, max(coph_matrix))
-  plotAxis(1, 0, max(dis))
-  abline(0, 1, col="grey", lwd=3, lty=2)
+  
+  plot(dis, coph_matrix, pch=19, col=alpha("red",0.2), axes=F, xlim=c(0,max(dis)), xlab="", ylab="", ylim=c(0,max(coph_matrix)), asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
+  title(xlab="Distance between metabolites",ylab="Cophenetic distance", line=line.lab)
+  plotAxis(2, 0, max(coph_matrix), lwd=lwd)
+  plotAxis(1, 0, max(dis), lwd=lwd)
+  abline(0, 1, col="grey", lty=2, lwd=lwd)
   suprLog = dev.off()
 }
 
@@ -625,7 +645,7 @@ plotGapPerPart = function(n, d, c, B=500, v=T){
   optimal_nb_clusters = getGapBest(gap)
   gap_k=round(gap$Tab,3)
   best = gap_k[,"gap"][optimal_nb_clusters]
-  if(optimal_nb_clusters < n) best = paste(best, ">",gap_k[,"gap"][optimal_NB_CLUSTERS+1],"-",gap_k[,"SE.sim"][optimal_nb_clusters +1])
+  if(optimal_nb_clusters < n) best = paste(best, ">",gap_k[,"gap"][optimal_nb_clusters+1],"-",gap_k[,"SE.sim"][optimal_nb_clusters +1])
   plot(gap, arrowArgs = list(col="gray", length=1/15, lwd=2, angle=90, code=3), type="b", xlim=c(1,n+1), ylim=c(0,max(gap$Tab[,"gap"])+0.1), col="grey", xlab="Nb. of clusters", ylab=expression(Gap[k]), main="",axes=F)
   plotBestClustering("Gap statistics method", gap$Tab[,"gap"]," gap value", optimal_nb_clusters, 0.1, 1, best)
   #cat(paste("With a corrected index, optimal number of clusters k =",getGapBest(gap,"firstSEmax"), "\n"))
@@ -670,14 +690,14 @@ printSummary = function(between, diff, sil, adv, gap=NULL){
 
 #Inputs:
 # cl_size: vector of size for each clusters
-plotRect = function (cl_sizes, colors){
+plotRect = function (cl_sizes, colors, lwd=3){
   # size of each clusters
   temp_size = 0
   for (i in 1:length(cl_sizes)){
     #y begin at the top, so sum(cl_sizes) must be substracted to y coord.
     #rect(xleft, ybottom, xright, ytop)
     # +0.5 because x, y coord are shifted to 0.5 comparativly to plotcolors functions
-    rect(temp_size + 0.5, sum(cl_sizes) -temp_size -cl_sizes[i] +0.5, cl_sizes[i] +temp_size +0.5, sum(cl_sizes) -temp_size +0.5, border = colors[i], lwd=3)
+    rect(temp_size + 0.5, sum(cl_sizes) -temp_size -cl_sizes[i] +0.5, cl_sizes[i] +temp_size +0.5, sum(cl_sizes) -temp_size +0.5, border = colors[i], lwd=lwd)
     #memorize the size of the cluster (for a bottom-right shift)
     temp_size = temp_size + cl_sizes[i]
   }
@@ -726,16 +746,22 @@ heatMap = function(df, d, s=NULL, c=NULL, cl=NULL, text=FALSE){
   #image(1:ncol(matrix), 1:ncol(matrix), t(matrix), axes=F, xlab="", ylab="")
 
   options(warn = -1)
-  if(nrow(df) > NB_ROW_MAX ) png("heat_map.png", 2000, 2000)
-  else pdf("heat_map.pdf")
+  if(nrow(df) > NB_ROW_MAX ){
+    png("heat_map.png", DIM_PNG, DIM_PNG)
+    labels=order
+    cex.main = 5; cex.legend = 3; cex.lab = 2; y_top = 12; x_lab = 0.6; lwd.rect=6
+  }else{
+    pdf("heat_map.pdf")
+    cex.main = 1.5; cex.legend = 0.85; cex.lab = 0.7; y_top = 8; x_lab = 0.5; lwd.rect=3
+  }
   
   par(fig=c(0,0.9,0,1), new=TRUE)
-  par(mar=c(1, 8, 8, 1))
+  par(mar=c(1, 8, y_top, 1))
   plotcolors(dmat.color(matrix, colors=heat.colors(1000),byrank = FALSE), ptype="image", na.color="red", rlabels=FALSE, clabels=FALSE, border=0)
-  mtext(paste('Distance matrix ordered by', title), 3, line=6, font=4, cex=1.5)
+  mtext(paste('Distance matrix ordered by', title), 3, line=6, font=4, cex=cex.main)
   text(-0.5, 0:(ncol(matrix)-1)+1, rev(labels), xpd=NA, adj=1, cex=0.7)
   text(0.5:(ncol(matrix)-0.5), ncol(matrix)+1, substr(labels, 0, 20), xpd=NA, cex=0.7, srt=65, pos=4)
-  plotRect(cl_sizes, colors)
+  plotRect(cl_sizes, colors, lwd.rect)
   if (isTRUE(text)) text(expand.grid(1:ncol(matrix), ncol(matrix):1), sprintf("%d", matrix), cex=0.4)
 
   par(fig=c(0.85,1,0.3,0.8),new=TRUE)
@@ -743,8 +769,8 @@ heatMap = function(df, d, s=NULL, c=NULL, cl=NULL, text=FALSE){
   legend_image = as.raster(matrix(heat.colors(1000), ncol=1))
   plot(c(0,1),c(0,1),type = 'n', axes = F,xlab = '', ylab = '', main = '')
   rasterImage(legend_image, 0.4, 0, 0.5, 1)
-  mtext('   Distance', 3, line=0.5, cex=0.85, font=2)
-  text(x=0.5, y = seq(0,1,l=3), labels = round(seq(max(matrix),0,l=3)),cex=0.7,pos=4)
+  mtext('   Distance', 3, line=0.5, cex=cex.legend, font=2)
+  text(x=x_lab, y = seq(0,1,l=3), labels = round(seq(max(matrix),0,l=3)),cex=cex.lab, pos=4)
   
   options(warn = 0)
   suprLog = dev.off()
@@ -758,6 +784,7 @@ heatMap = function(df, d, s=NULL, c=NULL, cl=NULL, text=FALSE){
 # k: number of clusters
 plotDendrogram = function(t, k, c, d, n, cl){
 
+  if(nrow(d) > NB_ROW_MAX ) c$labels = 1:nrow(d)
   pdf("dendrogram.pdf")
   setGraphicBasic()
   par(mar=c(2,5,5,1))
@@ -792,17 +819,22 @@ orderColors = function(c, cl){
 #nf: number of factorial axis
 plotPca = function(t, k, cl, d, nf=2){
   pca = dudi.pca(d, scannf=F, nf=nf)
+  
   if(nrow(d) > NB_ROW_MAX ) {
-    png("pca.png", 2000, 2000); cex = 1
+    png("pca.png", DIM_PNG, DIM_PNG)
+    par(mar=c(0,0,8,0), lwd=2)
+    cex=2; cex.main=6; cstar=0; cellipse=0; lwd.line=4; clabel=0; labels=1:nrow(d)
   }else{
-    pdf("pca.pdf"); cex = 0.6
+    pdf("pca.pdf")
+    par(mar=c(0,0,4.1,0))
+    cex=0.6; cex.main=1.5; cstar=1; cellipse=1; lwd.line=2; clabel=1; labels=rownames(d)
   }
-  par(mar=c(0,0,4.1,0))
+  
   title = paste("Cumulated inertia:", round((pca$eig[nf-1]+pca$eig[nf])/sum(pca$eig),4)*100, "%")
-  s.class(addaxes=F, cbind(pca$li[,nf-1] , pca$li[,nf]), ylim=c(min(pca$li[,nf])-3, max(pca$li[,nf])+3), xlim=c(min(pca$li[,nf-1])-3, max(pca$li[,nf-1])+3), csub=1.5, as.factor(cl), grid=F, col=colPers(k))
-  mtext(title, font=2, cex=1.5, line=1)
-  abline(h=0, v=0, lty=2, lwd=2, col="grey")
-  text(x=pca$li[,nf-1], y=pca$li[,nf], labels=rownames(pca$li), col=colorClusters(cl), cex=cex)
+  s.class(addaxes=F, cbind(pca$li[,nf-1] , pca$li[,nf]), ylim=c(min(pca$li[,nf])-3, max(pca$li[,nf])+3), xlim=c(min(pca$li[,nf-1])-3, max(pca$li[,nf-1])+3), csub=1.5, as.factor(cl), grid=F, col=colPers(k), clabel=clabel, cstar=cstar, cellipse=cellipse)
+  mtext(title, font=2, line=1, cex=cex.main)
+  abline(h=0, v=0, lty=2, lwd=lwd.line, col="grey")
+  text(x=pca$li[,nf-1], y=pca$li[,nf], labels=labels, col=colorClusters(cl), cex=cex)
   pca_coord = cbind(rownames(pca$li), pca$li[,1],pca$li[,2])
   #colnames(pca_coord) = c("Chemicals", "Axis 1", "Axis 2")
   assign("pca_coord", pca_coord, .GlobalEnv)
@@ -957,7 +989,8 @@ if(isTRUE(remove_doublets)){
   data = discardRowCondDoublets(data)
 }
 if ( (nrow(data) > 3000) & (CLASSIF_TYPE > 2) ) stop("With more than 3000 rows to analyse, --classType must be 1: K-medoids or 2: K-means", call.=FALSE)
- 
+if ( isSymmetric(as.matrix(data)) & !header) colnames(data) = rownames(data)
+
 #Perform classification
 printProgress(VERBOSE_NIV2, "Distance calculation")
 dis = getDistance(data, opt$distance)
@@ -982,13 +1015,13 @@ plotElbow(between)
 #Silhouette analysis
 sil = getSilhouettePerPart(data, list_clus, dis)
 mean_silhouette = getMeanSilhouettePerPart(sil)
-optimal_NB_CLUSTERS = plotSilhouettePerPart(mean_silhouette)
-if(!is.null(NB_CLUSTERS)) optimal_NB_CLUSTERS = NB_CLUSTERS
-sil_k = sil[[optimal_NB_CLUSTERS-1]]
+optimal_nb_clusters = plotSilhouettePerPart(mean_silhouette)
+if(!is.null(NB_CLUSTERS)) optimal_nb_clusters = NB_CLUSTERS
+sil_k = sil[[optimal_nb_clusters-1]]
 plotSilhouette(sil_k)
 
 #cl_temp, because writeTsv(clusters) recreate a different object named clusters
-clusters = list_clus[[optimal_NB_CLUSTERS-1]]
+clusters = list_clus[[optimal_nb_clusters-1]]
 cl_temp = clusters
 gap = NULL
 
@@ -997,11 +1030,11 @@ if (isTRUE(ADVANCED)){
 
   if (nrow(data) < 100){
     printProgress(VERBOSE_NIV2, "Gap statistics calculation")
-    gap = plotGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP)
+    gap = plotGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP, v=VERBOSE)
     plotGapPerPart2(gap, MAX_CLUSTERS)
   }
   
-  contribution = 100 * getCtrVar(CLASSIF_TYPE, optimal_NB_CLUSTERS, clusters, data)
+  contribution = 100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data)
   discriminant_power = 100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data)
   within_k = getRelativeWithinPerCluster(list_clus, data)
   
@@ -1010,9 +1043,9 @@ if (isTRUE(ADVANCED)){
 }
 
 #Plots
-if(CLASSIF_TYPE > 2) plotDendrogram(CLASSIF_TYPE, optimal_NB_CLUSTERS, classif, data, MAX_CLUSTERS, clusters)
+if(CLASSIF_TYPE > 2) plotDendrogram(CLASSIF_TYPE, optimal_nb_clusters, classif, data, MAX_CLUSTERS, clusters)
 printProgress(VERBOSE_NIV2, "PCA")
-plotPca(CLASSIF_TYPE, optimal_NB_CLUSTERS, clusters, data, opt$nbAxis)
+plotPca(CLASSIF_TYPE, optimal_nb_clusters, clusters, data, opt$nbAxis)
 printProgress(VERBOSE_NIV2, "Heatmap calculation")
 if(CLASSIF_TYPE <= 2 || isTRUE(ADVANCED)){
   heatMap(data, dis, sil_k, text=(nrow(data) < 100))
@@ -1023,11 +1056,16 @@ if(CLASSIF_TYPE <= 2 || isTRUE(ADVANCED)){
 #Final outputs
 summary = printSummary(between, diff, mean_silhouette, ADVANCED, gap)
 writeTsv("summary", v=VERBOSE)
+#apply(getClusterCentroids(data, clusters), 1, mean)
+if (nrow(data) > 100){
+  cat("\n")
+  table(CLUSTER_SIZES = clusters)
+} 
 writeClusters(data, clusters, TRUE, v=( (VERBOSE) & (nrow(data) < 100) ) )
-if (!isTRUE(VERBOSE)) cat(paste("Optimal number of clusters:", optimal_NB_CLUSTERS,"\n"))
+if (!isTRUE(VERBOSE)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
 if (isTRUE(VERBOSE_NIV2)) beep("ping")
 if (isTRUE(VERBOSE_NIV2)) getTimeElapsed(start_time)
 
 #errors
-if (optimal_NB_CLUSTERS==MAX_CLUSTERS) message("\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found.")
+if (optimal_nb_clusters==MAX_CLUSTERS) message("\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found.")
 if(min(table(cl_temp))==1) message("\n[WARNING] A cluster with an only singleton biased the silhouette score.")
