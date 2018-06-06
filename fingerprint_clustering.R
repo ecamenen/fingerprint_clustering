@@ -80,6 +80,8 @@ checkArg = function(a){
   }
   if(!is.null(opt$workdir)) checkFile("workdir")
   if(!is.null(opt$infile)) checkFile("infile")
+  
+  return (opt)
 }
 
 #Checking clusters args after data loading
@@ -171,7 +173,8 @@ discardRowCondDoublets = function(x){
     assign("removed", removed,.GlobalEnv)
     writeTsv("removed", v=F)
   }
-  return (x[-unlist(row_doublets),])
+  if(length(row_doublets)>0) return (x[-unlist(row_doublets),])
+  else return (x)
 }
 
 #Usage: colPers(x), x a number of colours in output
@@ -620,7 +623,8 @@ plotGapPerPart = function(n, d, c, B=500, v=T){
   savePdf("gap_statistics.pdf")
   optimal_nb_clusters = getGapBest(gap)
   gap_k=round(gap$Tab,3)
-  best = paste(gap_k[,"gap"][optimal_nb_clusters], ">",gap_k[,"gap"][optimal_nb_clusters+1],"-",gap_k[,"SE.sim"][optimal_nb_clusters])
+  best = gap_k[,"gap"][optimal_nb_clusters]
+  if(optimal_nb_clusters < n) best = paste(best, ">",gap_k[,"gap"][optimal_nb_clusters+1],"-",gap_k[,"SE.sim"][optimal_nb_clusters +1])
   plot(gap, arrowArgs = list(col="gray", length=1/15, lwd=2, angle=90, code=3), type="b", xlim=c(1,n+1), ylim=c(0,max(gap$Tab[,"gap"])+0.1), col="grey", xlab="Nb. of clusters", ylab=expression(Gap[k]), main="",axes=F)
   plotBestClustering("Gap statistics method", gap$Tab[,"gap"]," gap value", optimal_nb_clusters, 0.1, 1, best)
   #cat(paste("With a corrected index, optimal number of clusters k =",getGapBest(gap,"firstSEmax"), "\n"))
@@ -650,7 +654,7 @@ printSummary = function(between, diff, sil, adv, gap=NULL){
   #TODO: no n = nrow(data)
   summary = cbind(between, diff, 100-between, sil)
   names = c("Between-inertia (%)", "Between-differences (%)", "Within-inertia (%)", "Silhouette index") 
-  if(isTRUE(adv)) {
+  if(!is.null(gap)) {
     summary = cbind(summary, gap$Tab[,"gap"][-1], gap$Tab[,"SE.sim"][-1])
     names=c(names, "Gap", "Gap SE")
   }
@@ -833,14 +837,13 @@ getDistPerVariable = function(d, cl){
   #ponderation by the sd of the variable (=total inertia per var)
   d = scalecenter(d)
   nb_cl = length(levels(as.factor(cl)))
-  nb_met = length(cl)
-  ctr = matrix(0, nrow=nb_cl, ncol=nb_met)
-  for (i in 1:nb_met) {
+  ctr = matrix(0, nrow=nb_cl, ncol=ncol(d))
+  for (i in 1:nrow(d)) {
     #get the group number for each row
     cli = cl[i]
     #in the dataset, for a metabolite row, loop an each metadabolite column
     #values are affected the corresponding cluster row and metabolite column in ctr
-    for (j in 1:nb_met) ctr[cli,j] = ctr[cli,j] + d[i,j]
+    for (j in 1:ncol(d)) ctr[cli,j] = ctr[cli,j] + d[i,j]
   }
   return (ctr)
 }
@@ -855,12 +858,12 @@ getDistPerVariable = function(d, cl){
 getCtrVar = function(t, k, cl, d) {
   
   nb_cl = length(levels(as.factor(cl)))
-  nb_met = length(cl)
+  ncol = ncol(d)
   
   ctr = getDistPerVariable(d, cl)
   rownames(ctr) = paste("G", seq(1, k), sep=""); colnames(ctr) = colnames(d)
   for (i in 1:nb_cl)
-    for (j in 1:nb_met) ctr[i,j] = ctr[i,j]^2 / (nb_met * length(cl[cl==i]))
+    for (j in 1:ncol(d)) ctr[i,j] = ctr[i,j]^2 / (nrow(d) * length(cl[cl==i]))
   
   return(ctr)
 }
@@ -920,8 +923,12 @@ for (l in librairies){
 
 #Get arguments
 args = getArgs()
-checkArg(args)
-opt = parse_args(args)
+tryCatch({
+  opt = checkArg(args)
+}, error = function(e) {
+  print_help(args)
+  stop(e[[1]], call.=FALSE)
+})
 
 #Global variables settings
 nb_clusters = opt$nbClusters
@@ -952,12 +959,12 @@ if ( (nrow(data) > 3000) & (classif_type > 2) ) stop("With more than 3000 rows t
 #Perform classification
 printProgress(verboseNiv2, "Distance calculation")
 dis = getDistance(data, opt$distance)
-printProgress(verboseNiv2, "Classification")
+if(classif_type < 3) printProgress(verboseNiv2, "Classification")
 classif = getClassif(classif_type, max_clusters, data, dis)
 list_clus = getClusterPerPart(max_clusters+1, classif)
 
 #Indexes
-if(classif_type>2){
+if(classif_type > 2){
   printProgress(verboseNiv2, "Cophenetic calculation")
   plotCohenetic(dis, classif)
   if(isTRUE(advanced) & isTRUE(verbose)) cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
@@ -986,8 +993,10 @@ gap = NULL
 #Advanced indexes
 if (isTRUE(advanced)){
 
-  gap = plotGapPerPart(max_clusters, data, classif, bootstrap)
-  plotGapPerPart2(gap, max_clusters)
+  if (nrow(data) < 100){
+    gap = plotGapPerPart(max_clusters, data, classif, bootstrap)
+    plotGapPerPart2(gap, max_clusters)
+  }
   
   contribution = 100 * getCtrVar(classif_type, optimal_nb_clusters, clusters, data)
   discriminant_power = 100 * getPdisPerPartition(classif_type, max_clusters, list_clus, data)
