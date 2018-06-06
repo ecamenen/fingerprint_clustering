@@ -2,7 +2,7 @@ getArgs = function(){
   option_list = list(
     make_option(c("-w", "--workdir"), type="character", metavar="character",
                 help="Working directory path [default: the folder where the script is launched]"),
-    make_option(c("-i", "--infile"), type="character", default="matrix.txt", 
+    make_option(c("-i", "--infile"), type="character", default="data/matrix.txt", 
                 metavar="character",
                 help="Fingerprint file name [default: %default]"),
     make_option(c("-m", "--max_clusters"), type="integer", default=6, metavar="integer",
@@ -115,22 +115,23 @@ renameRownameDoublets = function(names.row){
       j = 1
     }
   }
+  return (names.row)
 }
 
 #rename row and avoid doublets errors
-renameRowname = function(data){
-  names.row = as.character(data[,1])
-  data=data[,-1]
-  renameRownameDoublets(names.row)
+renameRowname = function(d){
+  names.row = as.character(d[,1])
+  d=d[,-1]
+  names.row = renameRownameDoublets(names.row)
   tryCatch({
-    substr(names.row, 1, 25) -> rownames(data)
-    return(data)
+    substr(names.row, 1, 25) -> rownames(d)
+    return(d)
   }, warning = function(w) {
     names.row = renameRownameDoublets(substr(names.row, 1, 25))
-    names.row -> rownames(data)
-    return(data)
+    names.row -> rownames(d)
+    return(d)
   }, error = function(e) {
-    return(data)
+    return(d)
   })
 }
 
@@ -700,7 +701,8 @@ heatMap = function(df, d, s=NULL, c=NULL, cl=NULL, text=FALSE){
   #image(1:ncol(matrix), 1:ncol(matrix), t(matrix), axes=F, xlab="", ylab="")
 
   options(warn = -1)
-  pdf("heat_map.pdf")
+  if(nrow(df) > 200 ) png("heat_map.png", 2000, 2000)
+  else pdf("heat_map.pdf")
   
   par(fig=c(0,0.9,0,1), new=TRUE)
   par(mar=c(1, 8, 8, 1))
@@ -765,13 +767,17 @@ orderColors = function(c, cl){
 #nf: number of factorial axis
 plotPca = function(t, k, cl, d, nf=2){
   pca = dudi.pca(d, scannf=F, nf=nf)
-  pdf("pca.pdf")
+  if(nrow(d) > 200 ) {
+    png("pca.png", 1000, 1000); cex = 1
+  }else{
+    pdf("pca.pdf"); cex = 0.6
+  }
   par(mar=c(0,0,4.1,0))
   title = paste("Cumulated inertia:", round((pca$eig[nf-1]+pca$eig[nf])/sum(pca$eig),4)*100, "%")
   s.class(addaxes=F, cbind(pca$li[,nf-1] , pca$li[,nf]), ylim=c(min(pca$li[,nf])-3, max(pca$li[,nf])+3), xlim=c(min(pca$li[,nf-1])-3, max(pca$li[,nf-1])+3), csub=1.5, as.factor(cl), grid=F, col=colPers(k))
   mtext(title, font=2, cex=1.5, line=1)
   abline(h=0, v=0, lty=2, lwd=2, col="grey")
-  text(x=pca$li[,nf-1], y=pca$li[,nf], labels=rownames(pca$li), col=colorClusters(cl), cex=0.6)
+  text(x=pca$li[,nf-1], y=pca$li[,nf], labels=rownames(pca$li), col=colorClusters(cl), cex=cex)
   pca_coord = cbind(rownames(pca$li), pca$li[,1],pca$li[,2])
   #colnames(pca_coord) = c("Chemicals", "Axis 1", "Axis 2")
   assign("pca_coord", pca_coord, .GlobalEnv)
@@ -911,12 +917,11 @@ header = ("header" %in% names(opt))
 if (!is.null(opt$workdir)) setwd(opt$workdir)
 
 #Loading data "R_t03.2.csv"
-data = read.table("data/test.tsv", header=header, sep=opt$separator, dec=".")
+data = read.table(opt$infile, header=header, sep=opt$separator, dec=".")
 postChecking(args, data)
 #rename row and avoid doublets errors
 data = renameRowname(data)
-if(isTRUE(remove_doublets)) data = discardRowCondDoublets(data)
-row.names(data)
+#if(isTRUE(remove_doublets)) data = discardRowCondDoublets(data)
 
 printProgress = function (v, val){
   if(isTRUE(v)) 
@@ -978,15 +983,15 @@ printProgress(verboseNiv2, "PCA")
 plotPca(classif_type, optimal_nb_clusters, clusters, data, opt$nb_axis)
 printProgress(verboseNiv2, "Heatmap calculation")
 if(classif_type <= 2 || isTRUE(advanced)){
-  heatMap(data, dis, sil_k, text=T)
+  heatMap(data, dis, sil_k, text=(nrow(data) < 100))
 }else{
-  heatMap(data, dis, c=classif, cl=clusters, text=T)
+  heatMap(data, dis, c=classif, cl=clusters, text=(nrow(data) < 100))
 }
 
 #Final outputs
 summary = printSummary(between, diff, mean_silhouette, advanced, gap)
 writeTsv("summary", v=verbose)
-writeClusters(data, clusters, TRUE, v=verbose)
+writeClusters(data, clusters, TRUE, v=( (verbose) & (nrow(data) < 100) ) )
 if (!isTRUE(verbose)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
 if (isTRUE(verboseNiv2)) beep("ping")
 
