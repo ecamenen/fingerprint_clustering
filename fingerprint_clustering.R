@@ -9,21 +9,21 @@ getArgs = function(){
                 help="Maximum number of clusters [default: %default]"),
     make_option(c("-t", "--classifType"), type="integer", default=4, metavar="integer",
                 help="Type of classification [default: Complete links] (1: K-menoids; 2: K-means; 3: Ward; 4: Complete links; 5: Single links; 6: UPGMA; 7: WPGMA; 8: WPGMC; 9: UPGMC)"),
-    make_option(c("-adv", "--advanced"), type="logical", action="store_true", 
+    make_option(c("-a", "--advanced"), type="logical", action="store_true", 
                 help="Activate advanced mode (print more outputs)"),
     make_option(c("-q", "--quiet"), type="logical", action="store_true",
                 help="Activate quiet mode"),
-    make_option(c("-V", "--verbose"), type="logical", action="store_true",
-                help="Activate verbose mode"),
+    make_option(c("-v", "--verbose"), type="logical", action="store_true",
+                help="Activate \"super-verbose\" mode"),
     make_option(c("-T", "--text"), type="logical", action="store_true",
                 help="DO NOT print values on graph"),
-    make_option(c("-n", "--nb_clusters"), type="integer", metavar="integer",
+    make_option(c("-n", "--nbClusters"), type="integer", metavar="integer",
                 help="Fix the number of clusters"),
     make_option(c("-r", "--removeDoublets"), type="logical", action="store_true", 
                 help="Discard line containing the same information on all columns from analysis"),
     make_option(c("-b", "--bootstrap"), type="integer", default=500, metavar="integer",
-                help="Number of bootstraps for Gap statistic (advanced mode)"),
-    make_option(c("-D", "--distance"), type="integer", default=1, metavar="integer",
+                help="Number of bootstrap for Gap statistic (advanced mode)"),
+    make_option(c("-d", "--distance"), type="integer", default=1, metavar="integer",
                 help="Type of distance [default: Euclidian] (1: Euclidian, 2: Manhattan, 3: Jaccard, 4: Sokal & Michener, 5 Sorensen (Dice), 6: Ochiai)"),
     make_option(c("-H", "--header"), type="logical", action="store_true",
                 help="Consider first row as header of columns"),
@@ -44,7 +44,7 @@ checkArg = function(a){
   # def: defaul message
   if(opt$bootstrap < 100 || opt$bootstrap > 1000){
     print_help(a)
-    stop("--bootstrap comprise between 100 and 1000", call.=FALSE)
+    stop("--boostrap comprise between 100 and 1000", call.=FALSE)
   }
   
   checkMinCluster = function (o, def=""){
@@ -54,7 +54,7 @@ checkArg = function(a){
     }
   }
   checkMinCluster("maxClusters"," [by default: 6]")
-  if(!is.null(opt$nb_clusters)) checkMinCluster("nbClusters")
+  if(!is.null(opt$nbClusters)) checkMinCluster("nbClusters")
   
   if ((opt$classifType < 1) || (opt$classifType > 9)){
     print_help(a)
@@ -106,7 +106,7 @@ postChecking = function (a, d){
 
 printProgress = function (v, val){
   if(isTRUE(v)) 
-    cat(paste("\n[", format(Sys.time(), "%X"), "] ", val ," in progress...\n"), sep="")
+    cat(paste("\n[", format(Sys.time(), "%X"), "] ", val ,"in progress...\n"), sep="")
 }
 
 getTimeElapsed = function(start_time){
@@ -249,7 +249,7 @@ plotAxis = function (side, min, max, interval = 1){
 }
 
 plotBestClustering = function(sub_title, values, values_type, optimal_nb_clusters, interval = 1, min_x=2, best=NULL, val2=NULL){
-  plotAxis(1, 2, max_clusters)
+  plotAxis(1, 2, MAX_CLUSTERS)
   
   if (interval >= 1) axisSeq=round(values)
   else axisSeq = c(0, max(values) +0.1)
@@ -273,8 +273,8 @@ plotBestClustering = function(sub_title, values, values_type, optimal_nb_cluster
   if (!is.null(val2)) t_values = val2
   else t_values = values
   
-  if(isTRUE(text)) text(y=values, x=min_x:max_clusters, labels=round(t_values,2), cex=1.2, pos=4, col="red")
-  if (isTRUE(verbose)) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a", values_type, " of ", best, "\n", sep="")
+  if(isTRUE(text)) text(y=values, x=min_x:MAX_CLUSTERS, labels=round(t_values,2), cex=1.2, pos=4, col="red")
+  if (isTRUE(VERBOSE)) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a", values_type, " of ", best, "\n", sep="")
 }
 
 #f: filename
@@ -380,9 +380,9 @@ getClusterPerPart = function (n, c){
 #Input:
 # cl: clusters
 colorClusters = function(cl){
-  nb_clusters = length(levels(as.factor(cl)))
-  for (i in 1:nb_clusters){
-    cl[cl==i] = colPers(nb_clusters)[i]
+  NB_CLUSTERS = length(levels(as.factor(cl)))
+  for (i in 1:NB_CLUSTERS){
+    cl[cl==i] = colPers(NB_CLUSTERS)[i]
   }
   return (cl)
 }
@@ -431,11 +431,12 @@ writeClusters = function(d, cl, r=FALSE, v=FALSE){
 plotCohenetic=function(dis, cah){
   coph_matrix = cophenetic(cah)
   cor_coph = cor(dis, coph_matrix)
-  if (isTRUE(verbose)) cat(paste("\nCOPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation with the data:",round(cor_coph,3),"\n"))
+  if (isTRUE(VERBOSE)) cat(paste("\nCOPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation with the data:",round(cor_coph,3),"\n"))
 
   if(nrow(as.matrix(dis)) > NB_ROW_MAX ) {
-    png("shepard_graph.png", 2000, 2000)
-    setGraphic()
+    png("shepard_graph.png", DIM_PNG, DIM_PNG)
+    par(cex.lab=1.5*4, font.lab=3*4, font.axis=3*4, cex.axis=0.8*4, cex.main=2*4, cex=1, lwd=3*4)
+    par(mar=c(5.1,5.1,5.1,2.1))
   }else{
   savePdf("shepard_graph.pdf")
   }
@@ -511,7 +512,7 @@ getRelativeWithinPerCluster = function(cls, d) {
 
 # Between inertia differences between a partionning and the previous
 plotBetweenDiff = function(between_diff) {
-  if (isTRUE(verbose)) cat("\nBETWEEN DIFFERENCES:\n")
+  if (isTRUE(VERBOSE)) cat("\nBETWEEN DIFFERENCES:\n")
   optimal_nb_clusters = which.max(between_diff)+1
   savePdf("between_differences.pdf")
   plot(2:(length(between_diff)+1), between_diff, type="b", ylim=c(round(min(between_diff))-1,round(max(between_diff))+1), xlim=c(2,(length(between_diff)+2)), xlab="Nb. of clusters", ylab="Between-cluster variation (%)", col="grey", axes=F)
@@ -520,7 +521,7 @@ plotBetweenDiff = function(between_diff) {
 }
 
 plotFusionLevels = function(n, c) {
-  if (isTRUE(verbose)) cat("\nFUSION LEVELS:\n")
+  if (isTRUE(VERBOSE)) cat("\nFUSION LEVELS:\n")
   fusion = rev(c$height)
   diff = unlist(sapply(1:n, function(i) fusion[i-1]-fusion[i]))
   fusion = fusion[1:(n-1)]
@@ -533,7 +534,7 @@ plotFusionLevels = function(n, c) {
 
 #x: vector of between inertia for k partitions
 plotElbow = function(x) {
-  if (isTRUE(verbose)) cat("\nELBOW:\n")
+  if (isTRUE(VERBOSE)) cat("\nELBOW:\n")
   n = length(between) +1
   within = c(100, 100 - x)
   ratio = within[1:(n-1)] / within[2:n]
@@ -572,7 +573,7 @@ getMeanSilhouettePerPart = function(sils){
 # Plot the best average silhouette width for all clustering possible
 # mean_sils: vector of silhouette average width
 plotSilhouettePerPart = function(mean_silhouette){
-  if (isTRUE(verbose)) cat("\nSILHOUETTE:\n")
+  if (isTRUE(VERBOSE)) cat("\nSILHOUETTE:\n")
   savePdf("average_silhouettes.pdf")
   optimal_nb_clusters = which.max(mean_silhouette)+1
   plot(2:(length(sil)+1), mean_silhouette, type="b", xlim=c(2,length(sil)+2), ylim=c(0,max(mean_silhouette)+0.1), col="grey", xlab="Nb. of clusters", ylab="Average silhouette width", axes=F)
@@ -600,7 +601,7 @@ plotSilhouette = function(sil_k){
 #          GAP STATISTICS
 ###################################
 
-#B: nb of bootstrap
+#B: nb of NB_BOOTSTRAP
 getGapPerPart = function(n, d, c, B=500){
   #FUN mus have only two args in this order and return a list with an object cluster
   gapFun = function(x, k) list(cluster = getClusters(k, c))
@@ -624,7 +625,7 @@ plotGapPerPart = function(n, d, c, B=500, v=T){
   optimal_nb_clusters = getGapBest(gap)
   gap_k=round(gap$Tab,3)
   best = gap_k[,"gap"][optimal_nb_clusters]
-  if(optimal_nb_clusters < n) best = paste(best, ">",gap_k[,"gap"][optimal_nb_clusters+1],"-",gap_k[,"SE.sim"][optimal_nb_clusters +1])
+  if(optimal_nb_clusters < n) best = paste(best, ">",gap_k[,"gap"][optimal_NB_CLUSTERS+1],"-",gap_k[,"SE.sim"][optimal_nb_clusters +1])
   plot(gap, arrowArgs = list(col="gray", length=1/15, lwd=2, angle=90, code=3), type="b", xlim=c(1,n+1), ylim=c(0,max(gap$Tab[,"gap"])+0.1), col="grey", xlab="Nb. of clusters", ylab=expression(Gap[k]), main="",axes=F)
   plotBestClustering("Gap statistics method", gap$Tab[,"gap"]," gap value", optimal_nb_clusters, 0.1, 1, best)
   #cat(paste("With a corrected index, optimal number of clusters k =",getGapBest(gap,"firstSEmax"), "\n"))
@@ -807,7 +808,7 @@ plotPca = function(t, k, cl, d, nf=2){
   assign("pca_coord", pca_coord, .GlobalEnv)
   writeTsv("pca_coord", v=F)
   par(fig=c(0.8,1,0.82,1),new=TRUE)
-  if(isTRUE(advanced)) plotInertiaPca(pca)
+  if(isTRUE(ADVANCED)) plotInertiaPca(pca)
   suprLog = dev.off()
 }
 
@@ -931,19 +932,20 @@ tryCatch({
 })
 
 #Global variables settings
-nb_clusters = opt$nbClusters
-max_clusters = opt$maxClusters
-classif_type = opt$classifType
-bootstrap = opt$bootstrap
-advanced = "advanced" %in% names(opt)
-verbose = ( !("quiet" %in% names(opt)) | ("verbose" %in% names(opt)))
-verboseNiv2 = ("verbose" %in% names(opt))
+NB_CLUSTERS = opt$nbClusters
+MAX_CLUSTERS = opt$maxClusters
+CLASSIF_TYPE = opt$classifType
+NB_BOOTSTRAP = opt$bootstrap
+ADVANCED = "advanced" %in% names(opt)
+VERBOSE = ( !("quiet" %in% names(opt)) | ("verbose" %in% names(opt)))
+VERBOSE_NIV2 = ("verbose" %in% names(opt))
 remove_doublets = ("removeDoublets" %in% names(opt))
 text = !("text" %in% names(opt))
 header = ("header" %in% names(opt))
 if (!is.null(opt$workdir)) setwd(opt$workdir)
-if (isTRUE(verboseNiv2)) start_time = Sys.time()
+if (isTRUE(VERBOSE_NIV2)) start_time = Sys.time()
 NB_ROW_MAX = 200 #max row to have pdf, otherwise, some plots are in png
+DIM_PNG = 2000
 
 #Loading data
 data = read.table(opt$infile, header=header, sep=opt$separator, dec=".")
@@ -951,55 +953,56 @@ postChecking(args, data)
 #rename row and avoid doublets errors
 data = renameRowname(data)
 if(isTRUE(remove_doublets)){
-  printProgress(verboseNiv2, "Loading data")
+  printProgress(VERBOSE_NIV2, "Loading data")
   data = discardRowCondDoublets(data)
 }
-if ( (nrow(data) > 3000) & (classif_type > 2) ) stop("With more than 3000 rows to analyse, --classType must be 1: K-medoids or 2: K-means", call.=FALSE)
+if ( (nrow(data) > 3000) & (CLASSIF_TYPE > 2) ) stop("With more than 3000 rows to analyse, --classType must be 1: K-medoids or 2: K-means", call.=FALSE)
  
 #Perform classification
-printProgress(verboseNiv2, "Distance calculation")
+printProgress(VERBOSE_NIV2, "Distance calculation")
 dis = getDistance(data, opt$distance)
-if(classif_type < 3) printProgress(verboseNiv2, "Classification")
-classif = getClassif(classif_type, max_clusters, data, dis)
-list_clus = getClusterPerPart(max_clusters+1, classif)
+if(CLASSIF_TYPE < 3) printProgress(VERBOSE_NIV2, "Classification")
+classif = getClassif(CLASSIF_TYPE, MAX_CLUSTERS, data, dis)
+list_clus = getClusterPerPart(MAX_CLUSTERS+1, classif)
 
 #Indexes
-if(classif_type > 2){
-  printProgress(verboseNiv2, "Cophenetic calculation")
+if(CLASSIF_TYPE > 2){
+  printProgress(VERBOSE_NIV2, "Cophenetic calculation")
   plotCohenetic(dis, classif)
-  if(isTRUE(advanced) & isTRUE(verbose)) cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
-  plotFusionLevels(max_clusters, classif)
+  if(isTRUE(ADVANCED) & isTRUE(VERBOSE)) cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
+  plotFusionLevels(MAX_CLUSTERS, classif)
 }
 
 #Inertia
-printProgress(verboseNiv2, "Index calculation")
-between = getRelativeBetweenPerPart(max_clusters, data, list_clus)
+printProgress(VERBOSE_NIV2, "Index calculation")
+between = getRelativeBetweenPerPart(MAX_CLUSTERS, data, list_clus)
 diff = getBetweenDifferences(between)
 plotElbow(between)
 
 #Silhouette analysis
 sil = getSilhouettePerPart(data, list_clus, dis)
 mean_silhouette = getMeanSilhouettePerPart(sil)
-optimal_nb_clusters = plotSilhouettePerPart(mean_silhouette)
-if(!is.null(nb_clusters)) optimal_nb_clusters = nb_clusters
-sil_k = sil[[optimal_nb_clusters-1]]
+optimal_NB_CLUSTERS = plotSilhouettePerPart(mean_silhouette)
+if(!is.null(NB_CLUSTERS)) optimal_NB_CLUSTERS = NB_CLUSTERS
+sil_k = sil[[optimal_NB_CLUSTERS-1]]
 plotSilhouette(sil_k)
 
 #cl_temp, because writeTsv(clusters) recreate a different object named clusters
-clusters = list_clus[[optimal_nb_clusters-1]]
+clusters = list_clus[[optimal_NB_CLUSTERS-1]]
 cl_temp = clusters
 gap = NULL
 
-#Advanced indexes
-if (isTRUE(advanced)){
+#ADVANCED indexes
+if (isTRUE(ADVANCED)){
 
   if (nrow(data) < 100){
-    gap = plotGapPerPart(max_clusters, data, classif, bootstrap)
-    plotGapPerPart2(gap, max_clusters)
+    printProgress(VERBOSE_NIV2, "Gap statistics calculation")
+    gap = plotGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP)
+    plotGapPerPart2(gap, MAX_CLUSTERS)
   }
   
-  contribution = 100 * getCtrVar(classif_type, optimal_nb_clusters, clusters, data)
-  discriminant_power = 100 * getPdisPerPartition(classif_type, max_clusters, list_clus, data)
+  contribution = 100 * getCtrVar(CLASSIF_TYPE, optimal_NB_CLUSTERS, clusters, data)
+  discriminant_power = 100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data)
   within_k = getRelativeWithinPerCluster(list_clus, data)
   
   for (i in c("contribution", "discriminant_power", "within_k"))
@@ -1007,24 +1010,24 @@ if (isTRUE(advanced)){
 }
 
 #Plots
-if(classif_type > 2) plotDendrogram(classif_type, optimal_nb_clusters, classif, data, max_clusters, clusters)
-printProgress(verboseNiv2, "PCA")
-plotPca(classif_type, optimal_nb_clusters, clusters, data, opt$nbAxis)
-printProgress(verboseNiv2, "Heatmap calculation")
-if(classif_type <= 2 || isTRUE(advanced)){
+if(CLASSIF_TYPE > 2) plotDendrogram(CLASSIF_TYPE, optimal_NB_CLUSTERS, classif, data, MAX_CLUSTERS, clusters)
+printProgress(VERBOSE_NIV2, "PCA")
+plotPca(CLASSIF_TYPE, optimal_NB_CLUSTERS, clusters, data, opt$nbAxis)
+printProgress(VERBOSE_NIV2, "Heatmap calculation")
+if(CLASSIF_TYPE <= 2 || isTRUE(ADVANCED)){
   heatMap(data, dis, sil_k, text=(nrow(data) < 100))
 }else{
   heatMap(data, dis, c=classif, cl=clusters, text=(nrow(data) < 100))
 }
 
 #Final outputs
-summary = printSummary(between, diff, mean_silhouette, advanced, gap)
-writeTsv("summary", v=verbose)
-writeClusters(data, clusters, TRUE, v=( (verbose) & (nrow(data) < 100) ) )
-if (!isTRUE(verbose)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
-if (isTRUE(verboseNiv2)) beep("ping")
-if (isTRUE(verboseNiv2)) getTimeElapsed(start_time)
+summary = printSummary(between, diff, mean_silhouette, ADVANCED, gap)
+writeTsv("summary", v=VERBOSE)
+writeClusters(data, clusters, TRUE, v=( (VERBOSE) & (nrow(data) < 100) ) )
+if (!isTRUE(VERBOSE)) cat(paste("Optimal number of clusters:", optimal_NB_CLUSTERS,"\n"))
+if (isTRUE(VERBOSE_NIV2)) beep("ping")
+if (isTRUE(VERBOSE_NIV2)) getTimeElapsed(start_time)
 
 #errors
-if (optimal_nb_clusters==max_clusters) message("\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found.")
+if (optimal_NB_CLUSTERS==MAX_CLUSTERS) message("\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found.")
 if(min(table(cl_temp))==1) message("\n[WARNING] A cluster with an only singleton biased the silhouette score.")
