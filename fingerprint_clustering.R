@@ -452,7 +452,7 @@ plotCohenetic=function(dis, cah){
     par(cex.lab=1.5*2, font.lab=3, font.axis=3, cex.axis=0.8*2, cex.main=2*2, cex=1, lwd=3*2)
     par(mar=c(5.1,5.1,5.1,2.1)+7)
     lwd=3*2
-    line.lab = 3
+    line.lab = 5
   }else{
     savePdf("shepard_graph.pdf")
     lwd = 3
@@ -823,39 +823,47 @@ orderColors = function(c, cl){
 plotPca = function(t, k, cl, d, nf=2){
   pca = dudi.pca(d, scannf=F, nf=nf)
   
-  if(nrow(d) > NB_ROW_MAX ) {
+  if(nrow(d) < NB_ROW_MAX ) {
     png("pca.png", DIM_PNG, DIM_PNG)
-    par(mar=c(0,0,8,0), lwd=2)
-    cex=2; cex.main=6; cstar=0; cellipse=0; lwd.line=4; clabel=0; labels=1:nrow(d)
+    par(mar=c(0,0,18,0), lwd=4)
+    cex=2; cex.main=6; cstar=0; cellipse=0; lwd.line=8; clabel=0; labels=1:nrow(d); line.main=7
   }else{
     pdf("pca.pdf")
     par(mar=c(0,0,4.1,0))
-    cex=0.6; cex.main=1.5; cstar=1; cellipse=1; lwd.line=2; clabel=1; labels=rownames(d)
+    cex=0.6; cex.main=1.5; cstar=1; cellipse=1; lwd.line=2; clabel=1; labels=rownames(d); line.main=1
   }
   
   title = paste("Cumulated inertia:", round((pca$eig[nf-1]+pca$eig[nf])/sum(pca$eig),4)*100, "%")
   s.class(addaxes=F, cbind(pca$li[,nf-1] , pca$li[,nf]), ylim=c(min(pca$li[,nf])-3, max(pca$li[,nf])+3), xlim=c(min(pca$li[,nf-1])-3, max(pca$li[,nf-1])+3), csub=1.5, as.factor(cl), grid=F, col=colPers(k), clabel=clabel, cstar=cstar, cellipse=cellipse)
-  mtext(title, font=2, line=1, cex=cex.main)
+  mtext(title, font=2, line=line.main, cex=cex.main)
   abline(h=0, v=0, lty=2, lwd=lwd.line, col="grey")
   text(x=pca$li[,nf-1], y=pca$li[,nf], labels=labels, col=colorClusters(cl), cex=cex)
-  pca_coord = cbind(rownames(pca$li), pca$li[,1],pca$li[,2])
+  pca_coord = cbind(rownames(pca$li), pca$li[,1], pca$li[,2])
   #colnames(pca_coord) = c("Chemicals", "Axis 1", "Axis 2")
   assign("pca_coord", pca_coord, .GlobalEnv)
   writeTsv("pca_coord", v=F)
   par(fig=c(0.8,1,0.82,1),new=TRUE)
-  if(isTRUE(ADVANCED)) plotInertiaPca(pca)
+  if(isTRUE(ADVANCED)) plotInertiaPca(pca, d)
   suprLog = dev.off()
 }
 
 # nf: number of inertia bar plot corresponding to factorial axis
-plotInertiaPca = function (pca, nf=4){
+plotInertiaPca = function (pca, d, nf=4){
+  
+  if(nrow(d) < NB_ROW_MAX ) {
+    r_lim = c(8, 0, 4, 5); r_main_cex = 2.7; r_main_text=2.4; lwd.hist=40; line.hist=2
+  }else{
+  #r_lim = c(-0.2, 0.3, 1.1, 1.1); 
+    r_lim = c(2, 0, 1, 1); r_main_cex = 0.7; r_main_text=0.6; lwd.hist=10; line.hist=0
+  }
+  
   inertia = round(pca$eig/sum(pca$eig)*100, 1)
-  par(mar=c(2, 0, 1, 1) + 0.1)
-  plot(inertia, type="h", lwd=10, lend=1, xlim=c(0,nf+0.2),ylim=c(0,max(inertia+7)),col="grey75",font=2, axes=F, xlab="", ylab="")
-  title(sub="Inertia (in %)", line=0, cex.sub=0.7, font.sub=3)
-  text(1:nf,inertia[1:nf]+5, inertia[1:nf], cex = 0.6)
+  par(mar=c(r_lim[1], r_lim[2], r_lim[3], r_lim[4]) + 0.1)
+  plot(inertia, type="h", lwd=lwd.hist, lend=1, xlim=c(0,nf+0.2),ylim=c(0,max(inertia+7)),col="grey75",font=2, axes=F, xlab="", ylab="")
+  title(sub=" Inertia (in %)", line=line.hist, cex.sub=r_main_cex, font.sub=3)
+  text(1:nf,inertia[1:nf]+5, inertia[1:nf], cex = r_main_text)
   par(new=TRUE); par(mar=c(0,0,0,0)) ; plot(0:1,0:1, axes=F, type="n")
-  rect(0,0.1,0.9,0.9, border="grey65")
+  rect(0, 0.1, 0.9, 0.9, border="grey65")
 }
 
 
@@ -993,6 +1001,7 @@ if(isTRUE(remove_doublets)){
 }
 if ( (nrow(data) > 3000) & (CLASSIF_TYPE > 2) ) stop("With more than 3000 rows to analyse, --classType must be 1: K-medoids or 2: K-means", call.=FALSE)
 if ( isSymmetric(as.matrix(data)) & !header) colnames(data) = rownames(data)
+#summary(data)
 
 #Perform classification
 printProgress(VERBOSE_NIV2, "Distance calculation")
@@ -1013,7 +1022,6 @@ if(CLASSIF_TYPE > 2){
 printProgress(VERBOSE_NIV2, "Index calculation")
 between = getRelativeBetweenPerPart(MAX_CLUSTERS, data, list_clus)
 diff = getBetweenDifferences(between)
-plotElbow(between)
 
 #Silhouette analysis
 sil = getSilhouettePerPart(data, list_clus, dis)
@@ -1031,12 +1039,14 @@ gap = NULL
 #ADVANCED indexes
 if (isTRUE(ADVANCED)){
 
-  if (nrow(data) < 100){
-    printProgress(VERBOSE_NIV2, "Gap statistics calculation")
-    gap = plotGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP, v=VERBOSE)
-    plotGapPerPart2(gap, MAX_CLUSTERS)
-  }
+  # if (nrow(data) < 100){
+  #   printProgress(VERBOSE_NIV2, "Gap statistics calculation")
+  #   gap = plotGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP, v=VERBOSE)
+  #   plotGapPerPart2(gap, MAX_CLUSTERS)
+  # }
   
+  plotElbow(between)
+  #decomment to have contribution per variable to the inertia of each clusters and to each partionning
   contribution = 100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data)
   discriminant_power = 100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data)
   within_k = getRelativeWithinPerCluster(list_clus, data)
@@ -1059,6 +1069,9 @@ if(CLASSIF_TYPE <= 2 || isTRUE(ADVANCED)){
 #Final outputs
 summary = printSummary(between, diff, mean_silhouette, ADVANCED, gap)
 writeTsv("summary", v=VERBOSE)
+#decomment to have the mean of the variables for each clusters
+#getClusterCentroids(data, clusters)
+#decomment to have the mean of every variables (only if each column is a different condition of the same variable)
 #apply(getClusterCentroids(data, clusters), 1, mean)
 if (nrow(data) > 100){
   cat("\n")
