@@ -43,13 +43,11 @@ checkArg = function(a){
   # o: one argument from the list of arguments
   # def: defaul message
   if(opt$bootstrap < 100 || opt$bootstrap > 1000){
-    print_help(a)
     stop("--boostrap comprise between 100 and 1000", call.=FALSE)
   }
   
   checkMinCluster = function (o, def=""){
     if (opt[[o]] < 2){
-      print_help(a)
       stop(paste("--",o ," must be upper or equal to 2",def,".\n",sep=""), call.=FALSE)
     }
   }
@@ -57,24 +55,20 @@ checkArg = function(a){
   if(!is.null(opt$nbClusters)) checkMinCluster("nbClusters")
   
   if ((opt$classifType < 1) || (opt$classifType > 9)){
-    print_help(a)
     stop("--classifType must be comprise between 1 and 6 [by default: 2].\n", call.=FALSE)
   }
   
   if ((opt$nbAxis < 2) || (opt$nbAxis > 4)){
-    print_help(a)
     stop("--nbAxis must be comprise between 2 and 4 [by default: 2].\n", call.=FALSE)
   }
   
   if ((opt$distance < 1) || (opt$distance > 6)){
-    print_help(a)
     stop("--distance must be comprise between 1 and 6 [by default: 1 for Euclidian].\n", call.=FALSE)
   }
   
   
   checkFile = function (o){
     if(!file.exists(opt[[o]])){
-      print_help(a)
       stop(paste("--", o, " name does not exist\n", sep=""), call.=FALSE)
     }
   }
@@ -241,7 +235,7 @@ writeTsv = function(x, cl=T, v=T){
     }
     print(printed,  quote=F)
   }
-  write(t(output), paste(x,".tsv",sep=""), ncolumns=ncol(output), sep="\t")
+  if(isTRUE(cl)) write(t(output), paste(x,".tsv",sep=""), ncolumns=ncol(output), sep="\t")
   options(warn = 0)
 }
 
@@ -432,6 +426,10 @@ writeClusters = function(d, cl, r=FALSE, v=FALSE){
   # (because writeTsv use only global variables)
   assign("clusters", clusters,.GlobalEnv)
   writeTsv("clusters", F, v=v)
+  clusters = cbind(sil_k[,1], sil_k[,3], coord_pca[attr(sil_k,"iOrd"),])
+  colnames(clusters) = c("Cluster","Silhouette","Axis1","Axis2")
+  assign("clusters", clusters,.GlobalEnv)
+  writeTsv("clusters", cl=T, v=F)
 }
 
 ############################################################
@@ -826,15 +824,15 @@ plotPca = function(t, k, cl, d, nf=2){
   if(nrow(d) < NB_ROW_MAX ) {
     png("pca.png", DIM_PNG, DIM_PNG)
     par(mar=c(0,0,18,0), lwd=4)
-    cex=2; cex.main=6; cstar=0; cellipse=0; lwd.line=8; clabel=0; labels=1:nrow(d); line.main=7
+    cex=2; cex.main=6; cstar=0; cellipse=0; lwd.line=8; clabel=0; labels=1:nrow(d); line.main=7; cpoint=0
   }else{
-    pdf("pca.pdf")
+    pdf(paste("pca.pdf", sep=""))
     par(mar=c(0,0,4.1,0))
-    cex=0.6; cex.main=1.5; cstar=1; cellipse=1; lwd.line=2; clabel=1; labels=rownames(d); line.main=1
+    cex=0.6; cex.main=1.5; cstar=1; cellipse=1; lwd.line=2; clabel=1; labels=rownames(d); line.main=1; cpoint=1
   }
   
   title = paste("Cumulated inertia:", round((pca$eig[nf-1]+pca$eig[nf])/sum(pca$eig),4)*100, "%")
-  s.class(addaxes=F, cbind(pca$li[,nf-1] , pca$li[,nf]), ylim=c(min(pca$li[,nf])-3, max(pca$li[,nf])+3), xlim=c(min(pca$li[,nf-1])-3, max(pca$li[,nf-1])+3), csub=1.5, as.factor(cl), grid=F, col=colPers(k), clabel=clabel, cstar=cstar, cellipse=cellipse)
+  s.class(addaxes=F, cbind(pca$li[,nf-1] , pca$li[,nf]), ylim=c(min(pca$li[,nf])-3, max(pca$li[,nf])+3), xlim=c(min(pca$li[,nf-1])-3, max(pca$li[,nf-1])+3), csub=1.5, as.factor(cl), grid=F, col=colPers(k), clabel=clabel, cstar=cstar, cellipse=cellipse, cpoint=cpoint)
   mtext(title, font=2, line=line.main, cex=cex.main)
   abline(h=0, v=0, lty=2, lwd=lwd.line, col="grey")
   text(x=pca$li[,nf-1], y=pca$li[,nf], labels=labels, col=colorClusters(cl), cex=cex)
@@ -845,6 +843,7 @@ plotPca = function(t, k, cl, d, nf=2){
   par(fig=c(0.8,1,0.82,1),new=TRUE)
   if(isTRUE(ADVANCED)) plotInertiaPca(pca, d)
   suprLog = dev.off()
+  return(pca$li)
 }
 
 # nf: number of inertia bar plot corresponding to factorial axis
@@ -882,7 +881,7 @@ getDistPerVariable = function(d, cl){
   d = scalecenter(d)
   nb_cl = length(levels(as.factor(cl)))
   ctr = matrix(0, nrow=nb_cl, ncol=ncol(d))
-  for (i in 1:nrow(d)) {
+  for (i in 1:ncol(d)) {
     #get the group number for each row
     cli = cl[i]
     #in the dataset, for a metabolite row, loop an each metadabolite column
@@ -900,7 +899,7 @@ getDistPerVariable = function(d, cl){
 # c: hierarchical classification
 # d: data
 getCtrVar = function(t, k, cl, d) {
-  
+  #if NA values appear, scale 0/0 could produce NA values, NA could correspond to 0
   nb_cl = length(levels(as.factor(cl)))
   ncol = ncol(d)
   
@@ -1001,7 +1000,6 @@ if(isTRUE(remove_doublets)){
 }
 if ( (nrow(data) > 3000) & (CLASSIF_TYPE > 2) ) stop("With more than 3000 rows to analyse, --classType must be 1: K-medoids or 2: K-means", call.=FALSE)
 if ( isSymmetric(as.matrix(data)) & !header) colnames(data) = rownames(data)
-#summary(data)
 
 #Perform classification
 printProgress(VERBOSE_NIV2, "Distance calculation")
@@ -1047,18 +1045,19 @@ if (isTRUE(ADVANCED)){
   
   plotElbow(between)
   #decomment to have contribution per variable to the inertia of each clusters and to each partionning
-  contribution = 100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data)
-  discriminant_power = 100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data)
+  #contribution = 100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data)
+  #discriminant_power = 100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data)
   within_k = getRelativeWithinPerCluster(list_clus, data)
   
-  for (i in c("contribution", "discriminant_power", "within_k"))
-    writeTsv(i, v=F)
+  # for (i in c("contribution", "discriminant_power"))
+  #   writeTsv(i, v=F)
+  writeTsv("within_k", v=F)
 }
 
 #Plots
 if(CLASSIF_TYPE > 2) plotDendrogram(CLASSIF_TYPE, optimal_nb_clusters, classif, data, MAX_CLUSTERS, clusters)
 printProgress(VERBOSE_NIV2, "PCA")
-plotPca(CLASSIF_TYPE, optimal_nb_clusters, clusters, data, opt$nbAxis)
+coord_pca = plotPca(CLASSIF_TYPE, optimal_nb_clusters, clusters, data, opt$nbAxis)
 printProgress(VERBOSE_NIV2, "Heatmap calculation")
 if(CLASSIF_TYPE <= 2 || isTRUE(ADVANCED)){
   heatMap(data, dis, sil_k, text=(nrow(data) < 100))
@@ -1074,8 +1073,9 @@ writeTsv("summary", v=VERBOSE)
 #decomment to have the mean of every variables (only if each column is a different condition of the same variable)
 #apply(getClusterCentroids(data, clusters), 1, mean)
 if (nrow(data) > 100){
-  cat("\n")
-  table(CLUSTER_SIZES = clusters)
+  cat("\nCLUSTER SIZES:")
+  # t<- do not print "clusters"
+  table(t <- clusters)
 } 
 writeClusters(data, clusters, TRUE, v=( (VERBOSE) & (nrow(data) < 100) ) )
 if (!isTRUE(VERBOSE)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
