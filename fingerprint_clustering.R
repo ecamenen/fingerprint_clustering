@@ -448,11 +448,11 @@ plotCohenetic=function(dis, cah){
   if (isTRUE(VERBOSE)) cat(paste("\nCOPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation with the data:",round(cor_coph,3),"\n"))
 
   if(nrow(as.matrix(dis)) > NB_ROW_MAX ) {
-    png("shepard_graph.png", DIM_PNG, DIM_PNG)
-    par(cex.lab=1.5*4, font.lab=3, font.axis=3, cex.axis=0.8*4, cex.main=2*4, cex=1, lwd=3*4)
+    png("shepard_graph.png", DIM_PNG/2, DIM_PNG/2)
+    par(cex.lab=1.5*2, font.lab=3, font.axis=3, cex.axis=0.8*2, cex.main=2*2, cex=1, lwd=3*2)
     par(mar=c(5.1,5.1,5.1,2.1)+7)
-    lwd=3*4
-    line.lab = 5
+    lwd=3*2
+    line.lab = 3
   }else{
     savePdf("shepard_graph.pdf")
     lwd = 3
@@ -784,11 +784,14 @@ heatMap = function(df, d, s=NULL, c=NULL, cl=NULL, text=FALSE){
 # k: number of clusters
 plotDendrogram = function(t, k, c, d, n, cl){
 
-  if(nrow(d) > NB_ROW_MAX ) c$labels = 1:nrow(d)
+  if(nrow(d) > NB_ROW_MAX ) {
+    c$labels = 1:nrow(d)
+    cex=0.4
+  }else cex=0.8
   pdf("dendrogram.pdf")
   setGraphicBasic()
   par(mar=c(2,5,5,1))
-  plot(c, hang=-1, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), sub="", cex=0.8, font=3, ylab="Cophenetic distance", main="Dendrogram", axes=F)
+  plot(c, hang=-1, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), sub="", cex=cex, font=3, ylab="Cophenetic distance", main="Dendrogram", axes=F)
   plotAxis(2, 0, max(c$height))
   abline(h=rev(c$height)[1:n], col="gray", lty=2, lwd=1)
   #projection of the clusters
