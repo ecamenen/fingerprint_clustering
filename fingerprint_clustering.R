@@ -426,7 +426,7 @@ writeClusters = function(d, cl, r=FALSE, v=FALSE){
   # (because writeTsv use only global variables)
   assign("clusters", clusters,.GlobalEnv)
   writeTsv("clusters", F, v=v)
-  clusters = cbind(sil_k[,1], sil_k[,3], coord_pca[attr(sil_k,"iOrd"),])
+  clusters = cbind(sil_k[,1], sil_k[,3], pca$li[attr(sil_k,"iOrd"),])
   colnames(clusters) = c("Cluster","Silhouette","Axis1","Axis2")
   assign("clusters", clusters,.GlobalEnv)
   writeTsv("clusters", cl=T, v=F)
@@ -818,38 +818,34 @@ orderColors = function(c, cl){
 ################################
 
 #nf: number of factorial axis
-plotPca = function(t, k, cl, d, nf=2){
-  pca = dudi.pca(d, scannf=F, nf=nf)
+plotPca = function(pca, d, cl, axis1=1, axis2=2){
+  k = length(levels(as.factor(cl)))
   
-  if(nrow(d) < NB_ROW_MAX ) {
-    png("pca.png", DIM_PNG, DIM_PNG)
+  if(nrow(d) > NB_ROW_MAX ) {
+    png(paste("pca", axis1, "-", axis2,".png", sep=""), DIM_PNG, DIM_PNG)
     par(mar=c(0,0,18,0), lwd=4)
     cex=2; cex.main=6; cstar=0; cellipse=0; lwd.line=8; clabel=0; labels=1:nrow(d); line.main=7; cpoint=0
   }else{
-    pdf(paste("pca.pdf", sep=""))
+    pdf(paste("pca", axis1, "-", axis2,".pdf", sep=""))
     par(mar=c(0,0,4.1,0))
     cex=0.6; cex.main=1.5; cstar=1; cellipse=1; lwd.line=2; clabel=1; labels=rownames(d); line.main=1; cpoint=1
   }
   
-  title = paste("Cumulated inertia:", round((pca$eig[nf-1]+pca$eig[nf])/sum(pca$eig),4)*100, "%")
-  s.class(addaxes=F, cbind(pca$li[,nf-1] , pca$li[,nf]), ylim=c(min(pca$li[,nf])-3, max(pca$li[,nf])+3), xlim=c(min(pca$li[,nf-1])-3, max(pca$li[,nf-1])+3), csub=1.5, as.factor(cl), grid=F, col=colPers(k), clabel=clabel, cstar=cstar, cellipse=cellipse, cpoint=cpoint)
+  title = paste("Cumulated inertia:", round((pca$eig[axis1]+pca$eig[axis2])/sum(pca$eig),4)*100, "%")
+  s.class(addaxes=F, cbind(pca$li[,axis1] , pca$li[,axis2]), ylim=c(min(pca$li[,axis2])-3, max(pca$li[,axis2])+3), xlim=c(min(pca$li[,axis1])-3, max(pca$li[,axis1])+3), csub=1.5, as.factor(cl), grid=F, col=colPers(k), clabel=clabel, cstar=cstar, cellipse=cellipse, cpoint=cpoint)
   mtext(title, font=2, line=line.main, cex=cex.main)
   abline(h=0, v=0, lty=2, lwd=lwd.line, col="grey")
-  text(x=pca$li[,nf-1], y=pca$li[,nf], labels=labels, col=colorClusters(cl), cex=cex)
-  pca_coord = cbind(rownames(pca$li), pca$li[,1], pca$li[,2])
+  text(x=pca$li[,axis1], y=pca$li[,axis2], labels=labels, col=colorClusters(cl), cex=cex)
   #colnames(pca_coord) = c("Chemicals", "Axis 1", "Axis 2")
-  assign("pca_coord", pca_coord, .GlobalEnv)
-  writeTsv("pca_coord", v=F)
   par(fig=c(0.8,1,0.82,1),new=TRUE)
-  if(isTRUE(ADVANCED)) plotInertiaPca(pca, d)
+  if(isTRUE(ADVANCED)) plotInertiaPca(pca, d, pca$nf)
   suprLog = dev.off()
-  return(pca$li)
 }
 
 # nf: number of inertia bar plot corresponding to factorial axis
 plotInertiaPca = function (pca, d, nf=4){
   
-  if(nrow(d) < NB_ROW_MAX ) {
+  if(nrow(d) > NB_ROW_MAX ) {
     r_lim = c(8, 0, 4, 5); r_main_cex = 2.7; r_main_text=2.4; lwd.hist=40; line.hist=2
   }else{
   #r_lim = c(-0.2, 0.3, 1.1, 1.1); 
@@ -981,6 +977,7 @@ NB_BOOTSTRAP = opt$bootstrap
 ADVANCED = "advanced" %in% names(opt)
 VERBOSE = ( !("quiet" %in% names(opt)) | ("verbose" %in% names(opt)))
 VERBOSE_NIV2 = ("verbose" %in% names(opt))
+NB_AXIS =opt$nbAxis
 remove_doublets = ("removeDoublets" %in% names(opt))
 text = !("text" %in% names(opt))
 header = ("header" %in% names(opt))
@@ -1054,10 +1051,17 @@ if (isTRUE(ADVANCED)){
   writeTsv("within_k", v=F)
 }
 
-#Plots
+#dendrogram
 if(CLASSIF_TYPE > 2) plotDendrogram(CLASSIF_TYPE, optimal_nb_clusters, classif, data, MAX_CLUSTERS, clusters)
+
+#pca
 printProgress(VERBOSE_NIV2, "PCA")
-coord_pca = plotPca(CLASSIF_TYPE, optimal_nb_clusters, clusters, data, opt$nbAxis)
+pca = dudi.pca(data, scannf=F, nf=NB_AXIS)
+for (i in 1:NB_AXIS)
+  for (j in i:NB_AXIS)
+    if(i != j) plotPca(pca, data, clusters, i, j)
+
+#Heatmap
 printProgress(VERBOSE_NIV2, "Heatmap calculation")
 if(CLASSIF_TYPE <= 2 || isTRUE(ADVANCED)){
   heatMap(data, dis, sil_k, text=(nrow(data) < 100))
