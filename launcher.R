@@ -1,7 +1,5 @@
 getArgs = function(){
   option_list = list(
-    make_option(c("-w", "--workdir"), type="character", metavar="character",
-                help="Working directory path [default: the folder where the script is launched]"),
     make_option(c("-i", "--infile"), type="character", default="data/matrix.txt", 
                 metavar="character",
                 help="Fingerprint file name [default: %default]"),
@@ -15,20 +13,14 @@ getArgs = function(){
                 help="Activate quiet mode"),
     make_option(c("-v", "--verbose"), type="logical", action="store_true",
                 help="Activate \"super-verbose\" mode"),
-    make_option(c("-T", "--text"), type="logical", action="store_true",
-                help="DO NOT print values on graph"),
     make_option(c("-n", "--nbClusters"), type="integer", metavar="integer",
                 help="Fix the number of clusters"),
-    make_option(c("-r", "--removeDoublets"), type="logical", action="store_true", 
-                help="Discard line containing the same information on all columns from analysis"),
-    make_option(c("-b", "--bootstrap"), type="integer", default=500, metavar="integer",
-                help="Number of bootstrap for Gap statistic (advanced mode)"),
     make_option(c("-d", "--distance"), type="integer", default=1, metavar="integer",
                 help="Type of distance [default: Euclidian] (1: Euclidian, 2: Manhattan, 3: Jaccard, 4: Sokal & Michener, 5 Sorensen (Dice), 6: Ochiai)"),
     make_option(c("-H", "--header"), type="logical", action="store_true",
                 help="Consider first row as header of columns"),
-    make_option(c("-s", "--separator"), type="character", metavar="character", default="\t",
-                help="Type of separator (default: tabulation)"),
+    make_option(c("-s", "--separator"), type="integer", metavar="integer", default=1,
+                help="Type of separator [default: tabulation] (1: Tabulation, 2: Semicolon"),
     make_option(c("-N", "--nbAxis"), type="integer", default=2, metavar="integer",
                 help="Number of axis for pca (default: 2)")
   )
@@ -42,9 +34,6 @@ checkArg = function(a){
   opt = parse_args(a)
   # o: one argument from the list of arguments
   # def: defaul message
-  if(opt$bootstrap < 100 || opt$bootstrap > 1000){
-    stop("--boostrap comprise between 100 and 1000", call.=FALSE)
-  }
   
   checkMinCluster = function (o, def=""){
     if (opt[[o]] < 2){
@@ -72,7 +61,7 @@ checkArg = function(a){
       stop(paste("--", o, " name does not exist\n", sep=""), call.=FALSE)
     }
   }
-  if(!is.null(opt$workdir)) checkFile("workdir")
+  #if(!is.null(opt$workdir)) checkFile("workdir")
   if(!is.null(opt$infile)) checkFile("infile")
   
   return (opt)
@@ -101,6 +90,17 @@ postChecking = function (a, d){
 printProgress = function (v, val){
   if(isTRUE(v)) 
     cat(paste("\n[", format(Sys.time(), "%X"), "] ", val ,"in progress...\n"), sep="")
+}
+
+getTimeElapsed = function(start_time){
+  time = as.numeric(as.difftime(Sys.time()-start_time), units="secs")
+  secs = time %% 60
+  time = (time - secs) /60
+  mins = time %% 60
+  hours = time / 60
+  time = paste(mins, "min ", round(secs), "s\n", sep="")
+  if (hours >= 1)  time = paste(round(hours), "h ", time, sep="")
+  cat(paste("\nTime to run the process : ", time, sep=""))
 }
 
 ################################
@@ -132,30 +132,41 @@ tryCatch({
 NB_CLUSTERS = opt$nbClusters
 MAX_CLUSTERS = opt$maxClusters
 CLASSIF_TYPE = opt$classifType
-NB_BOOTSTRAP = opt$bootstrap
+NB_BOOTSTRAP = 500 #should be comprise between 100 and 1000
 ADVANCED = "advanced" %in% names(opt)
 VERBOSE = ( !("quiet" %in% names(opt)) | ("verbose" %in% names(opt)))
 VERBOSE_NIV2 = ("verbose" %in% names(opt))
 NB_AXIS =opt$nbAxis
-remove_doublets = ("removeDoublets" %in% names(opt))
-text = !("text" %in% names(opt))
-header = ("header" %in% names(opt))
-if (!is.null(opt$workdir)) setwd(opt$workdir)
+REMOVE_DOUBLETS = T #Discard line containing the same information on all columns from analysis
+TEXT = T #print values on graph (for optimum partition and heatmap)
+HEAD = ("header" %in% names(opt))
+#if (!is.null(opt$workdir)) setwd(opt$workdir)
 if (isTRUE(VERBOSE_NIV2)) start_time = Sys.time()
 NB_ROW_MAX = 200 #max row to have pdf, otherwise, some plots are in png
 DIM_PNG = 2000
 
+if (opt$separator==1){ SEP="\t"
+}else if (opt$separator==2){ SEP=";"
+}else{
+  print_help(args)
+  stop(paste("--separator must be 1 for tabulation or 2 for semicolon."), call.=FALSE)
+}
+
 #Loading data
-data = read.table(opt$infile, header=header, sep=opt$separator, dec=".")
+data = read.table(opt$infile, header=HEAD, sep=SEP, dec=".")
+if(ncol(data)==1){
+  print_help(args)
+  stop(paste("Check for the --separator (by default, tabulation)."), call.=FALSE)
+}
 postChecking(args, data)
 #rename row and avoid doublets errors
 data = renameRowname(data)
-if(isTRUE(remove_doublets)){
+if(isTRUE(REMOVE_DOUBLETS)){
   printProgress(VERBOSE_NIV2, "Loading data")
   data = discardRowCondDoublets(data)
 }
 if ( (nrow(data) > 3000) & (CLASSIF_TYPE > 2) ) stop("With more than 3000 rows to analyse, --classType must be 1: K-medoids or 2: K-means", call.=FALSE)
-if ( isSymmetric(as.matrix(data)) & !header) colnames(data) = rownames(data)
+if ( isSymmetric(as.matrix(data)) & !HEAD) colnames(data) = rownames(data)
 
 #Perform classification
 printProgress(VERBOSE_NIV2, "Distance calculation")
@@ -193,11 +204,11 @@ gap = NULL
 #ADVANCED indexes
 if (isTRUE(ADVANCED)){
   
-  # if (nrow(data) < 100){
-  #   printProgress(VERBOSE_NIV2, "Gap statistics calculation")
-  #   gap = plotGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP, v=VERBOSE)
-  #   plotGapPerPart2(gap, MAX_CLUSTERS)
-  # }
+  if (nrow(data) < 100){
+    printProgress(VERBOSE_NIV2, "Gap statistics calculation")
+    gap = plotGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP, v=VERBOSE)
+    plotGapPerPart2(gap, MAX_CLUSTERS)
+  }
   
   plotElbow(between)
   #decomment to have contribution per variable to the inertia of each clusters and to each partionning
@@ -222,10 +233,11 @@ for (i in 1:NB_AXIS)
 
 #Heatmap
 printProgress(VERBOSE_NIV2, "Heatmap calculation")
+textHeatmap = isTRUE(  isTRUE(TEXT) & (nrow(data) < 100) )
 if(CLASSIF_TYPE <= 2 || isTRUE(ADVANCED)){
-  heatMap(data, dis, sil_k, text=(nrow(data) < 100))
+  heatMap(data, dis, sil_k, text=textHeatmap)
 }else{
-  heatMap(data, dis, c=classif, cl=clusters, text=(nrow(data) < 100))
+  heatMap(data, dis, c=classif, cl=clusters, text=textHeatmap)
 }
 
 #Final outputs

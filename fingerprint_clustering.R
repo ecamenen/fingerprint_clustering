@@ -167,7 +167,7 @@ scalecenter = function(d) {
 getDistance = function(df, d){
   dists=c("euclidian", "manhattan", 1, 2, 5, 7)
   if(d < 3) dist(df, method = dists[d])
-  else dist.binary(df, method = dists[d])
+  else dist.binary(df, method = as.integer(dists[d]))
 }
 
 checkEuclidean = function(dis){
@@ -501,10 +501,6 @@ plotSilhouette = function(sil_k){
   plot(sil_k, max.strlen=25, main=" ", sub= "", do.clus.stat=TRUE, xlab="Silhouette width", cex.names=0.8, col=colorClusters(sil_k[,1]), nmax.lab=100, do.n.k = FALSE, axes=F)
   mtext(paste("Average silhouette width:", round(summary(sil_k)$avg.width,3)), font=2, cex=1.5, line=1)
   plotAxis(1, 0, 1, 0.2)
-  sil_scores = cbind(row.names(sil_k), sil_k[,1], sil_k[,3])
-  #colnames(sil_scores) = c("Chemicals", "Cluster", "Silhouette score")
-  assign("sil_scores", sil_scores, .GlobalEnv)
-  writeTsv("sil_scores", v=F)
   suprLog = dev.off()
 }
 
@@ -546,7 +542,7 @@ plotGapPerPart = function(n, d, c, B=500, v=T){
 
 #Plot the gap between the two function: within and random within average
 plotGapPerPart2 = function(g, n){
-  savePdf("gap_statistics2.pdf")
+  savePdf("log_w_diff.pdf")
   min_y=round(min(g$Tab[,c(1,2)]),1)
   max_y=round(max(g$Tab[,c(1,2)]),1)
   plot(0,0, xlim=c(1,n), ylim=c(min_y-0.1,max_y+0.1),type="n", xlab="Nb. of clusters", ylab="log(within-inertia)", axes=F)
@@ -638,11 +634,11 @@ heatMap = function(df, d, s=NULL, c=NULL, cl=NULL, text=FALSE){
 
   options(warn = -1)
   if(nrow(df) > NB_ROW_MAX ){
-    png("heat_map.png", DIM_PNG, DIM_PNG)
+    png("heatmap.png", DIM_PNG, DIM_PNG)
     labels=order
     cex.main = 5; cex.legend = 3; cex.lab = 2; y_top = 12; x_lab = 0.6; lwd.rect=6
   }else{
-    pdf("heat_map.pdf")
+    pdf("heatmap.pdf")
     cex.main = 1.5; cex.legend = 0.85; cex.lab = 0.7; y_top = 8; x_lab = 0.5; lwd.rect=3
   }
   
