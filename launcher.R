@@ -1,8 +1,25 @@
 getArgs = function(){
   option_list = list(
-    make_option(c("-i", "--infile"), type="character", default="data/matrix.txt", 
-                metavar="character",
-                help="Fingerprint file name [default: %default]"),
+    make_option(c("-i", "--infile"), type="character", metavar="character",
+                help="Fingerprint file name"),
+    make_option(c( "--output1"), type="character", default="average_silhouette", 
+                metavar="character", help="Average silhouettes file name [default: %default]"),
+    make_option(c( "--output2"), type="character", default="silhouette", 
+                metavar="character", help="Silhouette file name [default: %default]"),
+    make_option(c( "--output3"), type="character", default="dendrogram", 
+                metavar="character", help="Dendrogram file name [default: %default]"),
+    make_option(c( "--output4"), type="character", default="pca", 
+                metavar="character", help="PCA file name [default: %default]"),
+    make_option(c( "--output5"), type="character", default="heatmap", 
+                metavar="character", help="Heatmap file name [default: %default]"),
+    make_option(c( "--output6"), type="character", default="summary", 
+                metavar="character", help="Summary file name [default: %default]"),
+    make_option(c( "--output7"), type="character", default="clusters", 
+                metavar="character", help="Clusters file name [default: %default]"),
+    make_option(c( "--output8"), type="character", default="shepard_graph", 
+                metavar="character", help="Shepard graph file name [default: %default]"),
+    make_option(c( "--output9"), type="character", default="fusion_levels", 
+                metavar="character", help="Fusion levels file name [default: %default]"),
     make_option(c("-m", "--maxClusters"), type="integer", default=6, metavar="integer",
                 help="Maximum number of clusters [default: %default]"),
     make_option(c("-t", "--classifType"), type="integer", default=4, metavar="integer",
@@ -63,6 +80,7 @@ checkArg = function(a){
   }
   #if(!is.null(opt$workdir)) checkFile("workdir")
   if(!is.null(opt$infile)) checkFile("infile")
+  else stop(paste("--infile is required\n", sep=""), call.=FALSE)
   
   return (opt)
 }

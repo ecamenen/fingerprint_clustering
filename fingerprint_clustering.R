@@ -342,13 +342,13 @@ plotCohenetic=function(d, cah){
   if (isTRUE(VERBOSE)) cat(paste("\nCOPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation with the data:",round(cor_coph,3),"\n"))
 
   if(nrow(as.matrix(d)) > NB_ROW_MAX ) {
-    png("shepard_graph.png", DIM_PNG/2, DIM_PNG/2)
+    png(paste(opt$output8, ".png", sep=""), DIM_PNG/2, DIM_PNG/2)
     par(cex.lab=1.5*2, font.lab=3, font.axis=3, cex.axis=0.8*2, cex.main=2*2, cex=1, lwd=3*2)
     par(mar=c(5.1,5.1,5.1,2.1)+7)
     lwd=3*2
     line.lab = 5
   }else{
-    savePdf("shepard_graph.pdf")
+    savePdf(paste(opt$output8, ".pdf", sep=""))
     lwd = 3
     line.lab = 3
   }
@@ -440,7 +440,7 @@ plotFusionLevels = function(n, c) {
   diff = unlist(sapply(1:n, function(i) fusion[i-1]-fusion[i]))
   fusion = fusion[1:(n-1)]
   optimal_nb_clusters = which.max(diff)+1
-  savePdf("fusion_levels.pdf")
+  savePdf(paste(opt$output9, ".pdf", sep=""))
   plot(2:n, fusion, type="b", ylim=c(round(min(fusion))-1,round(max(fusion))+1), xlim=c(2,n+1), xlab="Nb. of clusters", ylab="Cophenetic distance", col="grey", axes=F)
   plotBestClustering("Fusion level method", fusion, " gain with the previous fusion level", optimal_nb_clusters, val2=diff)
   suprLog = dev.off()
@@ -488,7 +488,7 @@ getMeanSilhouettePerPart = function(sils){
 # mean_sils: vector of silhouette average width
 plotSilhouettePerPart = function(mean_silhouette){
   if (isTRUE(VERBOSE)) cat("\nSILHOUETTE:\n")
-  savePdf("average_silhouettes.pdf")
+  savePdf(paste(opt$output1, ".pdf", sep=""))
   optimal_nb_clusters = which.max(mean_silhouette)+1
   plot(2:(length(sil)+1), mean_silhouette, type="b", xlim=c(2,length(sil)+2), ylim=c(0,max(mean_silhouette)+0.1), col="grey", xlab="Nb. of clusters", ylab="Average silhouette width", axes=F)
   plotBestClustering("Silhouette method", mean_silhouette,"n average width", optimal_nb_clusters, 0.1)
@@ -498,7 +498,7 @@ plotSilhouettePerPart = function(mean_silhouette){
 
 #sil_k: a silhouette object
 plotSilhouette = function(sil_k){
-  pdf("silhouette.pdf")
+  pdf(paste(opt$output2, ".pdf", sep=""))
   setGraphicBasic()
   par(mar=c(4, 12, 3, 2))
   plot(sil_k, max.strlen=25, main=" ", sub= "", do.clus.stat=TRUE, xlab="Silhouette width", cex.names=0.8, col=colorClusters(sil_k[,1]), nmax.lab=100, do.n.k = FALSE, axes=F)
@@ -637,11 +637,11 @@ heatMap = function(df, d, s=NULL, c=NULL, cl=NULL, text=FALSE){
 
   options(warn = -1)
   if(nrow(df) > NB_ROW_MAX ){
-    png("heatmap.png", DIM_PNG, DIM_PNG)
+    png(paste(opt$output5, ".png", sep=""),DIM_PNG, DIM_PNG)
     labels=order
     cex.main = 5; cex.legend = 3; cex.lab = 2; y_top = 12; x_lab = 0.6; lwd.rect=6
   }else{
-    pdf("heatmap.pdf")
+    pdf(paste(opt$output5, ".pdf", sep=""))
     cex.main = 1.5; cex.legend = 0.85; cex.lab = 0.7; y_top = 8; x_lab = 0.5; lwd.rect=3
   }
   
@@ -678,7 +678,7 @@ plotDendrogram = function(t, k, c, d, n, cl){
     c$labels = 1:nrow(d)
     cex=0.4
   }else cex=0.8
-  pdf("dendrogram.pdf")
+  pdf(paste(opt$output3, ".pdf", sep=""))
   setGraphicBasic()
   par(mar=c(2,5,5,1))
   plot(c, hang=-1, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), sub="", cex=cex, font=3, ylab="Cophenetic distance", main="Dendrogram", axes=F)
@@ -714,11 +714,11 @@ plotPca = function(pca, d, cl, axis1=1, axis2=2){
   k = length(levels(as.factor(cl)))
   
   if(nrow(d) > NB_ROW_MAX ) {
-    png(paste("pca", axis1, "-", axis2,".png", sep=""), DIM_PNG, DIM_PNG)
+    png(paste(opt$output4, axis1, "-", axis2,".png", sep=""), DIM_PNG, DIM_PNG)
     par(mar=c(0,0,18,0), lwd=4)
     cex=2; cex.main=6; cstar=0; cellipse=0; lwd.line=8; clabel=0; labels=1:nrow(d); line.main=7; cpoint=0
   }else{
-    pdf(paste("pca", axis1, "-", axis2,".pdf", sep=""))
+    pdf(paste(opt$output4, axis1, "-", axis2,".pdf", sep=""))
     par(mar=c(0,0,4.1,0))
     cex=0.6; cex.main=1.5; cstar=1; cellipse=1; lwd.line=2; clabel=1; labels=rownames(d); line.main=1; cpoint=1
   }
