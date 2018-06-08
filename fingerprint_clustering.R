@@ -1,118 +1,6 @@
-getArgs = function(){
-  option_list = list(
-    make_option(c("-w", "--workdir"), type="character", metavar="character",
-                help="Working directory path [default: the folder where the script is launched]"),
-    make_option(c("-i", "--infile"), type="character", default="data/matrix.txt", 
-                metavar="character",
-                help="Fingerprint file name [default: %default]"),
-    make_option(c("-m", "--maxClusters"), type="integer", default=6, metavar="integer",
-                help="Maximum number of clusters [default: %default]"),
-    make_option(c("-t", "--classifType"), type="integer", default=4, metavar="integer",
-                help="Type of classification [default: Complete links] (1: K-menoids; 2: K-means; 3: Ward; 4: Complete links; 5: Single links; 6: UPGMA; 7: WPGMA; 8: WPGMC; 9: UPGMC)"),
-    make_option(c("-a", "--advanced"), type="logical", action="store_true", 
-                help="Activate advanced mode (print more outputs)"),
-    make_option(c("-q", "--quiet"), type="logical", action="store_true",
-                help="Activate quiet mode"),
-    make_option(c("-v", "--verbose"), type="logical", action="store_true",
-                help="Activate \"super-verbose\" mode"),
-    make_option(c("-T", "--text"), type="logical", action="store_true",
-                help="DO NOT print values on graph"),
-    make_option(c("-n", "--nbClusters"), type="integer", metavar="integer",
-                help="Fix the number of clusters"),
-    make_option(c("-r", "--removeDoublets"), type="logical", action="store_true", 
-                help="Discard line containing the same information on all columns from analysis"),
-    make_option(c("-b", "--bootstrap"), type="integer", default=500, metavar="integer",
-                help="Number of bootstrap for Gap statistic (advanced mode)"),
-    make_option(c("-d", "--distance"), type="integer", default=1, metavar="integer",
-                help="Type of distance [default: Euclidian] (1: Euclidian, 2: Manhattan, 3: Jaccard, 4: Sokal & Michener, 5 Sorensen (Dice), 6: Ochiai)"),
-    make_option(c("-H", "--header"), type="logical", action="store_true",
-                help="Consider first row as header of columns"),
-    make_option(c("-s", "--separator"), type="character", metavar="character", default="\t",
-                help="Type of separator (default: tabulation)"),
-    make_option(c("-N", "--nbAxis"), type="integer", default=2, metavar="integer",
-                help="Number of axis for pca (default: 2)")
-    )
-  return (OptionParser(option_list=option_list))
-}
-
-#Check the arguments validity
-#Inputs:
-# a: arguments (optionParser object)
-checkArg = function(a){
-  opt = parse_args(a)
-  # o: one argument from the list of arguments
-  # def: defaul message
-  if(opt$bootstrap < 100 || opt$bootstrap > 1000){
-    stop("--boostrap comprise between 100 and 1000", call.=FALSE)
-  }
-  
-  checkMinCluster = function (o, def=""){
-    if (opt[[o]] < 2){
-      stop(paste("--",o ," must be upper or equal to 2",def,".\n",sep=""), call.=FALSE)
-    }
-  }
-  checkMinCluster("maxClusters"," [by default: 6]")
-  if(!is.null(opt$nbClusters)) checkMinCluster("nbClusters")
-  
-  if ((opt$classifType < 1) || (opt$classifType > 9)){
-    stop("--classifType must be comprise between 1 and 6 [by default: 2].\n", call.=FALSE)
-  }
-  
-  if ((opt$nbAxis < 2) || (opt$nbAxis > 4)){
-    stop("--nbAxis must be comprise between 2 and 4 [by default: 2].\n", call.=FALSE)
-  }
-  
-  if ((opt$distance < 1) || (opt$distance > 6)){
-    stop("--distance must be comprise between 1 and 6 [by default: 1 for Euclidian].\n", call.=FALSE)
-  }
-  
-  
-  checkFile = function (o){
-    if(!file.exists(opt[[o]])){
-      stop(paste("--", o, " name does not exist\n", sep=""), call.=FALSE)
-    }
-  }
-  if(!is.null(opt$workdir)) checkFile("workdir")
-  if(!is.null(opt$infile)) checkFile("infile")
-  
-  return (opt)
-}
-
-#Checking clusters args after data loading
-#Inputs:
-# a: arguments (optionParser object)
-# d: data
-# o: one argument from the list of arguments
-# def: defaul message
-postChecking = function (a, d){
-  
-  opt = parse_args(a)
-  
-  checkMaxCluster = function (o, def="")
-    if (opt[[o]] > nrow(d)){
-      print_help(a)
-      stop(paste("--", o," must be lower or equal to the fingerprint",def,".\n",sep=""), call.=FALSE)
-    }
-  
-  checkMaxCluster("maxClusters"," [by default: 6]")
-  if(!is.null(opt$nbClusters)) checkMaxCluster("nbClusters")
-}
-
-printProgress = function (v, val){
-  if(isTRUE(v)) 
-    cat(paste("\n[", format(Sys.time(), "%X"), "] ", val ,"in progress...\n"), sep="")
-}
-
-getTimeElapsed = function(start_time){
-  time = as.numeric(as.difftime(Sys.time()-start_time), units="secs")
-  secs = time %% 60
-  time = (time - secs) /60
-  mins = time %% 60
-  hours = time / 60
-  time = paste(mins, "min ", round(secs), "s\n", sep="")
-  if (hours >= 1)  time = paste(round(hours), "h ", time, sep="")
-  cat(paste("\nTime to run the process : ", time, sep=""))
-}
+################################
+#          Parsing
+################################
 
 #avoid doublets in row names
 #r: row names vector
@@ -171,42 +59,6 @@ discardRowCondDoublets = function(x){
   else return (x)
 }
 
-isSymmetric = function (d){
-  if(nrow(d) == ncol(d)) {
-    isReflexivity = unique(d[cbind(1:nrow(d),1:nrow(d))] == 0)
-    
-    if ( length(isReflexivity)==1 & isTRUE(isReflexivity) ) {
-      isCommutativity = unique(d[lower.tri(d)] == t(d)[lower.tri(d)])
-      
-      if ( length(isCommutativity)==1 & isTRUE(isCommutativity) )
-        return (T)
-    }
-  }
-  return (F)
-}
-
-#Usage: colPers(x), x a number of colours in output
-#Gradient of color
-colPers = colorRampPalette(c(rgb(0.6,0.1,0.5,1), rgb(1,0,0,1), rgb(0.9,0.6,0,1), rgb(0.1,0.6,0.3,1), rgb(0.1,0.6,0.5,1), rgb(0,0,1,1)), alpha = TRUE)
-
-#Get the normalized distance between each points and the center
-#Outputs:
-# for each column, the mean=0 and the variance is the same
-scalecenter = function(d) {
-  #output scale function: for each column, mean=0, sd=1
-  return(scale(d) * sqrt(nrow(d)/(nrow(d)-1)))
-  # ponderation for sampling index (var use n-1)
-  # without this constante, for advanced outputs, total (max_cluster=nrow(data)) will be different from 1
-}
-
-#df: dataframe
-#d: distance type
-getDistance = function(df, d){
-  dists=c("euclidian", "manhattan", 1, 2, 5, 7)
-  if(d < 3) dist(df, method = dists[d])
-  else dist.binary(df, method = dists[d])
-}
-
 #Inputs: x : a matrix
 #filename of the saved file
 #Prints the matrix, save the matrix
@@ -242,6 +94,11 @@ writeTsv = function(x, cl=T, v=T){
 ################################
 #          Graphic
 ################################
+
+#Usage: colPers(x), x a number of colours in output
+#Gradient of color
+colPers = colorRampPalette(c(rgb(0.6,0.1,0.5,1), rgb(1,0,0,1), rgb(0.9,0.6,0,1), rgb(0.1,0.6,0.3,1), rgb(0.1,0.6,0.5,1), rgb(0,0,1,1)), alpha = TRUE)
+
 
 setGraphic = function(){
   setGraphicBasic()
@@ -292,31 +149,74 @@ savePdf = function (f){
 }
 
 ################################
+#          Statistics
+################################
+
+#Get the normalized distance between each points and the center
+#Outputs:
+# for each column, the mean=0 and the variance is the same
+scalecenter = function(d) {
+  #output scale function: for each column, mean=0, sd=1
+  return(scale(d) * sqrt(nrow(d)/(nrow(d)-1)))
+  # ponderation for sampling index (var use n-1)
+  # without this constante, for advanced outputs, total (max_cluster=nrow(data)) will be different from 1
+}
+
+#df: dataframe
+#d: distance type
+getDistance = function(df, d){
+  dists=c("euclidian", "manhattan", 1, 2, 5, 7)
+  if(d < 3) dist(df, method = dists[d])
+  else dist.binary(df, method = as.integer(dists[d]))
+}
+
+#d distance object
+checkEuclidean = function(d){
+  if(attributes(d)$method != "euclidean") 
+    stop("Distance should be euclidean with this classification method.", call.=FALSE)
+}
+
+isSymmetric = function (d){
+  if(nrow(d) == ncol(d)) {
+    isReflexivity = unique(d[cbind(1:nrow(d),1:nrow(d))] == 0)
+    
+    if ( length(isReflexivity)==1 & isTRUE(isReflexivity) ) {
+      isCommutativity = unique(d[lower.tri(d)] == t(d)[lower.tri(d)])
+      
+      if ( length(isCommutativity)==1 & isTRUE(isCommutativity) )
+        return (T)
+    }
+  }
+  return (F)
+}
+
+################################
 #          Clustering
 ################################
 
 #Inputs:
 # t: number of type of classification
-# d: data
-# dis: distance matrix
+# df: data
+# d: distance matrix
 #Ouput: Hierarchical classification
-getCAH = function(t, d, dis){
+getCAH = function(t, df, d){
   if(t>2){
-    if (t==8 | t==9 ) checkEuclidean(dis)
+    if (t==8 | t==9 ) checkEuclidean(d)
     #cah: classification hierarchic ascending
-    cah = hclust(dis, method=getClassifType(t))
+    cah = hclust(d, method=getClassifType(t))
   #automaticly ordering by clusters
-  return (reorder.hclust(cah, dis))
+  return (reorder.hclust(cah, d))
   }
 }
 
 # Selects best algo based on cophenetic calculation
-# df: data (or distance matrix for hierarchic)
-selectBestCAH = function (d, dis, v=F){
+# df: data
+#d: distance matrix
+selectBestCAH = function (df, d, v=F){
   temp = 0
   for (i in 3:9){
-    cah = getCAH(d, i)
-    res = cor(dis, cophenetic(cah))
+    cah = getCAH(df, i)
+    res = cor(d, cophenetic(cah))
     if (isTRUE(v)) cat(paste(getClassifType(i), ":",round(res,3), "\n"))
     if (res > temp){ 
       temp = res
@@ -340,29 +240,25 @@ getCoefAggl = function(c)
 
 #Inputs: 
 # t: number of type of classification
-# d: data (or distance for pam)
+# df: data
+# d: distance for pam
 # k: number of clusterting
 #Ouput: Non-hierarchical classification
-getCNH = function(t, d, dis, k){
-  if (t==1) return (pam(dis, k, diss=T))
+getCNH = function(t, df, d, k){
+  if (t==1) return (pam(d, k, diss=T))
   else if (t==2){
-    checkEuclidean(dis)
-    return (kmeans(d, centers=k, nstart=100))
+    checkEuclidean(d)
+    return (kmeans(df, centers=k, nstart=100))
   }
 }
 
-getClassif = function(t, n, d, dis){
-  if(t>2) getCAH(t, d, dis)
+getClassif = function(t, n, df, d){
+  if(t>2) getCAH(t, df, d)
   else {
     list_cnh = list("method"=getClassifType(t))
-    for (k in 2:(n+1)) list_cnh[[k]] = getCNH(t, d, dis, k)
+    for (k in 2:(n+1)) list_cnh[[k]] = getCNH(t, df, d, k)
     return(list_cnh)
   }
-}
-
-checkEuclidean = function(dis){
-  if(attributes(dis)$method != "euclidean") 
-    stop("Distance should be euclidean with this classification method.", call.=FALSE)
 }
 
 # Inputs: 
@@ -440,12 +336,12 @@ writeClusters = function(d, cl, r=FALSE, v=FALSE){
 #Inputs:
 # d : distance matrix
 # cah : hierarchical classification
-plotCohenetic=function(dis, cah){
+plotCohenetic=function(d, cah){
   coph_matrix = cophenetic(cah)
-  cor_coph = cor(dis, coph_matrix)
+  cor_coph = cor(d, coph_matrix)
   if (isTRUE(VERBOSE)) cat(paste("\nCOPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation with the data:",round(cor_coph,3),"\n"))
 
-  if(nrow(as.matrix(dis)) > NB_ROW_MAX ) {
+  if(nrow(as.matrix(d)) > NB_ROW_MAX ) {
     png("shepard_graph.png", DIM_PNG/2, DIM_PNG/2)
     par(cex.lab=1.5*2, font.lab=3, font.axis=3, cex.axis=0.8*2, cex.main=2*2, cex=1, lwd=3*2)
     par(mar=c(5.1,5.1,5.1,2.1)+7)
@@ -457,10 +353,10 @@ plotCohenetic=function(dis, cah){
     line.lab = 3
   }
   
-  plot(dis, coph_matrix, pch=19, col=alpha("red",0.2), axes=F, xlim=c(0,max(dis)), xlab="", ylab="", ylim=c(0,max(coph_matrix)), asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
+  plot(d, coph_matrix, pch=19, col=alpha("red",0.2), axes=F, xlim=c(0,max(d)), xlab="", ylab="", ylim=c(0,max(coph_matrix)), asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
   title(xlab="Distance between metabolites",ylab="Cophenetic distance", line=line.lab)
   plotAxis(2, 0, max(coph_matrix), lwd=lwd)
-  plotAxis(1, 0, max(dis), lwd=lwd)
+  plotAxis(1, 0, max(d), lwd=lwd)
   abline(0, 1, col="grey", lty=2, lwd=lwd)
   suprLog = dev.off()
 }
@@ -569,23 +465,23 @@ plotElbow = function(x) {
 ################################
 
 #Ouput: an ordered silhouette object
-getSilhouette = function(d, cl_k, dis){
-  sil = sortSilhouette(silhouette(cl_k, dis))
-  rownames(sil) = row.names(d)[attr(sil,"iOrd")]
-  return (sil)
+getSilhouette = function(df, cl_k, d){
+  s = sortSilhouette(silhouette(cl_k, d))
+  rownames(s) = row.names(df)[attr(s,"iOrd")]
+  return (s)
 }
 
-getSilhouettePerPart =function(d, cl, dis){
+getSilhouettePerPart =function(df, cl, d){
   list_sil = list()
   for (k in 2:length(cl)) {
-    list_sil[[k-1]] = getSilhouette(d, cl[[k-1]], dis)
+    list_sil[[k-1]] = getSilhouette(df, cl[[k-1]], d)
   }
   return(list_sil)
 }
 
 # sils: list of silhouettes objects per partition
 getMeanSilhouettePerPart = function(sils){
-  unlist(sapply(1:length(sil), function(i) summary(sil[[i]])$avg.width))
+  unlist(sapply(1:length(sils), function(i) summary(sils[[i]])$avg.width))
 }
 
 # Plot the best average silhouette width for all clustering possible
@@ -608,10 +504,6 @@ plotSilhouette = function(sil_k){
   plot(sil_k, max.strlen=25, main=" ", sub= "", do.clus.stat=TRUE, xlab="Silhouette width", cex.names=0.8, col=colorClusters(sil_k[,1]), nmax.lab=100, do.n.k = FALSE, axes=F)
   mtext(paste("Average silhouette width:", round(summary(sil_k)$avg.width,3)), font=2, cex=1.5, line=1)
   plotAxis(1, 0, 1, 0.2)
-  sil_scores = cbind(row.names(sil_k), sil_k[,1], sil_k[,3])
-  #colnames(sil_scores) = c("Chemicals", "Cluster", "Silhouette score")
-  assign("sil_scores", sil_scores, .GlobalEnv)
-  writeTsv("sil_scores", v=F)
   suprLog = dev.off()
 }
 
@@ -653,7 +545,7 @@ plotGapPerPart = function(n, d, c, B=500, v=T){
 
 #Plot the gap between the two function: within and random within average
 plotGapPerPart2 = function(g, n){
-  savePdf("gap_statistics2.pdf")
+  savePdf("log_w_diff.pdf")
   min_y=round(min(g$Tab[,c(1,2)]),1)
   max_y=round(max(g$Tab[,c(1,2)]),1)
   plot(0,0, xlim=c(1,n), ylim=c(min_y-0.1,max_y+0.1),type="n", xlab="Nb. of clusters", ylab="log(within-inertia)", axes=F)
@@ -745,11 +637,11 @@ heatMap = function(df, d, s=NULL, c=NULL, cl=NULL, text=FALSE){
 
   options(warn = -1)
   if(nrow(df) > NB_ROW_MAX ){
-    png("heat_map.png", DIM_PNG, DIM_PNG)
+    png("heatmap.png", DIM_PNG, DIM_PNG)
     labels=order
     cex.main = 5; cex.legend = 3; cex.lab = 2; y_top = 12; x_lab = 0.6; lwd.rect=6
   }else{
-    pdf("heat_map.pdf")
+    pdf("heatmap.pdf")
     cex.main = 1.5; cex.legend = 0.85; cex.lab = 0.7; y_top = 8; x_lab = 0.5; lwd.rect=3
   }
   
@@ -907,10 +799,6 @@ getCtrVar = function(t, k, cl, d) {
   return(ctr)
 }
 
-################################
-#            PDIS
-################################
-
 # Discriminant power (PDIS)
 # Relative contributions of the metabolites to inertia of a partitionning (in %)
 # Inputs: 
@@ -944,148 +832,3 @@ getPdisPerPartition = function(t, n, cls, d){
   }
   return (pdis_per_partition)
 }
-
-################################
-#            MAIN
-################################
-
-#Pseudo-random settings: 
-#milisec * PID
-set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
-
-#Loading librairies
-librairies = c("cluster", "optparse", "gclus", "ade4", "scales", "beepr")
-for (l in librairies){
-  if (! (l %in% installed.packages()[,"Package"])) install.packages(l, repos = "http://cran.us.r-project.org", quiet = T)
-  library(l, character.only = TRUE)
-}
-
-#Get arguments
-args = getArgs()
-tryCatch({
-  opt = checkArg(args)
-}, error = function(e) {
-  print_help(args)
-  stop(e[[1]], call.=FALSE)
-})
-
-#Global variables settings
-NB_CLUSTERS = opt$nbClusters
-MAX_CLUSTERS = opt$maxClusters
-CLASSIF_TYPE = opt$classifType
-NB_BOOTSTRAP = opt$bootstrap
-ADVANCED = "advanced" %in% names(opt)
-VERBOSE = ( !("quiet" %in% names(opt)) | ("verbose" %in% names(opt)))
-VERBOSE_NIV2 = ("verbose" %in% names(opt))
-NB_AXIS =opt$nbAxis
-remove_doublets = ("removeDoublets" %in% names(opt))
-text = !("text" %in% names(opt))
-header = ("header" %in% names(opt))
-if (!is.null(opt$workdir)) setwd(opt$workdir)
-if (isTRUE(VERBOSE_NIV2)) start_time = Sys.time()
-NB_ROW_MAX = 200 #max row to have pdf, otherwise, some plots are in png
-DIM_PNG = 2000
-
-#Loading data
-data = read.table(opt$infile, header=header, sep=opt$separator, dec=".")
-postChecking(args, data)
-#rename row and avoid doublets errors
-data = renameRowname(data)
-if(isTRUE(remove_doublets)){
-  printProgress(VERBOSE_NIV2, "Loading data")
-  data = discardRowCondDoublets(data)
-}
-if ( (nrow(data) > 3000) & (CLASSIF_TYPE > 2) ) stop("With more than 3000 rows to analyse, --classType must be 1: K-medoids or 2: K-means", call.=FALSE)
-if ( isSymmetric(as.matrix(data)) & !header) colnames(data) = rownames(data)
-
-#Perform classification
-printProgress(VERBOSE_NIV2, "Distance calculation")
-dis = getDistance(data, opt$distance)
-if(CLASSIF_TYPE < 3) printProgress(VERBOSE_NIV2, "Classification")
-classif = getClassif(CLASSIF_TYPE, MAX_CLUSTERS, data, dis)
-list_clus = getClusterPerPart(MAX_CLUSTERS+1, classif)
-
-#Indexes
-if(CLASSIF_TYPE > 2){
-  printProgress(VERBOSE_NIV2, "Cophenetic calculation")
-  plotCohenetic(dis, classif)
-  if(isTRUE(ADVANCED) & isTRUE(VERBOSE)) cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
-  plotFusionLevels(MAX_CLUSTERS, classif)
-}
-
-#Inertia
-printProgress(VERBOSE_NIV2, "Index calculation")
-between = getRelativeBetweenPerPart(MAX_CLUSTERS, data, list_clus)
-diff = getBetweenDifferences(between)
-
-#Silhouette analysis
-sil = getSilhouettePerPart(data, list_clus, dis)
-mean_silhouette = getMeanSilhouettePerPart(sil)
-optimal_nb_clusters = plotSilhouettePerPart(mean_silhouette)
-if(!is.null(NB_CLUSTERS)) optimal_nb_clusters = NB_CLUSTERS
-sil_k = sil[[optimal_nb_clusters-1]]
-plotSilhouette(sil_k)
-
-#cl_temp, because writeTsv(clusters) recreate a different object named clusters
-clusters = list_clus[[optimal_nb_clusters-1]]
-cl_temp = clusters
-gap = NULL
-
-#ADVANCED indexes
-if (isTRUE(ADVANCED)){
-
-  # if (nrow(data) < 100){
-  #   printProgress(VERBOSE_NIV2, "Gap statistics calculation")
-  #   gap = plotGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP, v=VERBOSE)
-  #   plotGapPerPart2(gap, MAX_CLUSTERS)
-  # }
-  
-  plotElbow(between)
-  #decomment to have contribution per variable to the inertia of each clusters and to each partionning
-  #contribution = 100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data)
-  #discriminant_power = 100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data)
-  within_k = getRelativeWithinPerCluster(list_clus, data)
-  
-  # for (i in c("contribution", "discriminant_power"))
-  #   writeTsv(i, v=F)
-  writeTsv("within_k", v=F)
-}
-
-#dendrogram
-if(CLASSIF_TYPE > 2) plotDendrogram(CLASSIF_TYPE, optimal_nb_clusters, classif, data, MAX_CLUSTERS, clusters)
-
-#pca
-printProgress(VERBOSE_NIV2, "PCA")
-pca = dudi.pca(data, scannf=F, nf=NB_AXIS)
-for (i in 1:NB_AXIS)
-  for (j in i:NB_AXIS)
-    if(i != j) plotPca(pca, data, clusters, i, j)
-
-#Heatmap
-printProgress(VERBOSE_NIV2, "Heatmap calculation")
-if(CLASSIF_TYPE <= 2 || isTRUE(ADVANCED)){
-  heatMap(data, dis, sil_k, text=(nrow(data) < 100))
-}else{
-  heatMap(data, dis, c=classif, cl=clusters, text=(nrow(data) < 100))
-}
-
-#Final outputs
-summary = printSummary(between, diff, mean_silhouette, ADVANCED, gap)
-writeTsv("summary", v=VERBOSE)
-#decomment to have the mean of the variables for each clusters
-#getClusterCentroids(data, clusters)
-#decomment to have the mean of every variables (only if each column is a different condition of the same variable)
-#apply(getClusterCentroids(data, clusters), 1, mean)
-if (nrow(data) > 100){
-  cat("\nCLUSTER SIZES:")
-  # t<- do not print "clusters"
-  table(t <- clusters)
-} 
-writeClusters(data, clusters, TRUE, v=( (VERBOSE) & (nrow(data) < 100) ) )
-if (!isTRUE(VERBOSE)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
-if (isTRUE(VERBOSE_NIV2)) beep("ping")
-if (isTRUE(VERBOSE_NIV2)) getTimeElapsed(start_time)
-
-#errors
-if (optimal_nb_clusters==MAX_CLUSTERS) message("\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found.")
-if(min(table(cl_temp))==1) message("\n[WARNING] A cluster with an only singleton biased the silhouette score.")
