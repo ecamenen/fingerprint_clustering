@@ -637,11 +637,11 @@ heatMap = function(df, d, s=NULL, c=NULL, cl=NULL, text=FALSE){
 
   options(warn = -1)
   if(nrow(df) > NB_ROW_MAX ){
-    png(paste(opt$output5, ".png", sep=""),DIM_PNG, DIM_PNG)
+    png(paste(opt$output4, ".png", sep=""),DIM_PNG, DIM_PNG)
     labels=order
     cex.main = 5; cex.legend = 3; cex.lab = 2; y_top = 12; x_lab = 0.6; lwd.rect=6
   }else{
-    pdf(paste(opt$output5, ".pdf", sep=""))
+    pdf(paste(opt$output4, ".pdf", sep=""))
     cex.main = 1.5; cex.legend = 0.85; cex.lab = 0.7; y_top = 8; x_lab = 0.5; lwd.rect=3
   }
   
@@ -678,7 +678,7 @@ plotDendrogram = function(t, k, c, d, n, cl){
     c$labels = 1:nrow(d)
     cex=0.4
   }else cex=0.8
-  pdf(paste(opt$output3, ".pdf", sep=""))
+  pdf(paste(opt$output7, ".pdf", sep=""))
   setGraphicBasic()
   par(mar=c(2,5,5,1))
   plot(c, hang=-1, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), sub="", cex=cex, font=3, ylab="Cophenetic distance", main="Dendrogram", axes=F)
@@ -714,11 +714,11 @@ plotPca = function(pca, d, cl, axis1=1, axis2=2){
   k = length(levels(as.factor(cl)))
   
   if(nrow(d) > NB_ROW_MAX ) {
-    png(paste(opt$output4, axis1, "-", axis2,".png", sep=""), DIM_PNG, DIM_PNG)
+    png(paste(opt$output3, axis1, "-", axis2,".png", sep=""), DIM_PNG, DIM_PNG)
     par(mar=c(0,0,18,0), lwd=4)
     cex=2; cex.main=6; cstar=0; cellipse=0; lwd.line=8; clabel=0; labels=1:nrow(d); line.main=7; cpoint=0
   }else{
-    pdf(paste(opt$output4, axis1, "-", axis2,".pdf", sep=""))
+    pdf(paste(opt$output3, axis1, "-", axis2,".pdf", sep=""))
     par(mar=c(0,0,4.1,0))
     cex=0.6; cex.main=1.5; cstar=1; cellipse=1; lwd.line=2; clabel=1; labels=rownames(d); line.main=1; cpoint=1
   }
