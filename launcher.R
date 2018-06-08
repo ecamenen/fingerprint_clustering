@@ -36,15 +36,15 @@ checkArg = function(a){
   # def: defaul message
   
   checkMinCluster = function (o, def=""){
-    if (opt[[o]] < 2){
-      stop(paste("--",o ," must be upper or equal to 2",def,".\n",sep=""), call.=FALSE)
+    if (opt[[o]] < 3){
+      stop(paste("--",o ," must be upper or equal to 3",def,".\n",sep=""), call.=FALSE)
     }
   }
   checkMinCluster("maxClusters"," [by default: 6]")
   if(!is.null(opt$nbClusters)) checkMinCluster("nbClusters")
   
   if ((opt$classifType < 1) || (opt$classifType > 9)){
-    stop("--classifType must be comprise between 1 and 6 [by default: 2].\n", call.=FALSE)
+    stop("--classifType must be comprise between 1 and 9 [by default: 2].\n", call.=FALSE)
   }
   
   if ((opt$nbAxis < 2) || (opt$nbAxis > 4)){
@@ -149,7 +149,7 @@ if (opt$separator==1){ SEP="\t"
 }else if (opt$separator==2){ SEP=";"
 }else{
   print_help(args)
-  stop(paste("--separator must be 1 for tabulation or 2 for semicolon."), call.=FALSE)
+  stop(paste("--separator must be 1: Tabulation or 2: Semicolon."), call.=FALSE)
 }
 
 #Loading data
@@ -161,11 +161,13 @@ if(ncol(data)==1){
 postChecking(args, data)
 #rename row and avoid doublets errors
 data = renameRowname(data)
+#remove columns containing characters
+data = data[, unlist(sapply(1:ncol(data), function(i) is.numeric(data[,i])))]
 if(isTRUE(REMOVE_DOUBLETS)){
   printProgress(VERBOSE_NIV2, "Loading data")
   data = discardRowCondDoublets(data)
 }
-if ( (nrow(data) > 3000) & (CLASSIF_TYPE > 2) ) stop("With more than 3000 rows to analyse, --classType must be 1: K-medoids or 2: K-means", call.=FALSE)
+if ( (nrow(data) > 3500) & (CLASSIF_TYPE > 2) ) stop("With more than 3000 rows to analyse, --classType must be 1: K-medoids or 2: K-means", call.=FALSE)
 if ( isSymmetric(as.matrix(data)) & !HEAD) colnames(data) = rownames(data)
 
 #Perform classification

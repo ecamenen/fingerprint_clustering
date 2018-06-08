@@ -170,8 +170,9 @@ getDistance = function(df, d){
   else dist.binary(df, method = as.integer(dists[d]))
 }
 
-checkEuclidean = function(dis){
-  if(attributes(dis)$method != "euclidean") 
+#d distance object
+checkEuclidean = function(d){
+  if(attributes(d)$method != "euclidean") 
     stop("Distance should be euclidean with this classification method.", call.=FALSE)
 }
 
@@ -195,26 +196,27 @@ isSymmetric = function (d){
 
 #Inputs:
 # t: number of type of classification
-# d: data
-# dis: distance matrix
+# df: data
+# d: distance matrix
 #Ouput: Hierarchical classification
-getCAH = function(t, d, dis){
+getCAH = function(t, df, d){
   if(t>2){
-    if (t==8 | t==9 ) checkEuclidean(dis)
+    if (t==8 | t==9 ) checkEuclidean(d)
     #cah: classification hierarchic ascending
-    cah = hclust(dis, method=getClassifType(t))
+    cah = hclust(d, method=getClassifType(t))
   #automaticly ordering by clusters
-  return (reorder.hclust(cah, dis))
+  return (reorder.hclust(cah, d))
   }
 }
 
 # Selects best algo based on cophenetic calculation
-# df: data (or distance matrix for hierarchic)
-selectBestCAH = function (d, dis, v=F){
+# df: data
+#d: distance matrix
+selectBestCAH = function (df, d, v=F){
   temp = 0
   for (i in 3:9){
-    cah = getCAH(d, i)
-    res = cor(dis, cophenetic(cah))
+    cah = getCAH(df, i)
+    res = cor(d, cophenetic(cah))
     if (isTRUE(v)) cat(paste(getClassifType(i), ":",round(res,3), "\n"))
     if (res > temp){ 
       temp = res
@@ -238,22 +240,23 @@ getCoefAggl = function(c)
 
 #Inputs: 
 # t: number of type of classification
-# d: data (or distance for pam)
+# df: data
+# d: distance for pam
 # k: number of clusterting
 #Ouput: Non-hierarchical classification
-getCNH = function(t, d, dis, k){
-  if (t==1) return (pam(dis, k, diss=T))
+getCNH = function(t, df, d, k){
+  if (t==1) return (pam(d, k, diss=T))
   else if (t==2){
-    checkEuclidean(dis)
-    return (kmeans(d, centers=k, nstart=100))
+    checkEuclidean(d)
+    return (kmeans(df, centers=k, nstart=100))
   }
 }
 
-getClassif = function(t, n, d, dis){
-  if(t>2) getCAH(t, d, dis)
+getClassif = function(t, n, df, d){
+  if(t>2) getCAH(t, df, d)
   else {
     list_cnh = list("method"=getClassifType(t))
-    for (k in 2:(n+1)) list_cnh[[k]] = getCNH(t, d, dis, k)
+    for (k in 2:(n+1)) list_cnh[[k]] = getCNH(t, df, d, k)
     return(list_cnh)
   }
 }
@@ -333,12 +336,12 @@ writeClusters = function(d, cl, r=FALSE, v=FALSE){
 #Inputs:
 # d : distance matrix
 # cah : hierarchical classification
-plotCohenetic=function(dis, cah){
+plotCohenetic=function(d, cah){
   coph_matrix = cophenetic(cah)
-  cor_coph = cor(dis, coph_matrix)
+  cor_coph = cor(d, coph_matrix)
   if (isTRUE(VERBOSE)) cat(paste("\nCOPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation with the data:",round(cor_coph,3),"\n"))
 
-  if(nrow(as.matrix(dis)) > NB_ROW_MAX ) {
+  if(nrow(as.matrix(d)) > NB_ROW_MAX ) {
     png("shepard_graph.png", DIM_PNG/2, DIM_PNG/2)
     par(cex.lab=1.5*2, font.lab=3, font.axis=3, cex.axis=0.8*2, cex.main=2*2, cex=1, lwd=3*2)
     par(mar=c(5.1,5.1,5.1,2.1)+7)
@@ -350,10 +353,10 @@ plotCohenetic=function(dis, cah){
     line.lab = 3
   }
   
-  plot(dis, coph_matrix, pch=19, col=alpha("red",0.2), axes=F, xlim=c(0,max(dis)), xlab="", ylab="", ylim=c(0,max(coph_matrix)), asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
+  plot(d, coph_matrix, pch=19, col=alpha("red",0.2), axes=F, xlim=c(0,max(d)), xlab="", ylab="", ylim=c(0,max(coph_matrix)), asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
   title(xlab="Distance between metabolites",ylab="Cophenetic distance", line=line.lab)
   plotAxis(2, 0, max(coph_matrix), lwd=lwd)
-  plotAxis(1, 0, max(dis), lwd=lwd)
+  plotAxis(1, 0, max(d), lwd=lwd)
   abline(0, 1, col="grey", lty=2, lwd=lwd)
   suprLog = dev.off()
 }
@@ -462,23 +465,23 @@ plotElbow = function(x) {
 ################################
 
 #Ouput: an ordered silhouette object
-getSilhouette = function(d, cl_k, dis){
-  sil = sortSilhouette(silhouette(cl_k, dis))
-  rownames(sil) = row.names(d)[attr(sil,"iOrd")]
-  return (sil)
+getSilhouette = function(df, cl_k, d){
+  s = sortSilhouette(silhouette(cl_k, d))
+  rownames(s) = row.names(df)[attr(s,"iOrd")]
+  return (s)
 }
 
-getSilhouettePerPart =function(d, cl, dis){
+getSilhouettePerPart =function(df, cl, d){
   list_sil = list()
   for (k in 2:length(cl)) {
-    list_sil[[k-1]] = getSilhouette(d, cl[[k-1]], dis)
+    list_sil[[k-1]] = getSilhouette(df, cl[[k-1]], d)
   }
   return(list_sil)
 }
 
 # sils: list of silhouettes objects per partition
 getMeanSilhouettePerPart = function(sils){
-  unlist(sapply(1:length(sil), function(i) summary(sil[[i]])$avg.width))
+  unlist(sapply(1:length(sils), function(i) summary(sils[[i]])$avg.width))
 }
 
 # Plot the best average silhouette width for all clustering possible
