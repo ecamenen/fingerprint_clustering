@@ -52,13 +52,13 @@ checkArg = function(a){
   # o: one argument from the list of arguments
   # def: defaul message
   
-  checkMinCluster = function (o, def=""){
-    if (opt[[o]] < 3){
-      stop(paste("--",o ," must be upper or equal to 3",def,".\n",sep=""), call.=FALSE)
+  checkMinCluster = function (o, n, def=""){
+    if (opt[[o]] < n){
+      stop(paste("--",o ," must be upper or equal to ",n, " ", def,".\n",sep=""), call.=FALSE)
     }
   }
-  checkMinCluster("maxClusters"," [by default: 6]")
-  if(!is.null(opt$nbClusters)) checkMinCluster("nbClusters")
+  checkMinCluster("maxClusters", 3, " [by default: 6]")
+  if(!is.null(opt$nbClusters)) checkMinCluster("nbClusters", 2)
   
   if ((opt$classifType < 1) || (opt$classifType > 9)){
     stop("--classifType must be comprise between 1 and 9 [by default: 2].\n", call.=FALSE)
