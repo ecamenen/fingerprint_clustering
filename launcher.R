@@ -97,7 +97,7 @@ postChecking = function (a, d){
   
   checkMaxCluster = function (o, def="")
     if (opt[[o]] > nrow(d)){
-      print_help(a)
+      #print_help(a)
       stop(paste("--", o," must be lower or equal to the fingerprint",def,".\n",sep=""), call.=FALSE)
     }
   
@@ -135,14 +135,13 @@ for (l in librairies){
   if (! (l %in% installed.packages()[,"Package"])) install.packages(l, repos = "http://cran.us.r-project.org", quiet = T)
   library(l, character.only = TRUE)
 }
-source("fingerprint_clustering.R")
 
 #Get arguments
 args = getArgs()
 tryCatch({
   opt = checkArg(args)
 }, error = function(e) {
-  print_help(args)
+  #print_help(args)
   stop(e[[1]], call.=FALSE)
 })
 
@@ -166,14 +165,14 @@ DIM_PNG = 2000
 if (opt$separator==1){ SEP="\t"
 }else if (opt$separator==2){ SEP=";"
 }else{
-  print_help(args)
+  #print_help(args)
   stop(paste("--separator must be 1: Tabulation or 2: Semicolon."), call.=FALSE)
 }
 
 #Loading data
 data = read.table(opt$infile, header=HEAD, sep=SEP, dec=".")
 if(ncol(data)==1){
-  print_help(args)
+  #print_help(args)
   stop(paste("Check for the --separator (by default, tabulation)."), call.=FALSE)
 }
 postChecking(args, data)
@@ -262,7 +261,7 @@ if(CLASSIF_TYPE <= 2 || isTRUE(ADVANCED)){
 
 #Final outputs
 summary = printSummary(between, diff, mean_silhouette, ADVANCED, gap)
-writeTsv("summary", v=VERBOSE)
+writeTsv("summary", opt$output5, v=VERBOSE)
 #decomment to have the mean of the variables for each clusters
 #getClusterCentroids(data, clusters)
 #decomment to have the mean of every variables (only if each column is a different condition of the same variable)
@@ -272,7 +271,7 @@ if (nrow(data) > 100){
   # t<- do not print "clusters"
   table(t <- clusters)
 } 
-writeClusters(data, clusters, TRUE, v=( (VERBOSE) & (nrow(data) < 100) ) )
+writeClusters(data, clusters, opt$output6, TRUE, v=( (VERBOSE) & (nrow(data) < 100) ) )
 if (!isTRUE(VERBOSE)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
 if (isTRUE(VERBOSE_NIV2)) beep("ping")
 if (isTRUE(VERBOSE_NIV2)) getTimeElapsed(start_time)
