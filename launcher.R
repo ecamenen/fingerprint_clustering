@@ -135,6 +135,7 @@ for (l in librairies){
   if (! (l %in% installed.packages()[,"Package"])) install.packages(l, repos = "http://cran.us.r-project.org", quiet = T)
   library(l, character.only = TRUE)
 }
+source("fingerprint_clustering.R") 
 
 #Get arguments
 args = getArgs()
