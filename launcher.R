@@ -130,15 +130,12 @@ getTimeElapsed = function(start_time){
 set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
 
 #Loading librairies
-librairies = c("cluster", "optparse", "gclus")
+librairies = c("cluster", "optparse", "gclus", "ade4")
 for (l in librairies){
-  if (! (l %in% installed.packages()[,"Package"])) install.packages(l, repos = "http://cran.us.r-project.org", quiet = T)
+  if (! (l %in% installed.packages()[,"Package"])) install.packages(l, dependencies=T, repos='http://cran.rstudio.com/', quiet = T)
   library(l, character.only = TRUE)
 }
-source("fingerprint_clustering.R") 
-
-install.packages("ade4", contrib = "http://cran.univ-lyon1.fr/bin/windows/contrib/r-release/")
-library(ade4)
+source("fingerprint_clustering.R")
 
 #Get arguments
 args = getArgs()
