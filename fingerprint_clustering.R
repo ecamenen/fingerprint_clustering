@@ -355,7 +355,7 @@ plotCohenetic=function(d, cah){
     line.lab = 3
   }
   
-  plot(d, coph_matrix, pch=19, col=alpha("red",0.2), axes=F, xlim=c(0,max(d)), xlab="", ylab="", ylim=c(0,max(coph_matrix)), asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
+  plot(d, coph_matrix, pch=19, col="red", axes=F, xlim=c(0,max(d)), xlab="", ylab="", ylim=c(0,max(coph_matrix)), asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
   title(xlab="Distance between metabolites",ylab="Cophenetic distance", line=line.lab)
   plotAxis(2, 0, max(coph_matrix), lwd=lwd)
   plotAxis(1, 0, max(d), lwd=lwd)

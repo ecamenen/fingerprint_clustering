@@ -130,7 +130,7 @@ getTimeElapsed = function(start_time){
 set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
 
 #Loading librairies
-librairies = c("cluster", "optparse", "gclus", "scales", "beepr")
+librairies = c("cluster", "optparse", "gclus")
 for (l in librairies){
   if (! (l %in% installed.packages()[,"Package"])) install.packages(l, repos = "http://cran.us.r-project.org", quiet = T)
   library(l, character.only = TRUE)
@@ -277,7 +277,6 @@ if (nrow(data) > 100){
 } 
 writeClusters(data, clusters, opt$output6, TRUE, v=( (VERBOSE) & (nrow(data) < 100) ) )
 if (!isTRUE(VERBOSE)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
-if (isTRUE(VERBOSE_NIV2)) beep("ping")
 if (isTRUE(VERBOSE_NIV2)) getTimeElapsed(start_time)
 
 #errors
