@@ -41,6 +41,9 @@ getArgs = function(){
     make_option(c("-N", "--nbAxis"), type="integer", default=2, metavar="integer",
                 help="Number of axis for pca (default: 2)")
   )
+  #if -h, avoid exit with error
+  args = commandArgs(trailingOnly=T)
+  if ("-h" %in% args | "--help" %in% args)  q("no", status=0, runLast = F)
   return (OptionParser(option_list=option_list))
 }
 
