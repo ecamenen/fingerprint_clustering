@@ -137,7 +137,7 @@ for (l in librairies){
 }
 source("fingerprint_clustering.R") 
 
-install.packages("ade4", contrib = "http://cran.univ-lyon1.fr/bin/windows/contrib/r-release/")
+install.packages("ade4", contrib = "https://pbil.univ-lyon1.fr/CRAN/src/contrib/Archive/ade4/")
 library(ade4)
 
 #Get arguments
