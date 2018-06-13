@@ -62,14 +62,14 @@ discardRowCondDoublets = function(x){
 #Inputs: x : a matrix
 #filename of the saved file
 #Prints the matrix, save the matrix
-writeTsv = function(x, cl=T, v=T){
+writeTsv = function(x, f=NULL, cl=F, v=T){
   #print on stdout
   if (isTRUE(v)) cat(paste("\n", gsub("_", " ", toupper(x)), ":\n", sep=""))
   #disabling warning
   options(warn = -1)
   #get variable
   tab = get(x)
-  if(isTRUE(cl)) output=as.matrix(rbind(c("", colnames(tab)), cbind(rownames(tab),tab)))
+  if(!isTRUE(cl)) output=as.matrix(rbind(c("", colnames(tab)), cbind(rownames(tab),tab)))
   else output = tab
   #discard empty rows
   output = output[rowSums(is.na(output)) != ncol(output),]
@@ -78,7 +78,7 @@ writeTsv = function(x, cl=T, v=T){
   output[is.na(output)] = ""
   colnames(output)=rep("", ncol(output)); rownames(output)=rep("", nrow(output))
   if (isTRUE(v)){
-    if (isTRUE(cl)){
+    if (!isTRUE(cl)){
       printed = round(apply(output[-1,-1],2,as.numeric),2)
       rownames(printed) = rownames(tab)
       colnames(printed) = colnames(tab)
@@ -87,7 +87,8 @@ writeTsv = function(x, cl=T, v=T){
     }
     print(printed,  quote=F)
   }
-  if(isTRUE(cl)) write(t(output), paste(x,".tsv",sep=""), ncolumns=ncol(output), sep="\t")
+  if (is.null(f)) f= paste(x,".tsv",sep="")
+  write(t(output), f, ncolumns=ncol(output), sep="\t")
   options(warn = 0)
 }
 
@@ -204,8 +205,8 @@ getCAH = function(t, df, d){
     if (t==8 | t==9 ) checkEuclidean(d)
     #cah: classification hierarchic ascending
     cah = hclust(d, method=getClassifType(t))
-  #automaticly ordering by clusters
-  return (reorder.hclust(cah, d))
+    #automaticly ordering by clusters
+    return (reorder.hclust(cah, d))
   }
 }
 
@@ -295,7 +296,7 @@ colorClusters = function(cl){
 # cl: clusters
 # f : filename
 # r: ordered alphabetically
-writeClusters = function(d, cl, r=FALSE, v=FALSE){
+writeClusters = function(d, cl, f, r=FALSE, v=FALSE){
   nb_cl = length(levels(as.factor(cl)))
   clusters = matrix(NA, length(cl), nb_cl)
   for (i in 1:nb_cl ){
@@ -321,11 +322,11 @@ writeClusters = function(d, cl, r=FALSE, v=FALSE){
   #dirty way to force saving a local variable
   # (because writeTsv use only global variables)
   assign("clusters", clusters,.GlobalEnv)
-  writeTsv("clusters", F, v=v)
+  writeTsv("clusters", cl=T, v=v)
   clusters = cbind(sil_k[,1], sil_k[,3], pca$li[attr(sil_k,"iOrd"),])
   colnames(clusters) = c("Cluster","Silhouette","Axis1","Axis2")
   assign("clusters", clusters,.GlobalEnv)
-  writeTsv("clusters", cl=T, v=F)
+  writeTsv("clusters", f, cl=F, v=F)
 }
 
 ############################################################
@@ -340,20 +341,20 @@ plotCohenetic=function(d, cah){
   coph_matrix = cophenetic(cah)
   cor_coph = cor(d, coph_matrix)
   if (isTRUE(VERBOSE)) cat(paste("\nCOPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation with the data:",round(cor_coph,3),"\n"))
-
+  
   if(nrow(as.matrix(d)) > NB_ROW_MAX ) {
-    png("shepard_graph.png", DIM_PNG/2, DIM_PNG/2)
+    png(paste(opt$output8, ".png", sep=""), DIM_PNG/2, DIM_PNG/2)
     par(cex.lab=1.5*2, font.lab=3, font.axis=3, cex.axis=0.8*2, cex.main=2*2, cex=1, lwd=3*2)
     par(mar=c(5.1,5.1,5.1,2.1)+7)
     lwd=3*2
     line.lab = 5
   }else{
-    savePdf("shepard_graph.pdf")
+    savePdf(paste(opt$output8, ".pdf", sep=""))
     lwd = 3
     line.lab = 3
   }
   
-  plot(d, coph_matrix, pch=19, col=alpha("red",0.2), axes=F, xlim=c(0,max(d)), xlab="", ylab="", ylim=c(0,max(coph_matrix)), asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
+  plot(d, coph_matrix, pch=19, col="red", axes=F, xlim=c(0,max(d)), xlab="", ylab="", ylim=c(0,max(coph_matrix)), asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
   title(xlab="Distance between metabolites",ylab="Cophenetic distance", line=line.lab)
   plotAxis(2, 0, max(coph_matrix), lwd=lwd)
   plotAxis(1, 0, max(d), lwd=lwd)
@@ -440,7 +441,7 @@ plotFusionLevels = function(n, c) {
   diff = unlist(sapply(1:n, function(i) fusion[i-1]-fusion[i]))
   fusion = fusion[1:(n-1)]
   optimal_nb_clusters = which.max(diff)+1
-  savePdf("fusion_levels.pdf")
+  savePdf(paste(opt$output9, ".pdf", sep=""))
   plot(2:n, fusion, type="b", ylim=c(round(min(fusion))-1,round(max(fusion))+1), xlim=c(2,n+1), xlab="Nb. of clusters", ylab="Cophenetic distance", col="grey", axes=F)
   plotBestClustering("Fusion level method", fusion, " gain with the previous fusion level", optimal_nb_clusters, val2=diff)
   suprLog = dev.off()
@@ -488,7 +489,7 @@ getMeanSilhouettePerPart = function(sils){
 # mean_sils: vector of silhouette average width
 plotSilhouettePerPart = function(mean_silhouette){
   if (isTRUE(VERBOSE)) cat("\nSILHOUETTE:\n")
-  savePdf("average_silhouettes.pdf")
+  savePdf(opt$output1)
   optimal_nb_clusters = which.max(mean_silhouette)+1
   plot(2:(length(sil)+1), mean_silhouette, type="b", xlim=c(2,length(sil)+2), ylim=c(0,max(mean_silhouette)+0.1), col="grey", xlab="Nb. of clusters", ylab="Average silhouette width", axes=F)
   plotBestClustering("Silhouette method", mean_silhouette,"n average width", optimal_nb_clusters, 0.1)
@@ -498,7 +499,7 @@ plotSilhouettePerPart = function(mean_silhouette){
 
 #sil_k: a silhouette object
 plotSilhouette = function(sil_k){
-  pdf("silhouette.pdf")
+  pdf(opt$output2)
   setGraphicBasic()
   par(mar=c(4, 12, 3, 2))
   plot(sil_k, max.strlen=25, main=" ", sub= "", do.clus.stat=TRUE, xlab="Silhouette width", cex.names=0.8, col=colorClusters(sil_k[,1]), nmax.lab=100, do.n.k = FALSE, axes=F)
@@ -628,20 +629,20 @@ heatMap = function(df, d, s=NULL, c=NULL, cl=NULL, text=FALSE){
     title="dendrogram"
     colors = orderColors(c, cl)
   }
-
+  
   matrix=as.matrix(d)
   matrix=matrix[order, order]
   rownames(matrix) <- rownames(df)[order] -> labels
   #if(tri == TRUE) matrix[!lower.tri(matrix)] = NA
   #image(1:ncol(matrix), 1:ncol(matrix), t(matrix), axes=F, xlab="", ylab="")
-
+  
   options(warn = -1)
   if(nrow(df) > NB_ROW_MAX ){
-    png("heatmap.png", DIM_PNG, DIM_PNG)
+    png(opt$output4,DIM_PNG, DIM_PNG)
     labels=order
     cex.main = 5; cex.legend = 3; cex.lab = 2; y_top = 12; x_lab = 0.6; lwd.rect=6
   }else{
-    pdf("heatmap.pdf")
+    pdf(opt$output4)
     cex.main = 1.5; cex.legend = 0.85; cex.lab = 0.7; y_top = 8; x_lab = 0.5; lwd.rect=3
   }
   
@@ -653,7 +654,7 @@ heatMap = function(df, d, s=NULL, c=NULL, cl=NULL, text=FALSE){
   text(0.5:(ncol(matrix)-0.5), ncol(matrix)+1, substr(labels, 0, 20), xpd=NA, cex=0.7, srt=65, pos=4)
   plotRect(cl_sizes, colors, lwd.rect)
   if (isTRUE(text)) text(expand.grid(1:ncol(matrix), ncol(matrix):1), sprintf("%d", matrix), cex=0.4)
-
+  
   par(fig=c(0.85,1,0.3,0.8),new=TRUE)
   par(mar=c(5, 0, 4, 0) + 0.1)
   legend_image = as.raster(matrix(heat.colors(1000), ncol=1))
@@ -673,12 +674,12 @@ heatMap = function(df, d, s=NULL, c=NULL, cl=NULL, text=FALSE){
 # Inputs:
 # k: number of clusters
 plotDendrogram = function(t, k, c, d, n, cl){
-
+  
   if(nrow(d) > NB_ROW_MAX ) {
     c$labels = 1:nrow(d)
     cex=0.4
   }else cex=0.8
-  pdf("dendrogram.pdf")
+  pdf(opt$output7)
   setGraphicBasic()
   par(mar=c(2,5,5,1))
   plot(c, hang=-1, ylim=c(0,max(c$height)), xlim=c(0,length(c$labels)), sub="", cex=cex, font=3, ylab="Cophenetic distance", main="Dendrogram", axes=F)
@@ -714,11 +715,11 @@ plotPca = function(pca, d, cl, axis1=1, axis2=2){
   k = length(levels(as.factor(cl)))
   
   if(nrow(d) > NB_ROW_MAX ) {
-    png(paste("pca", axis1, "-", axis2,".png", sep=""), DIM_PNG, DIM_PNG)
+    png(opt$output3, DIM_PNG, DIM_PNG)
     par(mar=c(0,0,18,0), lwd=4)
     cex=2; cex.main=6; cstar=0; cellipse=0; lwd.line=8; clabel=0; labels=1:nrow(d); line.main=7; cpoint=0
   }else{
-    pdf(paste("pca", axis1, "-", axis2,".pdf", sep=""))
+    pdf(opt$output3)
     par(mar=c(0,0,4.1,0))
     cex=0.6; cex.main=1.5; cstar=1; cellipse=1; lwd.line=2; clabel=1; labels=rownames(d); line.main=1; cpoint=1
   }
@@ -740,7 +741,7 @@ plotInertiaPca = function (pca, d, nf=4){
   if(nrow(d) > NB_ROW_MAX ) {
     r_lim = c(8, 0, 4, 5); r_main_cex = 2.7; r_main_text=2.4; lwd.hist=40; line.hist=2
   }else{
-  #r_lim = c(-0.2, 0.3, 1.1, 1.1); 
+    #r_lim = c(-0.2, 0.3, 1.1, 1.1); 
     r_lim = c(2, 0, 1, 1); r_main_cex = 0.7; r_main_text=0.6; lwd.hist=10; line.hist=0
   }
   

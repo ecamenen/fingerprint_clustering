@@ -1,8 +1,25 @@
 getArgs = function(){
   option_list = list(
-    make_option(c("-i", "--infile"), type="character", default="data/matrix.txt", 
-                metavar="character",
-                help="Fingerprint file name [default: %default]"),
+    make_option(c("-i", "--infile"), type="character", metavar="character",
+                help="Fingerprint file name"),
+    make_option(c( "--output1"), type="character", default="average_silhouette.pdf", 
+                metavar="character", help="Average silhouettes file name [default: %default]"),
+    make_option(c( "--output2"), type="character", default="silhouette.pdf", 
+                metavar="character", help="Silhouette file name [default: %default]"),
+    make_option(c( "--output3"), type="character", default="pca.pdf", 
+                metavar="character", help="PCA file name [default: %default]"),
+    make_option(c( "--output4"), type="character", default="heatmap.pdf", 
+                metavar="character", help="Heatmap file name [default: %default]"),
+    make_option(c( "--output5"), type="character", default="summary.tsv", 
+                metavar="character", help="Summary file name [default: %default]"),
+    make_option(c( "--output6"), type="character", default="clusters.tsv", 
+                metavar="character", help="Clusters file name [default: %default]"),
+    make_option(c( "--output7"), type="character", default="dendrogram.tsv", 
+                metavar="character", help="Dendrogram file name [default: %default]"),
+    make_option(c( "--output8"), type="character", default="shepard_graph.pdf", 
+                metavar="character", help="Shepard graph file name [default: %default]"),
+    make_option(c( "--output9"), type="character", default="fusion_levels.pdf", 
+                metavar="character", help="Fusion levels file name [default: %default]"),
     make_option(c("-m", "--maxClusters"), type="integer", default=6, metavar="integer",
                 help="Maximum number of clusters [default: %default]"),
     make_option(c("-t", "--classifType"), type="integer", default=4, metavar="integer",
@@ -35,13 +52,13 @@ checkArg = function(a){
   # o: one argument from the list of arguments
   # def: defaul message
   
-  checkMinCluster = function (o, def=""){
-    if (opt[[o]] < 3){
-      stop(paste("--",o ," must be upper or equal to 3",def,".\n",sep=""), call.=FALSE)
+  checkMinCluster = function (o, n, def=""){
+    if (opt[[o]] < n){
+      stop(paste("--",o ," must be upper or equal to ",n, " ", def,".\n",sep=""), call.=FALSE)
     }
   }
-  checkMinCluster("maxClusters"," [by default: 6]")
-  if(!is.null(opt$nbClusters)) checkMinCluster("nbClusters")
+  checkMinCluster("maxClusters", 3, " [by default: 6]")
+  if(!is.null(opt$nbClusters)) checkMinCluster("nbClusters", 2)
   
   if ((opt$classifType < 1) || (opt$classifType > 9)){
     stop("--classifType must be comprise between 1 and 9 [by default: 2].\n", call.=FALSE)
@@ -63,6 +80,7 @@ checkArg = function(a){
   }
   #if(!is.null(opt$workdir)) checkFile("workdir")
   if(!is.null(opt$infile)) checkFile("infile")
+  else stop(paste("--infile is required\n", sep=""), call.=FALSE)
   
   return (opt)
 }
@@ -79,7 +97,7 @@ postChecking = function (a, d){
   
   checkMaxCluster = function (o, def="")
     if (opt[[o]] > nrow(d)){
-      print_help(a)
+      #print_help(a)
       stop(paste("--", o," must be lower or equal to the fingerprint",def,".\n",sep=""), call.=FALSE)
     }
   
@@ -112,19 +130,19 @@ getTimeElapsed = function(start_time){
 set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
 
 #Loading librairies
-librairies = c("cluster", "optparse", "gclus", "ade4", "scales", "beepr")
+librairies = c("cluster", "optparse", "gclus", "ade4")
 for (l in librairies){
   if (! (l %in% installed.packages()[,"Package"])) install.packages(l, repos = "http://cran.us.r-project.org", quiet = T)
   library(l, character.only = TRUE)
 }
-source("fingerprint_clustering.R")
+source("fingerprint_clustering.R") 
 
 #Get arguments
 args = getArgs()
 tryCatch({
   opt = checkArg(args)
 }, error = function(e) {
-  print_help(args)
+  #print_help(args)
   stop(e[[1]], call.=FALSE)
 })
 
@@ -148,14 +166,14 @@ DIM_PNG = 2000
 if (opt$separator==1){ SEP="\t"
 }else if (opt$separator==2){ SEP=";"
 }else{
-  print_help(args)
+  #print_help(args)
   stop(paste("--separator must be 1: Tabulation or 2: Semicolon."), call.=FALSE)
 }
 
 #Loading data
 data = read.table(opt$infile, header=HEAD, sep=SEP, dec=".")
 if(ncol(data)==1){
-  print_help(args)
+  #print_help(args)
   stop(paste("Check for the --separator (by default, tabulation)."), call.=FALSE)
 }
 postChecking(args, data)
@@ -244,7 +262,7 @@ if(CLASSIF_TYPE <= 2 || isTRUE(ADVANCED)){
 
 #Final outputs
 summary = printSummary(between, diff, mean_silhouette, ADVANCED, gap)
-writeTsv("summary", v=VERBOSE)
+writeTsv("summary", opt$output5, v=VERBOSE)
 #decomment to have the mean of the variables for each clusters
 #getClusterCentroids(data, clusters)
 #decomment to have the mean of every variables (only if each column is a different condition of the same variable)
@@ -254,9 +272,8 @@ if (nrow(data) > 100){
   # t<- do not print "clusters"
   table(t <- clusters)
 } 
-writeClusters(data, clusters, TRUE, v=( (VERBOSE) & (nrow(data) < 100) ) )
+writeClusters(data, clusters, opt$output6, TRUE, v=( (VERBOSE) & (nrow(data) < 100) ) )
 if (!isTRUE(VERBOSE)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
-if (isTRUE(VERBOSE_NIV2)) beep("ping")
 if (isTRUE(VERBOSE_NIV2)) getTimeElapsed(start_time)
 
 #errors
