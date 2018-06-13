@@ -79,7 +79,6 @@ writeTsv = function(x, f=NULL, cl=F, v=T){
   colnames(output)=rep("", ncol(output)); rownames(output)=rep("", nrow(output))
   if (isTRUE(v)){
     if (!isTRUE(cl)){
-      print("ok")
       printed = round(apply(output[-1,-1],2,as.numeric),2)
       rownames(printed) = rownames(tab)
       colnames(printed) = colnames(tab)
