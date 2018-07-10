@@ -1,7 +1,7 @@
 #Loading librairies
 librairies = c("shiny","cluster", "optparse", "gclus", "ade4", "scales")
 for (l in librairies){
-  if (! (l %in% installed.packages()[,"Package"])) install.packages(l, repos = "http://cran.us.r-project.org", quiet = T)
+#  if (! (l %in% installed.packages()[,"Package"])) install.packages(l, repos = "http://cran.us.r-project.org", quiet = T)
   library(l, character.only = TRUE) #to work with "l"
 }
 

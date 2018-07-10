@@ -1,5 +1,6 @@
 library("sys")
-library(shinyjs)
+library("shinyjs")
+
 
 
 classif_methods = list("K-menoids" = 1,  "K-means" = 2, "Ward"=3, "Complete links"=4, "Single links"=5, "UPGMA"=6, "WPGMA"=7, "WPGMC"=8, "UPGMC"=9)
@@ -27,6 +28,16 @@ ui = fluidPage(
                    label=h5("Choose a file that containt MetExplore metabolite ids: ") #libellé associee a cet element 
                    #(apparait au dessus de l'input)
                 ),
+      selectInput("algoShortestPath",
+                  h5("Shortest path algorithm : "),
+                  selected = "Biological shortest path",
+                  choices = list(`Biological shortest path` =  "ValidShortest",
+                                 `Proximity shortest path` = "ShortestAsUndirected")),
+      
+      actionButton("conputeShortestPath",
+                   "Conpute Shortest Path"),
+      
+      hr(style="height: 2px; color: #0e325e; background-color: #0e325e; width: 75%; border: none;"),
       #checkValues and checkNames do not works on selectInput but only on checkbox
       selectInput("classif_type",
                   h5("Classification method: "),

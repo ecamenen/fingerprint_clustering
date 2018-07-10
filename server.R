@@ -29,6 +29,10 @@ assign("fingerprintFile",
        "nofile",
        .GlobalEnv)
 
+assign("algoShortestPath",
+       "ValidShortest",
+       .GlobalEnv)
+
 server = function(input, output, session){
   
   hide("loading-content")
@@ -38,22 +42,9 @@ server = function(input, output, session){
   #Each shiny server functions run in local environment
   #With assign, variables are forced to be in global env
   setVariables = function(input){
-    message ("setVariables")
-    
-    if(!identical(fingerprintFile,input$infile$datapath) & !is.null(input$infile$datapath)){
-      assign("fingerprint",
-             T,
-             .GlobalEnv)
-      
-      assign("fingerprintFile",
-             input$infile$datapath,
-             .GlobalEnv)
-      
-      computeDistance()
-    }
-      assign("classif_type",
-             getClassifValue(input$classif_type),
-             .GlobalEnv)
+    assign("classif_type",
+           getClassifValue(input$classif_type),
+           .GlobalEnv)
     
     if(!is.null(data)){
       assign("classif",
@@ -167,13 +158,13 @@ server = function(input, output, session){
     observeEvent(e, savePlot(f,func))
     func
   }
+  
   computeDistance = function (){
     hide("no-content")
-    message ("computeDistance")
     show("loading-content") # make the loading pane appear
-    cmd <- c('java -jar FingerprintSubnetwork-1.1.jar -network "recon2.v03_ext_noCompartment_noTransport.xml" -fingerprint ', fingerprintFile, ' -atommapping "recon2.v03_ext_noCompartment_noTransport_C-AAM-weights.tab" -matrixresult "matrix.txt" -reactionresult "reactionsPath.txt" -metabInfo "metabInfo.tsv" -algo "ShortestAsUndirected"')
-    message (cmd)
-    status <- exec_wait(paste(cmd))
+    cmd <- c('java -jar FingerprintSubnetwork-1.1.jar -network "recon2.v03_ext_noCompartment_noTransport.xml" -fingerprint ', fingerprintFile, ' -atommapping "recon2.v03_ext_noCompartment_noTransport_C-AAM-weights.tab" -matrixresult "matrix.txt" -reactionresult "reactionsPath.txt" -metabInfo "metabInfo.tsv" -algo "',algoShortestPath,'"')
+   message(cmd)
+    #status <- exec_wait(paste(cmd))
     
     while (!file.exists("matrix.txt") & !file.access("matrix.txt", mode = 2)) {
       Sys.sleep(2)
@@ -207,8 +198,30 @@ server = function(input, output, session){
     }
   })
   
+  observeEvent(input$conputeShortestPath, {
+    if(!is.null(input$algoShortestPath) & !is.null(fingerprintFile)){
+      computeDistance()
+    }
+  })
+  
   observeEvent(input$infile, {
-    setVariables(input)
+    if(!identical(fingerprintFile,input$infile$datapath) & !is.null(input$infile$datapath)){
+      assign("fingerprint",
+             T,
+             .GlobalEnv)
+      
+      assign("fingerprintFile",
+             input$infile$datapath,
+             .GlobalEnv)
+    }
+  })
+  
+  observeEvent(input$algoShortestPath, {
+    if(!identical(algoShortestPath,input$algoShortestPath) & !is.null(input$algoShortestPath) & !is.null(input$infile$datapath)){
+      assign("algoShortestPath",
+             input$algoShortestPath,
+             .GlobalEnv)
+    }
   })
   
   output$summary = renderTable({
@@ -270,6 +283,7 @@ server = function(input, output, session){
       }
     }
   })
+  
   
   output$cophenetic = renderPlot({
     if( !is.null(data) & classif_type > 2){
