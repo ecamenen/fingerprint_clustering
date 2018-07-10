@@ -48,26 +48,37 @@ server = function(input, output, session){
     assign("classif_type",
            getClassifValue(input$classif_type),
            .GlobalEnv)
-    
-    if(!is.null(data)){
-      assign("classif",
-             getCAH(data, classif_type),
-             .GlobalEnv)
-    }
     assign("max_cluster",
-             input$max_clusters,
-             .GlobalEnv)
+           input$max_clusters,
+           .GlobalEnv)
     
     assign("nb_clusters",
            input$nb_clusters,
            .GlobalEnv)
     assign("advanced",
-             input$advanced,
-             .GlobalEnv)
+           input$advanced,
+           .GlobalEnv)
     
     assign("verbose",
            F,
            .GlobalEnv)
+    
+    if(!is.null(data)){
+      assign("classif",
+             getCAH(data, classif_type),
+             .GlobalEnv)
+      
+      assign("summary",
+             printSummary(classif_type, input$max_clusters, classif, data),
+             .GlobalEnv)
+      assign("ctr_part", 
+             100 * getPdisPerPartition(classif_type, max_cluster, classif, data),
+             .GlobalEnv)
+      assign("ctr_clus", 
+             100 * getCtrVar(classif_type, optimal_nb_clusters, classif, data),
+             .GlobalEnv)
+    }
+    
   }
 
   setPrintFuncs = function(){
@@ -166,16 +177,11 @@ server = function(input, output, session){
     hide("no-content")
     show("loading-content") # make the loading pane appear
     unlink("matrix.txt")
-    cmd <- c('java -jar FingerprintSubnetwork-1.1.jar -network "recon2.v03_ext_noCompartment_noTransport.xml" -fingerprint ', fingerprintFile, ' -atommapping "recon2.v03_ext_noCompartment_noTransport_C-AAM-weights.tab" -matrixresult "matrix.txt" -reactionresult "reactionsPath.txt" -metabInfo "metabInfo.tsv" -algo "',algoShortestPath,'"')
-   message(cmd)
-    #status <- exec_wait(paste(cmd))
-    
+    cmd <- c('java -jar FingerprintSubnetwork-1.1.jar -network "recon2.v03_ext_noCompartment_noTransport.xml" -fingerprint ', fingerprintFile, ' -atommapping "recon2.v03_ext_noCompartment_noTransport_C-AAM-weights.tab" -matrixresult "matrix.txt" -reactionresult "reactionsPath.txt" -metabInfo "metabInfo.tsv" -algo ', algoShortestPath)
+
+    status <- exec_wait(paste(cmd))
     
     while (!file.exists("matrix.txt") & !file.access("matrix.txt", mode = 2)) {
-      message("file.exists(matrix.txt)")
-      message(file.exists("matrix.txt"))
-      message("file.access(matrix.txt, mode = 2)")
-      message(file.access("matrix.txt", mode = 2))
       Sys.sleep(2)
     }
     
