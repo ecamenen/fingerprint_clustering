@@ -42,6 +42,9 @@ server = function(input, output, session){
   #Each shiny server functions run in local environment
   #With assign, variables are forced to be in global env
   setVariables = function(input){
+    assign("data", 
+           loadData("matrix.txt", "\t"),
+           .GlobalEnv)
     assign("classif_type",
            getClassifValue(input$classif_type),
            .GlobalEnv)
@@ -51,14 +54,14 @@ server = function(input, output, session){
              getCAH(data, classif_type),
              .GlobalEnv)
     }
-      assign("max_cluster",
+    assign("max_cluster",
              input$max_clusters,
              .GlobalEnv)
     
     assign("nb_clusters",
            input$nb_clusters,
            .GlobalEnv)
-      assign("advanced",
+    assign("advanced",
              input$advanced,
              .GlobalEnv)
     
@@ -162,11 +165,17 @@ server = function(input, output, session){
   computeDistance = function (){
     hide("no-content")
     show("loading-content") # make the loading pane appear
+    unlink("matrix.txt")
     cmd <- c('java -jar FingerprintSubnetwork-1.1.jar -network "recon2.v03_ext_noCompartment_noTransport.xml" -fingerprint ', fingerprintFile, ' -atommapping "recon2.v03_ext_noCompartment_noTransport_C-AAM-weights.tab" -matrixresult "matrix.txt" -reactionresult "reactionsPath.txt" -metabInfo "metabInfo.tsv" -algo "',algoShortestPath,'"')
    message(cmd)
     #status <- exec_wait(paste(cmd))
     
+    
     while (!file.exists("matrix.txt") & !file.access("matrix.txt", mode = 2)) {
+      message("file.exists(matrix.txt)")
+      message(file.exists("matrix.txt"))
+      message("file.access(matrix.txt, mode = 2)")
+      message(file.access("matrix.txt", mode = 2))
       Sys.sleep(2)
     }
     
@@ -225,12 +234,11 @@ server = function(input, output, session){
   })
   
   output$summary = renderTable({
-    if(!is.null(data)){
       setVariables(input)
       if(checkMaxCluster()){
         setPrintFuncs()
         observeEvent(input$summary_save, writeTsv("summary")); summary
-      }
+      
     }
   })
   
