@@ -634,7 +634,7 @@ getPdisPerPartition = function(t, n, c, d){
 
 loadData = function(f){
   d = read.table(f, header=F, sep="\t", dec=".", row.names=1)
-  colnames(d) <- substr(rownames(d), 1, 25) -> rownames(d)
+  colnames(d) <- substr(rownames(d), 1, 100) -> rownames(d)
   #postChecking(args, d)
   return (d)
 }
