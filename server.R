@@ -187,7 +187,7 @@ server = function(input, output, session){
     
     f=gsub(".txt", "", fingerprintFileName)
     message(f)
-    fn<-paste('matrix', f, algoShortestPath,'.txt', sep = "")
+    fn<-paste('matrix_', f,'_',algoShortestPath,'.txt', sep = "")
     fileName <- fn
     message(fileName)
     message(fingerprintFile)
