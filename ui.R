@@ -35,7 +35,8 @@ ui = fluidPage(
                                  `Proximity shortest path` = "ShortestAsUndirected")),
       
       actionButton("conputeShortestPath",
-                   "Conpute Shortest Path"),
+                   "Conpute Shortest Path",
+                   style = "background-color: #428bca; width: 100%;"),
       
       hr(style="height: 2px; color: #0e325e; background-color: #0e325e; width: 75%; border: none;"),
       #checkValues and checkNames do not works on selectInput but only on checkbox

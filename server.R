@@ -1,21 +1,18 @@
-rm(list=ls())
-
+closeAllConnections()
+rm(list=ls(all=TRUE))
 source("fingerprint_clustering.R")
 
 classif_methods <- list("K-menoids" = 1,  "K-means" = 2, "Ward"=3, "Complete links"=4, "Single links"=5, "UPGMA"=6, "WPGMA"=7, "WPGMC"=8, "UPGMC"=9)
 d=NULL
 
-assign("data",
-       NULL,
-       .GlobalEnv)
-
 loadData = function(f, s="\t"){
+  
   if(!is.null(f)){
     d = read.table(f,
-                   header=F,
-                   sep=s,
-                   dec=".",
-                   row.names=1)
+       header=F,
+       sep=s,
+       dec=".",
+       row.names=1)
     colnames(d) <- substr(rownames(d), 1, 100) -> rownames(d)
   }
   return (d)
@@ -35,6 +32,9 @@ assign("algoShortestPath",
 
 server = function(input, output, session){
   
+  donnees <- reactiveValues()
+  donnees$data <- NULL
+  
   hide("loading-content")
   hide("tabsetPanel")
   getClassifValue = function(key)  unlist(classif_methods[key])
@@ -42,9 +42,23 @@ server = function(input, output, session){
   #Each shiny server functions run in local environment
   #With assign, variables are forced to be in global env
   setVariables = function(input){
-    assign("data", 
-           loadData("matrix.txt", "\t"),
+    
+    assign("fingerprint",
+           input$fingerprint,
            .GlobalEnv)
+    
+    assign("fingerprintFile",
+           input$fingerprintFile,
+           .GlobalEnv)
+    
+    assign("fingerprintFileName",
+           input$infile$name,
+           .GlobalEnv)
+    
+    assign("algoShortestPath",
+           "input$algoShortestPath",
+           .GlobalEnv)
+    
     assign("classif_type",
            getClassifValue(input$classif_type),
            .GlobalEnv)
@@ -63,54 +77,47 @@ server = function(input, output, session){
            F,
            .GlobalEnv)
     
-    if(!is.null(data)){
+    if(!is.null(donnees$data)){
       assign("classif",
-             getCAH(data, classif_type),
+             getCAH(donnees$data, classif_type),
              .GlobalEnv)
       
       assign("summary",
-             printSummary(classif_type, input$max_clusters, classif, data),
-             .GlobalEnv)
-      assign("ctr_part", 
-             100 * getPdisPerPartition(classif_type, max_cluster, classif, data),
-             .GlobalEnv)
-      assign("ctr_clus", 
-             100 * getCtrVar(classif_type, optimal_nb_clusters, classif, data),
+             printSummary(classif_type, input$max_clusters, classif, donnees$data),
              .GlobalEnv)
     }
-    
   }
 
   setPrintFuncs = function(){
-    
+    message("setPrintFuncs")
     ###### plot funcs #####
     assign("plotPCA", 
-           function() plotPca(classif_type, optimal_nb_clusters, classif, data),
+           function() plotPca(classif_type, optimal_nb_clusters, classif, donnees$data),
            .GlobalEnv)
     assign("plotBest", 
-           function() plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data),
+           function() plotSilhouettePerPart(classif_type, max_cluster + 1, classif, donnees$data),
            .GlobalEnv)
     assign("plotSil", 
-           function() plotSilhouette(getSilhouette(classif_type, optimal_nb_clusters, classif, data)),
+           function() plotSilhouette(getSilhouette(classif_type, optimal_nb_clusters, classif, donnees$data)),
            .GlobalEnv)
     assign("plotCoph", 
-           function() plotCohenetic(classif_type, data, classif),
+           function() plotCohenetic(classif_type, donnees$data, classif),
            .GlobalEnv)
     assign("plotDend", 
-           function() plotDendrogram(classif_type, optimal_nb_clusters, classif, data, advanced),
+           function() plotDendrogram(classif_type, optimal_nb_clusters, classif, donnees$data, advanced),
            .GlobalEnv)
     
     if(classif_type <= 2 | isTRUE(advanced)){
       assign("plotHeatmap", 
-             function() heatMap(data,
-                                getSilhouette(classif_type, optimal_nb_clusters, classif, data),
+             function() heatMap(donnees$data,
+                                getSilhouette(classif_type, optimal_nb_clusters, classif, donnees$data),
                                 text=T),
              .GlobalEnv)
     }else{
       assign("plotHeatmap",
-             function() heatMap(data,
+             function() heatMap(donnees$data,
                                 c=classif,
-                                cl=getClusters(classif_type, optimal_nb_clusters, classif, data),
+                                cl=getClusters(classif_type, optimal_nb_clusters, classif, donnees$data),
                                 text=T),
              .GlobalEnv)
     }
@@ -118,26 +125,27 @@ server = function(input, output, session){
     ##### print table func #####
     
     assign("summary",
-           printSummary(classif_type, max_cluster, classif, data),
+           printSummary(classif_type, max_cluster, classif, donnees$data),
            .GlobalEnv)
     assign("ctr_part", 
-           100 * getPdisPerPartition(classif_type, max_cluster, classif, data),
+           100 * getPdisPerPartition(classif_type, max_cluster, classif, donnees$data),
            .GlobalEnv)
     assign("ctr_clus", 
-           100 * getCtrVar(classif_type, optimal_nb_clusters, classif, data),
+           100 * getCtrVar(classif_type, optimal_nb_clusters, classif, donnees$data),
            .GlobalEnv)
     
-    clusters = getClusters(classif_type, optimal_nb_clusters, classif, data)
+    clusters = getClusters(classif_type, optimal_nb_clusters, classif, donnees$data)
     writeClusters(clusters, T)
   }
   
   checkMaxCluster = function(){
-    if(max_cluster > (nrow(data) - 1)){
-      message(paste("[WARNING] Max number of clusters must be lower (and not equal) to the number of line of the dataset (", nrow(data), ")", sep=""))
+    
+    if(max_cluster > (nrow(donnees$data) - 1)){
+      message(paste("[WARNING] Max number of clusters must be lower (and not equal) to the number of line of the dataset (", nrow(donnees$data), ")", sep=""))
       return (F)
     }else{
       assign("optimal_nb_clusters", 
-             getOptimalNbClus(classif_type, max_cluster, classif, data, nb_clusters),
+             getOptimalNbClus(classif_type, max_cluster, classif, donnees$data, nb_clusters),
              .GlobalEnv)
       return(T)
     }
@@ -176,25 +184,30 @@ server = function(input, output, session){
   computeDistance = function (){
     hide("no-content")
     show("loading-content") # make the loading pane appear
-    unlink("matrix.txt")
-    cmd <- c('java -jar FingerprintSubnetwork-1.1.jar -network "recon2.v03_ext_noCompartment_noTransport.xml" -fingerprint ', fingerprintFile, ' -atommapping "recon2.v03_ext_noCompartment_noTransport_C-AAM-weights.tab" -matrixresult "matrix.txt" -reactionresult "reactionsPath.txt" -metabInfo "metabInfo.tsv" -algo ', algoShortestPath)
-
-    status <- exec_wait(paste(cmd))
     
-    while (!file.exists("matrix.txt") & !file.access("matrix.txt", mode = 2)) {
-      Sys.sleep(2)
-    }
+    f=gsub(".txt", "", fingerprintFileName)
+    message(f)
+    fn<-paste('matrix', f, algoShortestPath,'.txt', sep = "")
+    fileName <- fn
+    message(fileName)
+    message(fingerprintFile)
     
+    if(!file.exists(fileName))
+    { 
+      status <- exec_wait(paste('java -jar FingerprintSubnetwork-1.1.jar -network "recon2.v03_ext_noCompartment_noTransport.xml" -fingerprint ', fingerprintFile, ' -atommapping "recon2.v03_ext_noCompartment_noTransport_C-AAM-weights.tab" -matrixresult "', fileName, '" -reactionresult "reactionsPath.txt" -metabInfo "metabInfo.tsv" -algo ', algoShortestPath, sep = ""))
+      
+      while (!file.exists(fileName) & !file.access("fileName", mode = 2)) {
+        Sys.sleep(2)
+      }
+    }  
     hide("loading-content")
     show("tabsetPanel")
     
-    assign("data", 
-           loadData("matrix.txt", "\t"),
-           .GlobalEnv)
+    donnees$data <- loadData(fileName, "\t")
   }
   
   observeEvent(input$save_all, {
-    if(!is.null(data)){
+    if(!is.null(donnees$data)){
       setVariables(input)
       setPrintFuncs()
       writeTsv("summary")
@@ -216,6 +229,7 @@ server = function(input, output, session){
   observeEvent(input$conputeShortestPath, {
     if(!is.null(input$algoShortestPath) & !is.null(fingerprintFile)){
       computeDistance()
+      Sys.sleep(2)
     }
   })
   
@@ -227,6 +241,10 @@ server = function(input, output, session){
       
       assign("fingerprintFile",
              input$infile$datapath,
+             .GlobalEnv)
+      
+      assign("fingerprintFileName",
+             input$infile$name,
              .GlobalEnv)
     }
   })
@@ -240,24 +258,21 @@ server = function(input, output, session){
   })
   
   output$summary = renderTable({
+    if(!is.null(donnees$data)){
+      message('summ')
       setVariables(input)
       if(checkMaxCluster()){
         setPrintFuncs()
         observeEvent(input$summary_save, writeTsv("summary")); summary
-      
+      }
     }
   })
   
   output$best_cluster = renderPlot({
-    if(!is.null(data)){
+    if(!is.null(donnees$data)){
       setVariables(input)
       if(checkMaxCluster()){
         setPrintFuncs()
-        #plotFusionLevels(getClassifValue(input$classif_type), max_cluster, classif, data)
-        #TODO: pass an event into a nested function (actually not working)
-        # plot2(input$sil_save,
-        #       "best_clustering",
-        #       plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data))
         observeEvent(input$best_save, savePlot("best_clustering", plotBest()))
         plotBest()
       }
@@ -265,7 +280,7 @@ server = function(input, output, session){
   })
   
   output$silhouette = renderPlot({
-    if(!is.null(data)){
+    if(!is.null(donnees$data)){
       setVariables(input)
       if(checkMaxCluster()){
         setPrintFuncs()
@@ -276,7 +291,7 @@ server = function(input, output, session){
   })
   
   output$pca = renderPlot({
-    if(!is.null(data)){
+    if(!is.null(donnees$data)){
       setVariables(input)
       if(checkMaxCluster()){
         setPrintFuncs()
@@ -287,7 +302,7 @@ server = function(input, output, session){
   })
   
   output$heatmap = renderPlot({
-    if(!is.null(data)){
+    if(!is.null(donnees$data)){
       setVariables(input)
       if(checkMaxCluster()){
         par(mar=c(0,0,0,0)) ; plot(0:1,0:1, axes=F, type="n") #delete sil plot
@@ -300,7 +315,7 @@ server = function(input, output, session){
   
   
   output$cophenetic = renderPlot({
-    if( !is.null(data) & classif_type > 2){
+    if( !is.null(donnees$data) & classif_type > 2){
       setVariables(input)
       if(checkMaxCluster()){
         setPrintFuncs()
@@ -311,7 +326,7 @@ server = function(input, output, session){
   })
   
   output$dendrogram = renderPlot({
-    if(!is.null(data) & classif_type > 2){
+    if(!is.null(donnees$data) & classif_type > 2){
       setVariables(input)
       if(checkMaxCluster()){
         setPrintFuncs()
@@ -322,7 +337,7 @@ server = function(input, output, session){
   })
   
   output$ctr_part = renderTable({
-    if(!is.null(data) & isTRUE(input$advanced)){
+    if(!is.null(donnees$data) & isTRUE(input$advanced)){
       setVariables(input)
       if(checkMaxCluster()){
         setPrintFuncs()
@@ -333,7 +348,7 @@ server = function(input, output, session){
   }, rownames=T, hover=T, striped=T, digits=2, align="c")
   
   output$ctr_clus = renderTable({
-    if(!is.null(data) & isTRUE(input$advanced)){
+    if(!is.null(donnees$data) & isTRUE(input$advanced)){
       setVariables(input)
       if(checkMaxCluster()){
         setPrintFuncs()
