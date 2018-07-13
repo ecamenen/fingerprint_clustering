@@ -1,6 +1,7 @@
 rm(list=ls())
 source("fingerprint_clustering.R")
 classif_methods <- list("K-menoids" = 1,  "K-means" = 2, "Ward"=3, "Complete links"=4, "Single links"=5, "UPGMA"=6, "WPGMA"=7, "WPGMC"=8, "UPGMC"=9)
+library("shinyjs")
 
 tryCatch({
   data <- loadData("matrix.txt")
@@ -144,6 +145,17 @@ server = function(input, output, session){
     observeEvent(e, savePlot(f,func))
     func
   }
+  
+  observe({
+    show(selector = "#navbar li a[data-value=coph]")
+    show(selector = "#navbar li a[data-value=dendr]")
+    hide(selector = "#navbar li a[data-value=ctr_part]")
+    hide(selector = "#navbar li a[data-value=ctr_clus]")
+    toggle(condition = input$advanced, selector = "#navbar li a[data-value=ctr_part]")
+    toggle(condition = input$advanced, selector = "#navbar li a[data-value=ctr_clus]")
+    toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=coph]")
+    toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=coph]")
+  })
   
   observeEvent(input$save_all, {
     if(is.data.frame(data)){

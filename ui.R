@@ -1,4 +1,5 @@
 classif_methods = list("K-menoids" = 1,  "K-means" = 2, "Ward"=3, "Complete links"=4, "Single links"=5, "UPGMA"=6, "WPGMA"=7, "WPGMC"=8, "UPGMC"=9)
+library("shinyjs")
 
 #min-max: minimum and maximum position number in the list
 getClassifKeys = function(min, max)
@@ -6,10 +7,14 @@ getClassifKeys = function(min, max)
   unlist(sapply(min:max, function(i) names(classif_methods)[i]))
 
 ui = pageWithSidebar(
+
+  
   headerPanel("Fingerprint clustering"), #titre appl
   
   #pannel de cote
   sidebarPanel( #elements de controle de l'apli
+    
+    useShinyjs(),
     
     fileInput(inputId="infile", #nom (ou ID) associee a cet element de controle,
                  #sera utilisee dans la partie 'server'
@@ -36,7 +41,7 @@ ui = pageWithSidebar(
                 min=0, max= 10, value=0),
     checkboxInput("advanced",
                   "Advanced mode",
-                  value=T),
+                  value=F),
     actionButton("save_all",
                  "Save all")
   ),
@@ -44,7 +49,7 @@ ui = pageWithSidebar(
   mainPanel(
     tabsetPanel(
       type = "tabs",
-      
+      id = "navbar",
       tabPanel("Summary",
                tableOutput("summary"),
                actionButton("summary_save","Save")),
@@ -61,15 +66,19 @@ ui = pageWithSidebar(
                plotOutput("heatmap"),
                actionButton("heatmap_save","Save")),
       tabPanel("Cophenetic",
+               value="coph",
                plotOutput("cophenetic"),
                actionButton("coph_save","Save")),
       tabPanel("Dendrogram",
+               value="dendr",
                plotOutput("dendrogram"),
                actionButton("dendr_save","Save")),
       tabPanel("Partition contributions",
+               value="ctr_part",
                tableOutput("ctr_part"),
                actionButton("ctr_part_save","Save")),
       tabPanel("Cluster contributions",
+               value="ctr_clus",
                tableOutput("ctr_clus"),
                actionButton("ctr_clus_save","Save"))
     )
