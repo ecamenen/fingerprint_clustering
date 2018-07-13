@@ -1,10 +1,11 @@
+rm(list=ls())
 source("fingerprint_clustering.R")
 classif_methods <- list("K-menoids" = 1,  "K-means" = 2, "Ward"=3, "Complete links"=4, "Single links"=5, "UPGMA"=6, "WPGMA"=7, "WPGMC"=8, "UPGMC"=9)
-d=NULL
 
 tryCatch({
-  d <- loadData("matrix.txt")
+  data <- loadData("matrix.txt")
   }, warning = function(w) {
+    data=NULL
     message("Default file \"matrix.txt\" is not in the folder. Please, load another one.")
   }, error = function(e) {
   })
@@ -12,14 +13,14 @@ tryCatch({
 loadData = function(f, s="\t"){
   #!file.exists(
   if(!is.null(f)){
-    d = read.table(f,
+    data = read.table(f,
                  header=F,
                  sep=s,
                  dec=".",
                  row.names=1)
-    colnames(d) <- substr(rownames(d), 1, 25) -> rownames(d)
+    colnames(data) <- substr(rownames(data), 1, 25) -> rownames(data)
   }
-  return (d)
+  return (data)
 }
 
 server = function(input, output, session){
@@ -145,7 +146,7 @@ server = function(input, output, session){
   }
   
   observeEvent(input$save_all, {
-    if(!is.null(d)){
+    if(is.data.frame(data)){
       setVariables(input)
       setPrintFuncs()
       writeTsv("summary")
@@ -165,17 +166,19 @@ server = function(input, output, session){
   })
   
   output$summary = renderTable({
-    if(!is.null(d)){
+    tryCatch({
       setVariables(input)
       if(checkMaxCluster()){
         setPrintFuncs()
         observeEvent(input$summary_save, writeTsv("summary")); summary
       }
-    }
+    }, error = function(e) {
+    })
   })
   
   output$best_cluster = renderPlot({
-    if(!is.null(d)){
+
+    tryCatch({
       setVariables(input)
       if(checkMaxCluster()){
         setPrintFuncs()
@@ -187,33 +190,36 @@ server = function(input, output, session){
         observeEvent(input$best_save, savePlot("best_clustering", plotBest()))
         plotBest()
       }
-    }
+    }, error = function(e) {
+    })
   })
   
   output$silhouette = renderPlot({
-    if(!is.null(d)){
+    tryCatch({
       setVariables(input)
       if(checkMaxCluster()){
         setPrintFuncs()
         observeEvent(input$sil_save, savePlot("silhouette", plotSil()))
         plotSil()
       }
-    }
+    }, error = function(e) {
+    })
   })
   
   output$pca = renderPlot({
-    if(!is.null(d)){
+    tryCatch({
       setVariables(input)
       if(checkMaxCluster()){
         setPrintFuncs()
         observeEvent(input$pca_save, savePlot("pca", plotPCA()))
         plotPCA()
       }
-    }
+    }, error = function(e) {
+    })
   })
   
   output$heatmap = renderPlot({
-    if(!is.null(d)){
+    tryCatch({
       setVariables(input)
       if(checkMaxCluster()){
         par(mar=c(0,0,0,0)) ; plot(0:1,0:1, axes=F, type="n") #delete sil plot
@@ -221,51 +227,64 @@ server = function(input, output, session){
         observeEvent(input$heatmap_save, savePlot("heatmap", plotHeatmap()))
         plotHeatmap()
       }
-    }
+    }, error = function(e) {
+    })
   })
   
   output$cophenetic = renderPlot({
-    if( !is.null(d) & classif_type > 2){
-      setVariables(input)
-      if(checkMaxCluster()){
-        setPrintFuncs()
-        observeEvent(input$coph_save, savePlot("cohenetic", plotCoph()))
-        plotCoph()
+    tryCatch({
+      if( classif_type > 2){
+        setVariables(input)
+        if(checkMaxCluster()){
+          setPrintFuncs()
+          observeEvent(input$coph_save, savePlot("cohenetic", plotCoph()))
+          plotCoph()
+        }
       }
-    }
+    }, error = function(e) {
+    })
   })
   
   output$dendrogram = renderPlot({
-    if(!is.null(d) & classif_type > 2){
-      setVariables(input)
-      if(checkMaxCluster()){
-        setPrintFuncs()
-        observeEvent(input$dendr_save, savePlot("dendrogram", plotDend()))
-        plotDend()
+    tryCatch({
+      if( classif_type > 2){
+        setVariables(input)
+        if(checkMaxCluster()){
+          setPrintFuncs()
+          observeEvent(input$dendr_save, savePlot("dendrogram", plotDend()))
+          plotDend()
+        }
       }
-    }
+    }, error = function(e) {
+    })
   })
   
   output$ctr_part = renderTable({
-    if(!is.null(d) & isTRUE(input$advanced)){
-      setVariables(input)
-      if(checkMaxCluster()){
-        setPrintFuncs()
-        observeEvent(input$ctr_part_save, writeTsv("ctr_part"))
-        ctr_part
+    tryCatch({
+      if(isTRUE(input$advanced)){
+        setVariables(input)
+        if(checkMaxCluster()){
+          setPrintFuncs()
+          observeEvent(input$ctr_part_save, writeTsv("ctr_part"))
+          ctr_part
+        }
       }
-    }
+    }, error = function(e) {
+    })
   }, rownames=T, hover=T, striped=T, digits=2, align="c")
   
   output$ctr_clus = renderTable({
-    if(!is.null(d) & isTRUE(input$advanced)){
-      setVariables(input)
-      if(checkMaxCluster()){
-        setPrintFuncs()
-        observeEvent(input$ctr_clus_save, writeTsv("ctr_clus"))
-        ctr_clus
+    tryCatch({
+      if(isTRUE(input$advanced)){
+        setVariables(input)
+        if(checkMaxCluster()){
+          setPrintFuncs()
+          observeEvent(input$ctr_clus_save, writeTsv("ctr_clus"))
+          ctr_clus
+        }
       }
-    }
+    }, error = function(e) {
+    })
   }, rownames=T, hover=T, striped=T, digits=2, width="100cm", align="c", size=200)
   
 }
