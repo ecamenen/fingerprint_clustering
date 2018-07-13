@@ -147,14 +147,19 @@ server = function(input, output, session){
   }
   
   observe({
+    #set an id in tabsetPanel (here "navbar") and for each tabs
+    
+    #default behaviour
     show(selector = "#navbar li a[data-value=coph]")
     show(selector = "#navbar li a[data-value=dendr]")
     hide(selector = "#navbar li a[data-value=ctr_part]")
     hide(selector = "#navbar li a[data-value=ctr_clus]")
+    
+    #responsive for a given condition
     toggle(condition = input$advanced, selector = "#navbar li a[data-value=ctr_part]")
     toggle(condition = input$advanced, selector = "#navbar li a[data-value=ctr_clus]")
     toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=coph]")
-    toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=coph]")
+    toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=dendr]")
   })
   
   observeEvent(input$save_all, {
