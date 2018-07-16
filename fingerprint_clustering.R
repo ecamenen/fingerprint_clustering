@@ -451,37 +451,38 @@ colorClusters = function(cl){
 # cl: clusters
 # f : filename
 # r: ordered alphabetically
-writeClusters = function(d, cl, f, r=FALSE, v=FALSE){
-  nb_cl = length(levels(as.factor(cl)))
-  clusters = matrix(NA, length(cl), nb_cl)
-  for (i in 1:nb_cl ){
-    if (r == FALSE){
-      #get metabolites from clusters and put into a column of the output matrix
-      # from the begining of the column to the end of the vector of metabolites names
-      clusters[c(1:length(cl[cl==i])),i] =  names(cl[cl==i])
-    }else if (r == TRUE){
-      #ordering alphabetically
-      clusters[c(1:length(cl[cl==i])),i] = sort(names(cl[cl==i]))
-    }
-    #ordering by clusters size
-    length_cl = colSums(!is.na(clusters))
-    for (i in 2:nb_cl) {
-      #inversion if a column as more metabolites than the previous
-      if (length_cl[i] > length_cl[i-1]){
-        temp = clusters[,i-1]
-        clusters[,i-1] = clusters[,i]
-        clusters[,i] = temp
-      }
-    }
-  }
+writeClusters = function(f, v=FALSE){
+#writeClusters = function(d, cl, f, r=FALSE, v=FALSE){
+  # nb_cl = length(levels(as.factor(cl)))
+  # clusters = matrix(NA, length(cl), nb_cl)
+  # for (i in 1:nb_cl ){
+  #   if (r == FALSE){
+  #     #get metabolites from clusters and put into a column of the output matrix
+  #     # from the begining of the column to the end of the vector of metabolites names
+  #     clusters[c(1:length(cl[cl==i])),i] =  names(cl[cl==i])
+  #   }else if (r == TRUE){
+  #     #ordering alphabetically
+  #     clusters[c(1:length(cl[cl==i])),i] = sort(names(cl[cl==i]))
+  #   }
+  #   #ordering by clusters size
+  #   length_cl = colSums(!is.na(clusters))
+  #   for (i in 2:nb_cl) {
+  #     #inversion if a column as more metabolites than the previous
+  #     if (length_cl[i] > length_cl[i-1]){
+  #       temp = clusters[,i-1]
+  #       clusters[,i-1] = clusters[,i]
+  #       clusters[,i] = temp
+  #     }
+  #   }
+  # }
   #dirty way to force saving a local variable
   # (because writeTsv use only global variables)
-  assign("clusters", clusters,.GlobalEnv)
-  writeTsv("clusters", cl=T, v=v)
-  clusters = cbind(sil_k[,1], sil_k[,3], pca$li[attr(sil_k,"iOrd"),])
-  colnames(clusters) = c("Cluster","Silhouette","Axis1","Axis2")
-  assign("clusters", clusters,.GlobalEnv)
-  writeTsv("clusters", f, cl=F, v=F)
+  #assign("clusters", clusters,.GlobalEnv)
+  #writeTsv("clusters", cl=T, v=v)
+  cluster = cbind(sil_k[,1], sil_k[,3], pca$li[attr(sil_k,"iOrd"),])
+  colnames(cluster) = c("Cluster","Silhouette","Axis1","Axis2")
+  assign("cluster", cluster,.GlobalEnv)
+  writeTsv("cluster", f, cl=F, v=v)
 }
 
 ############################################################

@@ -83,12 +83,12 @@ server = function(input, output, session){
   setPrintFuncs = function(){
 
     ###### plot funcs #####
+    printProgress(VERBOSE_NIV2, "PCA")
+    assign("pca",
+           dudi.pca(data, scannf=F, nf=max(AXIS1,AXIS2)),
+           .GlobalEnv)
     assign("plotPCA", 
            function() {
-              printProgress(VERBOSE_NIV2, "PCA")
-              assign("pca",
-                    dudi.pca(data, scannf=F, nf=max(AXIS1,AXIS2)),
-                    .GlobalEnv)
                   plotPca(pca, data, clusters, AXIS1, AXIS2)
                   # if(isTRUE(ADVANCED)){
                   #   par(fig=c(0.8,1,0.82,1), new=T)
@@ -99,13 +99,11 @@ server = function(input, output, session){
     assign("plotBest", 
            function() plotSilhouettePerPart(mean_silhouette),
            .GlobalEnv)
+    assign("sil_k",
+           sil[[optimal_nb_clusters-1]],
+           .GlobalEnv)
     assign("plotSil", 
-           function() {
-             assign("sil_k",
-                  sil[[optimal_nb_clusters-1]],
-                  .GlobalEnv)
-             plotSilhouette(sil_k)
-           },
+           function() plotSilhouette(sil_k),
            .GlobalEnv)
     assign("plotCoph", 
            function()  {
@@ -139,6 +137,8 @@ server = function(input, output, session){
     assign("ctr_clus", 
            100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data),
            .GlobalEnv)
+    
+    writeClusters("clusters.tsv", v=F)
   }
   
   checkMaxCluster = function(){
@@ -168,7 +168,6 @@ server = function(input, output, session){
       assign("cl_temp", 
              clusters,
              .GlobalEnv)
-      #writeClusters(data, clusters, "clusters.tsv", TRUE, v=F )
       assign("gap", 
              NULL,
              .GlobalEnv)
