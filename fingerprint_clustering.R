@@ -79,10 +79,6 @@ VERBOSE_NIV2=F
 #   plotFusionLevels(MAX_CLUSTERS, classif)
 # }
 
-################################
-#            Parsing
-################################
-
 #ADVANCED indexes
 ADVANCED=F
 if (isTRUE(ADVANCED)){
@@ -104,14 +100,6 @@ if (isTRUE(ADVANCED)){
   writeTsv("within_k", v=F)
 }
 
-#pca
-# printProgress(VERBOSE_NIV2, "PCA")
-# pca = dudi.pca(data, scannf=F, nf=NB_AXIS)
-# for (i in 1:NB_AXIS)
-#   for (j in i:NB_AXIS)
-#     if(i != j) plotPca(pca, data, clusters, i, j)
-
-
 #decomment to have the mean of the variables for each clusters
 #getClusterCentroids(data, clusters)
 #decomment to have the mean of every variables (only if each column is a different condition of the same variable)
@@ -124,6 +112,7 @@ if (isTRUE(ADVANCED)){
 
 # if (!isTRUE(VERBOSE)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
 # if (isTRUE(VERBOSE_NIV2)) getTimeElapsed(start_time)
+
 
 printProgress = function (v, val){
   if(isTRUE(v)) 
@@ -891,11 +880,11 @@ plotPca = function(pca, d, cl, axis1=1, axis2=2){
   k = length(levels(as.factor(cl)))
   
   if(nrow(d) > NB_ROW_MAX ) {
-    png(opt$output3, DIM_PNG, DIM_PNG)
+    #png(opt$output3, DIM_PNG, DIM_PNG)
     par(mar=c(0,0,18,0), lwd=4)
     cex=2; cex.main=6; cstar=0; cellipse=0; lwd.line=8; clabel=0; labels=1:nrow(d); line.main=7; cpoint=0
   }else{
-    pdf(opt$output3)
+    #pdf(opt$output3)
     par(mar=c(0,0,4.1,0))
     cex=0.6; cex.main=1.5; cstar=1; cellipse=1; lwd.line=2; clabel=1; labels=rownames(d); line.main=1; cpoint=1
   }
@@ -906,9 +895,9 @@ plotPca = function(pca, d, cl, axis1=1, axis2=2){
   abline(h=0, v=0, lty=2, lwd=lwd.line, col="grey")
   text(x=pca$li[,axis1], y=pca$li[,axis2], labels=labels, col=colorClusters(cl), cex=cex)
   #colnames(pca_coord) = c("Chemicals", "Axis 1", "Axis 2")
-  par(fig=c(0.8,1,0.82,1),new=TRUE)
-  if(isTRUE(ADVANCED)) plotInertiaPca(pca, d, pca$nf)
-  suprLog = dev.off()
+
+
+  #suprLog = dev.off()
 }
 
 # nf: number of inertia bar plot corresponding to factorial axis

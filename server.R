@@ -81,28 +81,37 @@ server = function(input, output, session){
 
     ###### plot funcs #####
     assign("plotPCA", 
-           function() plotPca(CLASSIF_TYPE, optimal_nb_clusters, classif, data),
+           function() {
+              printProgress(VERBOSE_NIV2, "PCA")
+              assign("pca",
+                    dudi.pca(data, scannf=F, nf=NB_AXIS),
+                    .GlobalEnv)
+              par(mfrow=c(round(NB_AXIS/2),round(NB_AXIS/3*2)))
+              for (i in 1:NB_AXIS)
+                for (j in i:NB_AXIS)
+                  if(i != j) {
+                    print(paste(i, j))
+                    plotPca(pca, data, clusters, i, j)
+                    if(isTRUE(ADVANCED)){
+                      par(fig=c(0.8,1,0.82,1), new=T)
+                      plotInertiaPca(pca, d, pca$nf)
+                    }
+                  }
+             },
            .GlobalEnv)
     assign("plotBest", 
            function() plotSilhouettePerPart(mean_silhouette),
            .GlobalEnv)
     assign("plotSil", 
            function() {
-             if(NB_CLUSTERS > 0) 
-               assign("optimal_nb_clusters",
-                      NB_CLUSTERS,
-                      .GlobalEnv)
-             else {
-               assign("sil_k",
-                    sil[[optimal_nb_clusters-1]],
-                    .GlobalEnv)
-             }
+             assign("sil_k",
+                  sil[[optimal_nb_clusters-1]],
+                  .GlobalEnv)
              plotSilhouette(sil_k)
            },
            .GlobalEnv)
     assign("plotCoph", 
            function()  {
-             if(isTRUE(ADVANCED) & isTRUE(VERBOSE)) cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
              printProgress(VERBOSE_NIV2, "Cophenetic calculation")
              plotCohenetic(dis, classif)
              },
@@ -147,10 +156,14 @@ server = function(input, output, session){
       message(paste("[WARNING] Max number of clusters must be lower (and not equal) to the number of line of the dataset (", nrow(data), ")", sep=""))
       return (F)
     }else{
-      assign("optimal_nb_clusters", 
+      if(NB_CLUSTERS > 0) 
+        assign("optimal_nb_clusters",
+               NB_CLUSTERS,
+               .GlobalEnv)
+      else assign("optimal_nb_clusters", 
              which.max(mean_silhouette)+1,
              .GlobalEnv)
-
+      
       #cl_temp, because writeTsv(clusters) recreate a different object named clusters
       assign("clusters", 
              list_clus[[optimal_nb_clusters-1]],
@@ -190,6 +203,11 @@ server = function(input, output, session){
     observeEvent(e, savePlot(f,func))
     func
   }
+  
+  observeEvent(input$advanced, {
+    if(isTRUE(input$advanced))  
+      cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
+  })
   
   observe({
     #set an id in tabsetPanel (here "navbar") and for each tabs
