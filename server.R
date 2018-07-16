@@ -11,15 +11,16 @@ tryCatch({
   }, error = function(e) {
   })
 
-loadData = function(f, s="\t"){
+loadData = function(f, s="\t",h=F){
   #!file.exists(
   if(!is.null(f)){
     data = read.table(f,
-                 header=F,
+                 header=h,
                  sep=s,
                  dec=".",
                  row.names=1)
     colnames(data) <- substr(rownames(data), 1, 25) -> rownames(data)
+    data = preProcessData(data)
   }
   return (data)
 }
@@ -32,25 +33,47 @@ server = function(input, output, session){
   #With assign, variables are forced to be in global env
   setVariables = function(input){
     assign("data", 
-           loadData(input$infile$datapath, input$sep),
+           loadData(input$infile$datapath, input$sep, input$header),
            .GlobalEnv)
-    assign("classif_type",
-           getClassifValue(input$classif_type),
+    assign("CLASSIF_TYPE",
+           as.integer(getClassifValue(input$classif_type)),
            .GlobalEnv)
-    assign("classif",
-           getCAH(data, classif_type),
-           .GlobalEnv)
-    assign("max_cluster",
+    assign("MAX_CLUSTERS",
            input$max_clusters,
            .GlobalEnv)
-    assign("nb_clusters",
+    assign("NB_CLUSTERS",
            input$nb_clusters,
            .GlobalEnv)
-    assign("advanced",
+    assign("ADVANCED",
            input$advanced,
            .GlobalEnv)
-    assign("verbose",
+    assign("VERBOSE",
            F,
+           .GlobalEnv)
+    assign("NB_AXIS",
+           input$nb_axis,
+           .GlobalEnv)
+    
+    #Perform classification
+    printProgress(VERBOSE_NIV2, "Distance calculation")
+    assign("dis",
+           getDistance(data, as.integer(input$dist_type)),
+           .GlobalEnv)
+    if(CLASSIF_TYPE < 3) printProgress(VERBOSE_NIV2, "Classification")
+    assign("classif",
+           getClassif(CLASSIF_TYPE, MAX_CLUSTERS, data, dis),
+           .GlobalEnv)
+    assign("list_clus",
+           getClusterPerPart(MAX_CLUSTERS+1, classif),
+           .GlobalEnv)
+    
+    #inertia
+    printProgress(VERBOSE_NIV2, "Index calculation")
+    assign("between",
+           getRelativeBetweenPerPart(MAX_CLUSTERS, data, list_clus),
+           .GlobalEnv)
+    assign("diff",
+           getBetweenDifferences(between),
            .GlobalEnv)
   }
   
@@ -58,72 +81,94 @@ server = function(input, output, session){
 
     ###### plot funcs #####
     assign("plotPCA", 
-           function() plotPca(classif_type, optimal_nb_clusters, classif, data),
+           function() plotPca(CLASSIF_TYPE, optimal_nb_clusters, classif, data),
            .GlobalEnv)
     assign("plotBest", 
-           function() plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data),
+           function() plotSilhouettePerPart(mean_silhouette),
            .GlobalEnv)
     assign("plotSil", 
-           function() plotSilhouette(getSilhouette(classif_type, optimal_nb_clusters, classif, data)),
+           function() {
+             if(NB_CLUSTERS > 0) 
+               assign("optimal_nb_clusters",
+                      NB_CLUSTERS,
+                      .GlobalEnv)
+             else {
+               assign("sil_k",
+                    sil[[optimal_nb_clusters-1]],
+                    .GlobalEnv)
+             }
+             plotSilhouette(sil_k)
+           },
            .GlobalEnv)
     assign("plotCoph", 
-           function() plotCohenetic(classif_type, data, classif),
+           function()  {
+             if(isTRUE(ADVANCED) & isTRUE(VERBOSE)) cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
+             printProgress(VERBOSE_NIV2, "Cophenetic calculation")
+             plotCohenetic(dis, classif)
+             },
            .GlobalEnv)
     assign("plotDend", 
-           function() plotDendrogram(classif_type, optimal_nb_clusters, classif, data, advanced),
+           function() plotDendrogram(CLASSIF_TYPE, optimal_nb_clusters, classif, data, MAX_CLUSTERS, clusters),
            .GlobalEnv)
 
-    if(classif_type <= 2 | isTRUE(advanced)){
+    if(CLASSIF_TYPE <= 2 | isTRUE(ADVANCED)){
       assign("plotHeatmap", 
-             function() heatMap(data,
-                                getSilhouette(classif_type, optimal_nb_clusters, classif, data),
-                                text=T),
+             function() heatMap(data, dis, sil_k),
              .GlobalEnv)
     }else{
       assign("plotHeatmap",
-             function() heatMap(data,
-                                c=classif,
-                                cl=getClusters(classif_type, optimal_nb_clusters, classif, data),
-                                text=T),
+             function() heatMap(data, dis, c=classif, cl=clusters),
              .GlobalEnv)
+      
     }
     
     ##### print table func #####
 
     assign("summary",
-           printSummary(classif_type, max_cluster, classif, data),
+           printSummary(between, diff, mean_silhouette, ADVANCED, gap),
            .GlobalEnv)
     assign("ctr_part", 
-           100 * getPdisPerPartition(classif_type, max_cluster, classif, data),
+           100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data),
            .GlobalEnv)
     assign("ctr_clus", 
-           100 * getCtrVar(classif_type, optimal_nb_clusters, classif, data),
+           100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data),
            .GlobalEnv)
-    
-    clusters = getClusters(classif_type, optimal_nb_clusters, classif, data)
-    writeClusters(clusters, T)
   }
   
   checkMaxCluster = function(){
-    if(max_cluster > (nrow(data) - 1)){
+    assign("sil", 
+           getSilhouettePerPart(data, list_clus, dis),
+           .GlobalEnv)
+    assign("mean_silhouette", 
+           getMeanSilhouettePerPart(sil),
+           .GlobalEnv)
+    
+    if(MAX_CLUSTERS > (nrow(data) - 1)){
       message(paste("[WARNING] Max number of clusters must be lower (and not equal) to the number of line of the dataset (", nrow(data), ")", sep=""))
       return (F)
     }else{
       assign("optimal_nb_clusters", 
-             getOptimalNbClus(classif_type, max_cluster, classif, data, nb_clusters),
+             which.max(mean_silhouette)+1,
              .GlobalEnv)
+
+      #cl_temp, because writeTsv(clusters) recreate a different object named clusters
+      assign("clusters", 
+             list_clus[[optimal_nb_clusters-1]],
+             .GlobalEnv)
+      assign("cl_temp", 
+             clusters,
+             .GlobalEnv)
+      #writeClusters(data, clusters, "clusters.tsv", TRUE, v=F )
+      assign("gap", 
+             NULL,
+             .GlobalEnv)
+      
+      #errors
+      if (optimal_nb_clusters==MAX_CLUSTERS) message("\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found.")
+      if(min(table(cl_temp))==1) message("\n[WARNING] A cluster with an only singleton biased the silhouette score.")
+      
       return(T)
     }
-  }
-  
-  #t: classif_type
-  #m: max_cluster
-  #c: classif
-  #d: data,
-  #n: nb_clusters
-  getOptimalNbClus = function(t, m, c, d, n){
-    if(n > 1) return (n)
-    else return (plotSilhouettePerPart(t, m + 1, c, d))
   }
 
   # f: filename
@@ -158,15 +203,15 @@ server = function(input, output, session){
     #responsive for a given condition
     toggle(condition = input$advanced, selector = "#navbar li a[data-value=ctr_part]")
     toggle(condition = input$advanced, selector = "#navbar li a[data-value=ctr_clus]")
-    toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=coph]")
-    toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=dendr]")
+    toggle(condition = (as.integer(getClassifValue(input$CLASSIF_TYPE) > 2)), selector = "#navbar li a[data-value=coph]")
+    toggle(condition = (as.integer(getClassifValue(input$CLASSIF_TYPE) > 2)), selector = "#navbar li a[data-value=dendr]")
   })
   
   observeEvent(input$save_all, {
     if(is.data.frame(data)){
       setVariables(input)
       setPrintFuncs()
-      writeTsv("summary")
+      writeTsv("summary", "summary.tsv", v=F)
       
       savePlot("best_clustering", plotBest())
       savePlot("silhouette", plotSil())
@@ -187,7 +232,7 @@ server = function(input, output, session){
       setVariables(input)
       if(checkMaxCluster()){
         setPrintFuncs()
-        observeEvent(input$summary_save, writeTsv("summary")); summary
+        observeEvent(input$summary_save, writeTsv("summary", "summary.tsv", v=F)); summary
       }
     }, error = function(e) {
     })
@@ -197,15 +242,17 @@ server = function(input, output, session){
 
     tryCatch({
       setVariables(input)
+
       if(checkMaxCluster()){
         setPrintFuncs()
-        #plotFusionLevels(getClassifValue(input$classif_type), max_cluster, classif, data)
+        #plotFusionLevels(getClassifValue(input$CLASSIF_TYPE), MAX_CLUSTERS, classif, data)
         #TODO: pass an event into a nested function (actually not working)
         # plot2(input$sil_save,
         #       "best_clustering",
-        #       plotSilhouettePerPart(classif_type, max_cluster + 1, classif, data))
+        #       plotSilhouettePerPart(CLASSIF_TYPE, MAX_CLUSTERS + 1, classif, data))
         observeEvent(input$best_save, savePlot("best_clustering", plotBest()))
         plotBest()
+
       }
     }, error = function(e) {
     })
@@ -250,7 +297,7 @@ server = function(input, output, session){
   
   output$cophenetic = renderPlot({
     tryCatch({
-      if( classif_type > 2){
+      if( CLASSIF_TYPE > 2){
         setVariables(input)
         if(checkMaxCluster()){
           setPrintFuncs()
@@ -264,7 +311,7 @@ server = function(input, output, session){
   
   output$dendrogram = renderPlot({
     tryCatch({
-      if( classif_type > 2){
+      if( CLASSIF_TYPE > 2){
         setVariables(input)
         if(checkMaxCluster()){
           setPrintFuncs()

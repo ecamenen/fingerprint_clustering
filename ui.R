@@ -21,6 +21,9 @@ ui = pageWithSidebar(
                  label=h5("Choose a file: ") #libellé associee a cet element 
                  #(apparait au dessus de l'input)
               ),
+    checkboxInput("header",
+                  "Consider first row as header",
+                  value=F),
     radioButtons("sep", 
                  "Separator",
                  choices = c(Comma = ",",
@@ -28,6 +31,11 @@ ui = pageWithSidebar(
                              Tab = "\t"),
                  selected = "\t"),
     #checkValues and checkNames do not works on selectInput but only on checkbox
+    selectInput("dist_type",
+                h5("Distance method: "),
+                selected = 1,
+                choices = list(`Distance` = c("Euclidean" = 1, "Manhattan" = 2), 
+                               `Similarity` = c("Jaccard" = 3, "Sokal & Michener" = 4, "Sorensen (Dice)" = 5, "Ochiai" = 6))),
     selectInput("classif_type",
                 h5("Classification method: "),
                 selected = "Complete links",
@@ -39,6 +47,9 @@ ui = pageWithSidebar(
     sliderInput("nb_clusters",
                 h5("Number of clusters: "),
                 min=0, max= 10, value=0),
+    sliderInput("nb_axis", 
+                h5("Number of axis in PCA: "), 
+                min=2, max= 4, value=2),
     checkboxInput("advanced",
                   "Advanced mode",
                   value=F),
