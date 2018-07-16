@@ -896,7 +896,10 @@ plotPca = function(pca, d, cl, axis1=1, axis2=2){
   text(x=pca$li[,axis1], y=pca$li[,axis2], labels=labels, col=colorClusters(cl), cex=cex)
   #colnames(pca_coord) = c("Chemicals", "Axis 1", "Axis 2")
 
-
+  if(isTRUE(ADVANCED)){
+    par(fig=c(0.8,1,0.82,1),new=T)
+    plotInertiaPca(pca, d, pca$nf)
+  }
   #suprLog = dev.off()
 }
 

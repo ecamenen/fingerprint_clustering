@@ -50,8 +50,11 @@ server = function(input, output, session){
     assign("VERBOSE",
            F,
            .GlobalEnv)
-    assign("NB_AXIS",
-           input$nb_axis,
+    assign("AXIS1",
+           input$axis1,
+           .GlobalEnv)
+    assign("AXIS2",
+           input$axis2,
            .GlobalEnv)
     
     #Perform classification
@@ -84,19 +87,13 @@ server = function(input, output, session){
            function() {
               printProgress(VERBOSE_NIV2, "PCA")
               assign("pca",
-                    dudi.pca(data, scannf=F, nf=NB_AXIS),
+                    dudi.pca(data, scannf=F, nf=max(AXIS1,AXIS2)),
                     .GlobalEnv)
-              par(mfrow=c(round(NB_AXIS/2),round(NB_AXIS/3*2)))
-              for (i in 1:NB_AXIS)
-                for (j in i:NB_AXIS)
-                  if(i != j) {
-                    print(paste(i, j))
-                    plotPca(pca, data, clusters, i, j)
-                    if(isTRUE(ADVANCED)){
-                      par(fig=c(0.8,1,0.82,1), new=T)
-                      plotInertiaPca(pca, d, pca$nf)
-                    }
-                  }
+                  plotPca(pca, data, clusters, AXIS1, AXIS2)
+                  # if(isTRUE(ADVANCED)){
+                  #   par(fig=c(0.8,1,0.82,1), new=T)
+                  #   plotInertiaPca(pca, d, pca$nf)
+                  # }
              },
            .GlobalEnv)
     assign("plotBest", 
