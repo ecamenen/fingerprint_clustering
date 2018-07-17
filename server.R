@@ -227,6 +227,16 @@ server = function(input, output, session){
   #          EVENTS
   ###################################
   
+  # observeEvent(input$infile, {
+  #   assign("data",
+  #          loadData(input$infile$datapath, input$sep, input$header),
+  #          .GlobalEnv)
+  #   printProgress(VERBOSE_NIV2, "Distance calculation")
+  #   assign("dis",
+  #          getDistance(data, as.integer(input$dist_type)),
+  #          .GlobalEnv)
+  # })
+
   observeEvent(input$advanced, {
     if(!is.null(input$infile) & isTRUE(input$advanced)){
       cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
@@ -244,6 +254,9 @@ server = function(input, output, session){
       hide(selector = "#navbar li a[data-value=coph]")
       hide(selector = "#navbar li a[data-value=fusion]")
       hide(selector = "#navbar li a[data-value=within]")
+      toggle(condition = input$advanced, id="nb_clusters")
+      toggle(condition = input$advanced, id="axis1")
+      toggle(condition = input$advanced, id="axis2")
       
       if(!is.null(input$infile)){ #catch condition when no data are loaded and adv is selected
       
