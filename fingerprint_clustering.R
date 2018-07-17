@@ -678,8 +678,14 @@ plotSilhouette = function(sil_k){
 ###################################
 
 #B: nb of NB_BOOTSTRAP
-getGapPerPart = function(n, d, c, B=500){
+getGapPerPart = function(n, d, c, B=500, v=F){
   #FUN mus have only two args in this order and return a list with an object cluster
+  
+  if (isTRUE(v)) cat("\nGAP STATISTICS:\n")
+  if(classif$method=="kmeans" & (n > 10 | nrow(d)>=100)) plural=c("few ", "s")
+  else plural=c("","")
+  if(classif$method=="kmeans" | nrow(d)>=100 ) cat(paste("It could take a ",plural[1], "minute",plural[2],"...\n",sep=""))
+  
   gapFun = function(x, k) list(cluster = getClusters(k, c))
   clusGap(d, FUN=gapFun, K.max=n, verbose=F, B=B)
 }
@@ -691,23 +697,17 @@ getGapBest = function (g, M="Tibs2001SEmax"){
 
 # Plot the gap statistics width for all clustering possible
 #TODO: HERE
-plotGapPerPart = function(n, d, c, B=500, v=T){
-  if (isTRUE(v)) cat("\nGAP STATISTICS:\n")
-  if(classif$method=="kmeans" & (n > 10 | nrow(d)>=100)) plural=c("few ", "s")
-  else plural=c("","")
-  if(classif$method=="kmeans" | nrow(d)>=100 ) cat(paste("It could take a ",plural[1], "minute",plural[2],"...\n",sep=""))
-  gap = getGapPerPart(n, d, c, B)
+plotGapPerPart = function(g, n, v=T){
   setGraphic()
   #savePdf("gap_statistics.pdf")
-  optimal_nb_clusters = getGapBest(gap)
-  gap_k=round(gap$Tab,3)
+  optimal_nb_clusters = getGapBest(g)
+  gap_k=round(g$Tab,3)
   best = gap_k[,"gap"][optimal_nb_clusters]
   if(optimal_nb_clusters < n) best = paste(best, ">",gap_k[,"gap"][optimal_nb_clusters+1],"-",gap_k[,"SE.sim"][optimal_nb_clusters +1])
-  plot(gap, arrowArgs = list(col="gray", length=1/15, lwd=2, angle=90, code=3), type="b", xlim=c(1,n+1), ylim=c(0,max(gap$Tab[,"gap"])+0.1), col="grey", xlab="Nb. of clusters", ylab=expression(Gap[k]), main="",axes=F)
-  plotBestClustering("Gap statistics method", gap$Tab[,"gap"]," gap value", optimal_nb_clusters, 0.1, 1, best)
+  plot(g, arrowArgs = list(col="gray", length=1/15, lwd=2, angle=90, code=3), type="b", xlim=c(1,n+1), ylim=c(0,max(g$Tab[,"gap"])+0.1), col="grey", xlab="Nb. of clusters", ylab=expression(Gap[k]), main="",axes=F)
+  plotBestClustering("Gap statistics method", g$Tab[,"gap"]," gap value", optimal_nb_clusters, 0.1, 1, best)
   #cat(paste("With a corrected index, optimal number of clusters k =",getGapBest(gap,"firstSEmax"), "\n"))
   #suprLog = dev.off()
-  return (gap)
 }
 
 #Plot the gap between the two function: within and random within average

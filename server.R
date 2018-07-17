@@ -26,8 +26,12 @@ loadData = function(f, s="\t",h=F){
 }
 
 server = function(input, output, session){
-  
+
   getClassifValue = function(key)  unlist(classif_methods[key])
+  
+  ###################################
+  #          SETTINGS
+  ###################################
   
   #Each shiny server functions run in local environment
   #With assign, variables are forced to be in global env
@@ -91,13 +95,7 @@ server = function(input, output, session){
            dudi.pca(data, scannf=F, nf=max(AXIS1,AXIS2)), 
            .GlobalEnv)
     assign("plotPCA", 
-           function() {
-                  plotPca(pca, data, clusters, AXIS1, AXIS2)
-                  # if(isTRUE(ADVANCED)){
-                  #   par(fig=c(0.8,1,0.82,1), new=T)
-                  #   plotInertiaPca(pca, d, pca$nf)
-                  # }
-             },
+           function() plotPca(pca, data, clusters, AXIS1, AXIS2),
            .GlobalEnv)
     assign("plotBest", 
            function() plotSilhouettePerPart(mean_silhouette),
@@ -107,12 +105,6 @@ server = function(input, output, session){
            .GlobalEnv)
     assign("plotSil", 
            function() plotSilhouette(sil_k),
-           .GlobalEnv)
-    assign("plotCoph", 
-           function()  {
-             printProgress(VERBOSE_NIV2, "Cophenetic calculation")
-             plotCohenetic(dis, classif)
-             },
            .GlobalEnv)
     assign("plotDend", 
            function() plotDendrogram(CLASSIF_TYPE, optimal_nb_clusters, classif, data, MAX_CLUSTERS, clusters),
@@ -134,18 +126,24 @@ server = function(input, output, session){
       assign("plotFus",
              function() plotFusionLevels(MAX_CLUSTERS, classif),
              .GlobalEnv)
-      
+      assign("plotCoph", 
+             function()  {
+               printProgress(VERBOSE_NIV2, "Cophenetic calculation")
+               plotCohenetic(dis, classif)
+             },
+             .GlobalEnv)
       assign("plotGap",
              function() {
-               if (nrow(data) < 100){
-                 par(mfrow=c(1,2))
+               if (nrow(data) < (NB_ROW_MAX/2)){
                  printProgress(VERBOSE_NIV2, "Gap statistics calculation")
-                 gap = plotGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP, v=F)
-                 plotGapPerPart2(gap, MAX_CLUSTERS)
+                 assign("gap",
+                        getGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP),
+                        .GlobalEnv)
+                 plotGapPerPart(gap, MAX_CLUSTERS, v=F)
+                 #plotGapPerPart2(gap, MAX_CLUSTERS)
                }
               },
              .GlobalEnv)
-      
       assign("plotElb",
              function() plotElbow(between),
              .GlobalEnv)
@@ -156,8 +154,15 @@ server = function(input, output, session){
     
     ##### print table func #####
 
-    assign("summary",
-           printSummary(between, diff, mean_silhouette, ADVANCED, gap),
+    assign("summary", {
+      if (nrow(data) < (NB_ROW_MAX/2)){
+        printProgress(VERBOSE_NIV2, "Gap statistics calculation")
+        assign("gap",
+               getGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP),
+               .GlobalEnv)
+      }
+      printSummary(between, diff, mean_silhouette, ADVANCED, gap)
+      },
            .GlobalEnv)
     # assign("ctr_part", 
     #        100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data),
@@ -217,20 +222,15 @@ server = function(input, output, session){
         func
         suprLog = dev.off()
   }
-  
-  #BUGED
-  # e: event variable
-  # f: filename
-  # func: plot function
-  plot2 = function (e, f, func){
-    #BUG: cannot get e
-    observeEvent(e, savePlot(f,func))
-    func
-  }
+
+  ###################################
+  #          EVENTS
+  ###################################
   
   observeEvent(input$advanced, {
-    if(!is.null(input$infile) & isTRUE(input$advanced))  
+    if(!is.null(input$infile) & isTRUE(input$advanced)){
       cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
+    }
   })
   
   observe({
@@ -238,20 +238,23 @@ server = function(input, output, session){
     #set an id in tabsetPanel (here "navbar") and for each tabs
       
       #default behaviour
-      show(selector = "#navbar li a[data-value=coph]")
       show(selector = "#navbar li a[data-value=dendr]")
       hide(selector = "#navbar li a[data-value=elbow]")
+      hide(selector = "#navbar li a[data-value=gap]")
+      hide(selector = "#navbar li a[data-value=coph]")
       hide(selector = "#navbar li a[data-value=fusion]")
       hide(selector = "#navbar li a[data-value=within]")
       
-      if(!is.null(input$infile)){
+      if(!is.null(input$infile)){ #catch condition when no data are loaded and adv is selected
       
         #responsive for a given condition
         toggle(condition = input$advanced, selector = "#navbar li a[data-value=elbow]")
-        toggle(condition = ( input$advanced & as.integer(getClassifValue(input$classif_type) > 2) ), selector = "#navbar li a[data-value=fusion]")
+        toggle(condition = input$advanced, selector = "#navbar li a[data-value=gap]")
         toggle(condition = input$advanced, selector = "#navbar li a[data-value=within]")
-        toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=coph]")
+        toggle(condition = ( input$advanced & as.integer(getClassifValue(input$classif_type) > 2) ), selector = "#navbar li a[data-value=fusion]")
+        toggle(condition = ( input$advanced & as.integer(getClassifValue(input$classif_type) > 2) ), selector = "#navbar li a[data-value=coph]")
         toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=dendr]")
+        
       }
   })
   
@@ -267,21 +270,28 @@ server = function(input, output, session){
       savePlot("heatmap", plotHeatmap())
       
       if(as.integer(getClassifValue(input$classif_type) > 2)){
-        savePlot("cohenetic", plotCoph())
         savePlot("dendrogram", plotDend())
       }
       
       if(isTRUE(input$advanced)){
         if(as.integer(getClassifValue(input$classif_type) > 2)){
+          savePlot("cohenetic", plotCoph())
           savePlot("fusion", plotFus())
         }
         savePlot("elbow", plotElb())
-        # writeTsv("ctr_clus")
-        # writeTsv("ctr_part")
+        #if (nrow(data) < (NB_ROW_MAX/2)){
+          savePlot("gap", plotGap())
+        #}
+        # writeTsv("ctr_clus", "ctr_clus.tsv", v=F)
+        # writeTsv("ctr_part", "ctr_part.tsv", v=F)
         writeTsv("within_k", "within_k.tsv", v=F)
       }
     }
   })
+  
+  ###################################
+  #          RENDER
+  ###################################
   
   output$summary = renderTable({
     tryCatch({
@@ -353,7 +363,7 @@ server = function(input, output, session){
   
   output$cophenetic = renderPlot({
     tryCatch({
-      if( CLASSIF_TYPE > 2){
+      if(isTRUE(input$advanced) & CLASSIF_TYPE > 2){
         setVariables(input)
         if(checkMaxCluster()){
           setPrintFuncs()
@@ -387,6 +397,20 @@ server = function(input, output, session){
           setPrintFuncs()
           observeEvent(input$fusion_save, savePlot("fusion", plotFus()))
           plotFus()
+        }
+      }
+    }, error = function(e) {
+    })
+  })
+  
+  output$gap = renderPlot({
+    tryCatch({
+      if(isTRUE(input$advanced)){
+        setVariables(input)
+        if(checkMaxCluster()){
+          setPrintFuncs()
+          observeEvent(input$gap_save, savePlot("gap", plotGap()))
+          plotGap()
         }
       }
     }, error = function(e) {
