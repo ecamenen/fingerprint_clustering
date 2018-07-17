@@ -220,8 +220,8 @@ server = function(input, output, session){
     #responsive for a given condition
     toggle(condition = input$advanced, selector = "#navbar li a[data-value=ctr_part]")
     toggle(condition = input$advanced, selector = "#navbar li a[data-value=ctr_clus]")
-    toggle(condition = (as.integer(getClassifValue(input$CLASSIF_TYPE) > 2)), selector = "#navbar li a[data-value=coph]")
-    toggle(condition = (as.integer(getClassifValue(input$CLASSIF_TYPE) > 2)), selector = "#navbar li a[data-value=dendr]")
+    toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=coph]")
+    toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=dendr]")
   })
   
   observeEvent(input$save_all, {
