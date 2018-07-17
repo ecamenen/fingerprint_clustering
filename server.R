@@ -39,9 +39,6 @@ server = function(input, output, session){
     assign("HEAD", 
            input$header,
            .GlobalEnv)
-    assign("data",
-           loadData(input$infile$datapath, input$sep, input$header),
-           .GlobalEnv)
     assign("CLASSIF_TYPE",
            as.integer(getClassifValue(input$classif_type)),
            .GlobalEnv)
@@ -66,9 +63,6 @@ server = function(input, output, session){
     
     #Perform classification
     printProgress(VERBOSE_NIV2, "Distance calculation")
-    assign("dis",
-           getDistance(data, as.integer(input$dist_type)),
-           .GlobalEnv)
     if(CLASSIF_TYPE < 3) printProgress(VERBOSE_NIV2, "Classification")
     assign("classif",
            getClassif(CLASSIF_TYPE, MAX_CLUSTERS, data, dis),
@@ -223,14 +217,24 @@ server = function(input, output, session){
   ###################################
   #          EVENTS
   ###################################
+  
+  observeEvent(input$infile, {
+    assign("data",
+           loadData(input$infile$datapath, input$sep, input$header),
+           .GlobalEnv)
+    printProgress(VERBOSE_NIV2, "Distance calculation")
+    assign("dis",
+           getDistance(data, as.integer(input$dist_type)),
+           .GlobalEnv)
+  })
 
   # events for advanced mode
-  observeEvent(input$advanced, {
-    if(!is.null(input$infile) & isTRUE(input$advanced)){
-      cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
-    }
-  })
-  
+  # observeEvent(input$advanced, {
+  #   if(!is.null(input$infile) & isTRUE(input$advanced)){
+  #     cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
+  #   }
+  # })
+  # 
   # hide either input options or tabs
   observe({
     
@@ -258,6 +262,10 @@ server = function(input, output, session){
         toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=dendr]")
         
       }
+  })
+  
+  observeEvent(input$refresh, {
+      js$refresh();
   })
   
   #function save_all

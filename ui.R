@@ -1,5 +1,6 @@
 classif_methods = list("K-menoids" = 1,  "K-means" = 2, "Ward"=3, "Complete links"=4, "Single links"=5, "UPGMA"=6, "WPGMA"=7, "WPGMC"=8, "UPGMC"=9)
 library("shinyjs")
+jscode <- "shinyjs.refresh = function() { location.reload(); }"
 
 #min-max: minimum and maximum position number in the list
 getClassifKeys = function(min, max)
@@ -15,6 +16,7 @@ ui = pageWithSidebar(
   sidebarPanel( #elements de controle de l'apli
     
     useShinyjs(),
+    extendShinyjs(text = jscode, functions = "refresh"),
     
     fileInput(inputId="infile", #nom (ou ID) associee a cet element de controle,
                  #sera utilisee dans la partie 'server'
@@ -56,6 +58,8 @@ ui = pageWithSidebar(
     sliderInput("axis2", 
                 h5("PCA axis 2: "), 
                 min=1, max=4, value=2),
+    actionButton("refresh",
+                 "Refresh"),
     actionButton("save_all",
                  "Save all")
   ),
