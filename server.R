@@ -39,7 +39,7 @@ server = function(input, output, session){
     assign("HEAD", 
            input$header,
            .GlobalEnv)
-    assign("data", 
+    assign("data",
            loadData(input$infile$datapath, input$sep, input$header),
            .GlobalEnv)
     assign("CLASSIF_TYPE",
@@ -157,9 +157,11 @@ server = function(input, output, session){
     assign("summary", {
       if (nrow(data) < (NB_ROW_MAX/2)){
         printProgress(VERBOSE_NIV2, "Gap statistics calculation")
-        assign("gap",
-               getGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP),
-               .GlobalEnv)
+        if(isTRUE(ADVANCED)){
+          assign("gap",
+                 getGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP),
+                 .GlobalEnv)
+        }
       }
       printSummary(between, diff, mean_silhouette, ADVANCED, gap)
       },
@@ -174,6 +176,8 @@ server = function(input, output, session){
     writeClusters("clusters.tsv", v=F)
   }
   
+  # post-process for data
+  # check that the maximum_number of clusters fixed is not greater than the number of row of the datafile
   checkMaxCluster = function(){
     assign("sil", 
            getSilhouettePerPart(data, list_clus, dis),
@@ -227,22 +231,24 @@ server = function(input, output, session){
   #          EVENTS
   ###################################
   
-  # observeEvent(input$infile, {
-  #   assign("data",
-  #          loadData(input$infile$datapath, input$sep, input$header),
-  #          .GlobalEnv)
-  #   printProgress(VERBOSE_NIV2, "Distance calculation")
-  #   assign("dis",
-  #          getDistance(data, as.integer(input$dist_type)),
-  #          .GlobalEnv)
-  # })
+  observeEvent(input$infile, {
+    assign("data",
+           loadData(input$infile$datapath, input$sep, input$header),
+           .GlobalEnv)
+    printProgress(VERBOSE_NIV2, "Distance calculation")
+    assign("dis",
+           getDistance(data, as.integer(input$dist_type)),
+           .GlobalEnv)
+  })
 
+  # events for advanced mode
   observeEvent(input$advanced, {
     if(!is.null(input$infile) & isTRUE(input$advanced)){
       cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
     }
   })
   
+  # hide either input options or tabs
   observe({
     
     #set an id in tabsetPanel (here "navbar") and for each tabs
@@ -271,6 +277,7 @@ server = function(input, output, session){
       }
   })
   
+  #function save_all
   observeEvent(input$save_all, {
     if(is.data.frame(data)){
       setVariables(input)
