@@ -123,6 +123,12 @@ server = function(input, output, session){
     
     ##### advanced #####
     if(isTRUE(ADVANCED)){
+      if (nrow(data) < (NB_ROW_MAX/2)){
+        printProgress(VERBOSE_NIV2, "Gap statistics calculation")
+        assign("gap",
+               getGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP),
+               .GlobalEnv)
+      }
       assign("plotFus",
              function() plotFusionLevels(MAX_CLUSTERS, classif),
              .GlobalEnv)
@@ -135,10 +141,6 @@ server = function(input, output, session){
       assign("plotGap",
              function() {
                if (nrow(data) < (NB_ROW_MAX/2)){
-                 printProgress(VERBOSE_NIV2, "Gap statistics calculation")
-                 assign("gap",
-                        getGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP),
-                        .GlobalEnv)
                  plotGapPerPart(gap, MAX_CLUSTERS, v=F)
                  #plotGapPerPart2(gap, MAX_CLUSTERS)
                }
@@ -154,17 +156,8 @@ server = function(input, output, session){
     
     ##### print table func #####
 
-    assign("summary", {
-      if (nrow(data) < (NB_ROW_MAX/2)){
-        printProgress(VERBOSE_NIV2, "Gap statistics calculation")
-        if(isTRUE(ADVANCED)){
-          assign("gap",
-                 getGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP),
-                 .GlobalEnv)
-        }
-      }
-      printSummary(between, diff, mean_silhouette, ADVANCED, gap)
-      },
+    assign("summary", 
+           printSummary(between, diff, mean_silhouette, ADVANCED, gap),
            .GlobalEnv)
     # assign("ctr_part", 
     #        100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data),
@@ -230,16 +223,6 @@ server = function(input, output, session){
   ###################################
   #          EVENTS
   ###################################
-  
-  observeEvent(input$infile, {
-    assign("data",
-           loadData(input$infile$datapath, input$sep, input$header),
-           .GlobalEnv)
-    printProgress(VERBOSE_NIV2, "Distance calculation")
-    assign("dis",
-           getDistance(data, as.integer(input$dist_type)),
-           .GlobalEnv)
-  })
 
   # events for advanced mode
   observeEvent(input$advanced, {
