@@ -32,6 +32,9 @@ server = function(input, output, session){
   #Each shiny server functions run in local environment
   #With assign, variables are forced to be in global env
   setVariables = function(input){
+    assign("HEAD", 
+           input$header,
+           .GlobalEnv)
     assign("data", 
            loadData(input$infile$datapath, input$sep, input$header),
            .GlobalEnv)
@@ -83,9 +86,9 @@ server = function(input, output, session){
   setPrintFuncs = function(){
 
     ###### plot funcs #####
-    printProgress(VERBOSE_NIV2, "PCA")
-    assign("pca",
-           dudi.pca(data, scannf=F, nf=max(AXIS1,AXIS2)),
+    printProgress(VERBOSE_NIV2, "PCA") 
+    assign("pca", 
+           dudi.pca(data, scannf=F, nf=max(AXIS1,AXIS2)), 
            .GlobalEnv)
     assign("plotPCA", 
            function() {

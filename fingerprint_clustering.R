@@ -64,7 +64,6 @@ for (l in librairies){
 
 #Global variables settings
 NB_BOOTSTRAP = 500 #should be comprise between 100 and 1000
-REMOVE_DOUBLETS = T #Discard line containing the same information on all columns from analysis
 TEXT = T #print values on graph (for optimum partition and heatmap)
 NB_ROW_MAX = 200 #max row to have pdf, otherwise, some plots are in png
 DIM_PNG = 2000
@@ -140,9 +139,13 @@ preProcessData = function(d){
   if(ncol(d)==1){
     stop(paste("Check for the separator (by default, tabulation)."), call.=FALSE)
   }
-  #d = renameRowname(d)
+  
+  REMOVE_DOUBLETS = (nrow(d) > NB_ROW_MAX) #Discard line containing the same information on all columns from analysis
+  
+  d = renameRowname(d)
   #remove columns containing characters
-  if(nrow(d) > NB_ROW_MAX) VERBOSE_NIV2 = T
+  #if(nrow(d) > NB_ROW_MAX) VERBOSE_NIV2 = T
+  #get only columns with numeric values
   d = d[, unlist(sapply(1:ncol(d), function(i) is.numeric(d[,i])))]
   if(isTRUE(REMOVE_DOUBLETS)){
     printProgress(VERBOSE_NIV2, "Loading data")
@@ -151,7 +154,7 @@ preProcessData = function(d){
   
   if ( (nrow(d) > 3500) & (CLASSIF_TYPE > 2) ) stop("With more than 3000 rows to analyse, --classType must be 1: K-medoids or 2: K-means", call.=FALSE)
 
-  #if ( isSymmetric(as.matrix(d)) & !HEAD) colnames(d) = rownames(d)
+  if ( isSymmetric(as.matrix(d)) & !HEAD) colnames(d) = rownames(d)
 
   return(d)
 }
@@ -174,7 +177,8 @@ renameRownameDoublets = function(names.row){
 
 #rename row and avoid doublets errors
 renameRowname = function(d){
-  names.row = as.character(d[,1])
+  #names.row = as.character(d[,1])
+  names.row=rownames(d)
   d=d[,-1]
   names.row = renameRownameDoublets(names.row)
   tryCatch({
