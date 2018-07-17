@@ -236,19 +236,22 @@ server = function(input, output, session){
   observe({
     
     #set an id in tabsetPanel (here "navbar") and for each tabs
-    if(!is.null(input$infile)){
       
       #default behaviour
       show(selector = "#navbar li a[data-value=coph]")
       show(selector = "#navbar li a[data-value=dendr]")
       hide(selector = "#navbar li a[data-value=elbow]")
+      hide(selector = "#navbar li a[data-value=fusion]")
       hide(selector = "#navbar li a[data-value=within]")
       
-      #responsive for a given condition
-      toggle(condition = input$advanced, selector = "#navbar li a[data-value=elbow]")
-      toggle(condition = input$advanced, selector = "#navbar li a[data-value=within]")
-      toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=coph]")
-      toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=dendr]")
+      if(!is.null(input$infile)){
+      
+        #responsive for a given condition
+        toggle(condition = input$advanced, selector = "#navbar li a[data-value=elbow]")
+        toggle(condition = ( input$advanced & as.integer(getClassifValue(input$classif_type) > 2) ), selector = "#navbar li a[data-value=fusion]")
+        toggle(condition = input$advanced, selector = "#navbar li a[data-value=within]")
+        toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=coph]")
+        toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=dendr]")
       }
   })
   
@@ -269,7 +272,10 @@ server = function(input, output, session){
       }
       
       if(isTRUE(input$advanced)){
-        if(isTRUE(input$advanced)) {}
+        if(as.integer(getClassifValue(input$classif_type) > 2)){
+          savePlot("fusion", plotFus())
+        }
+        savePlot("elbow", plotElb())
         # writeTsv("ctr_clus")
         # writeTsv("ctr_part")
         writeTsv("within_k", "within_k.tsv", v=F)
@@ -367,6 +373,20 @@ server = function(input, output, session){
           setPrintFuncs()
           observeEvent(input$dendr_save, savePlot("dendrogram", plotDend()))
           plotDend()
+        }
+      }
+    }, error = function(e) {
+    })
+  })
+  
+  output$fusion = renderPlot({
+    tryCatch({
+      if(isTRUE(input$advanced) & CLASSIF_TYPE > 2){
+        setVariables(input)
+        if(checkMaxCluster()){
+          setPrintFuncs()
+          observeEvent(input$fusion_save, savePlot("fusion", plotFus()))
+          plotFus()
         }
       }
     }, error = function(e) {
