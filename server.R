@@ -129,17 +129,42 @@ server = function(input, output, session){
       
     }
     
+    ##### advanced #####
+    if(isTRUE(ADVANCED)){
+      assign("plotFus",
+             function() plotFusionLevels(MAX_CLUSTERS, classif),
+             .GlobalEnv)
+      
+      assign("plotGap",
+             function() {
+               if (nrow(data) < 100){
+                 printProgress(VERBOSE_NIV2, "Gap statistics calculation")
+                 gap = plotGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP, v=F)
+                 plotGapPerPart2(gap, MAX_CLUSTERS)
+               }
+               },
+             .GlobalEnv)
+      
+      assign("plotElbow",
+             function() plotElbow(between),
+             .GlobalEnv)
+      assign("within_k",
+             function() getRelativeWithinPerCluster(list_clus, data),
+             .GlobalEnv)
+
+    }
+    
     ##### print table func #####
 
     assign("summary",
            printSummary(between, diff, mean_silhouette, ADVANCED, gap),
            .GlobalEnv)
-    assign("ctr_part", 
-           100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data),
-           .GlobalEnv)
-    assign("ctr_clus", 
-           100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data),
-           .GlobalEnv)
+    # assign("ctr_part", 
+    #        100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data),
+    #        .GlobalEnv)
+    # assign("ctr_clus", 
+    #        100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data),
+    #        .GlobalEnv)
     
     writeClusters("clusters.tsv", v=F)
   }
@@ -204,24 +229,27 @@ server = function(input, output, session){
   }
   
   observeEvent(input$advanced, {
-    if(isTRUE(input$advanced))  
+    if(!is.null(input$infile) & isTRUE(input$advanced))  
       cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
   })
   
   observe({
+    
     #set an id in tabsetPanel (here "navbar") and for each tabs
-    
-    #default behaviour
-    show(selector = "#navbar li a[data-value=coph]")
-    show(selector = "#navbar li a[data-value=dendr]")
-    hide(selector = "#navbar li a[data-value=ctr_part]")
-    hide(selector = "#navbar li a[data-value=ctr_clus]")
-    
-    #responsive for a given condition
-    toggle(condition = input$advanced, selector = "#navbar li a[data-value=ctr_part]")
-    toggle(condition = input$advanced, selector = "#navbar li a[data-value=ctr_clus]")
-    toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=coph]")
-    toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=dendr]")
+    if(!is.null(input$infile)){
+      
+      #default behaviour
+      show(selector = "#navbar li a[data-value=coph]")
+      show(selector = "#navbar li a[data-value=dendr]")
+      hide(selector = "#navbar li a[data-value=ctr_part]")
+      hide(selector = "#navbar li a[data-value=ctr_clus]")
+      
+      #responsive for a given condition
+      toggle(condition = input$advanced, selector = "#navbar li a[data-value=ctr_part]")
+      toggle(condition = input$advanced, selector = "#navbar li a[data-value=ctr_clus]")
+      toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=coph]")
+      toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=dendr]")
+      }
   })
   
   observeEvent(input$save_all, {
@@ -234,12 +262,16 @@ server = function(input, output, session){
       savePlot("silhouette", plotSil())
       savePlot("pca", plotPCA())
       savePlot("heatmap", plotHeatmap())
-      savePlot("cohenetic", plotCoph())
-      savePlot("dendrogram", plotDend())
+      
+      if(as.integer(getClassifValue(input$classif_type) > 2)){
+        savePlot("cohenetic", plotCoph())
+        savePlot("dendrogram", plotDend())
+      }
       
       if(isTRUE(input$advanced)){
-        writeTsv("ctr_clus")
-        writeTsv("ctr_part")
+        if(isTRUE(input$advanced)) {}
+        # writeTsv("ctr_clus")
+        # writeTsv("ctr_part")
       }
     }
   })
@@ -360,8 +392,8 @@ server = function(input, output, session){
         setVariables(input)
         if(checkMaxCluster()){
           setPrintFuncs()
-          observeEvent(input$ctr_clus_save, writeTsv("ctr_clus"))
-          ctr_clus
+          observeEvent(input$ctr_clus_save, writeTsv("within_k", v=F))
+          within_k()
         }
       }
     }, error = function(e) {
