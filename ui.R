@@ -87,14 +87,14 @@ ui = pageWithSidebar(
                value="dendr",
                plotOutput("dendrogram"),
                actionButton("dendr_save","Save")),
-      tabPanel("Partition contributions",
-               value="ctr_part",
-               tableOutput("ctr_part"),
-               actionButton("ctr_part_save","Save")),
-      tabPanel("Cluster contributions",
-               value="ctr_clus",
-               tableOutput("ctr_clus"),
-               actionButton("ctr_clus_save","Save"))
+      tabPanel("Elbow",
+               value="elbow",
+               plotOutput("elbow"),
+               actionButton("elbow_save","Save")),
+      tabPanel("Within-inertia",
+               value="within",
+               tableOutput("within"),
+               actionButton("within_save","Save"))
     )
   )
   

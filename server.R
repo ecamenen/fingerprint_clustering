@@ -138,20 +138,20 @@ server = function(input, output, session){
       assign("plotGap",
              function() {
                if (nrow(data) < 100){
+                 par(mfrow=c(1,2))
                  printProgress(VERBOSE_NIV2, "Gap statistics calculation")
                  gap = plotGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP, v=F)
                  plotGapPerPart2(gap, MAX_CLUSTERS)
                }
-               },
+              },
              .GlobalEnv)
       
-      assign("plotElbow",
+      assign("plotElb",
              function() plotElbow(between),
              .GlobalEnv)
       assign("within_k",
-             function() getRelativeWithinPerCluster(list_clus, data),
+             getRelativeWithinPerCluster(list_clus, data),
              .GlobalEnv)
-
     }
     
     ##### print table func #####
@@ -241,12 +241,12 @@ server = function(input, output, session){
       #default behaviour
       show(selector = "#navbar li a[data-value=coph]")
       show(selector = "#navbar li a[data-value=dendr]")
-      hide(selector = "#navbar li a[data-value=ctr_part]")
-      hide(selector = "#navbar li a[data-value=ctr_clus]")
+      hide(selector = "#navbar li a[data-value=elbow]")
+      hide(selector = "#navbar li a[data-value=within]")
       
       #responsive for a given condition
-      toggle(condition = input$advanced, selector = "#navbar li a[data-value=ctr_part]")
-      toggle(condition = input$advanced, selector = "#navbar li a[data-value=ctr_clus]")
+      toggle(condition = input$advanced, selector = "#navbar li a[data-value=elbow]")
+      toggle(condition = input$advanced, selector = "#navbar li a[data-value=within]")
       toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=coph]")
       toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=dendr]")
       }
@@ -272,6 +272,7 @@ server = function(input, output, session){
         if(isTRUE(input$advanced)) {}
         # writeTsv("ctr_clus")
         # writeTsv("ctr_part")
+        writeTsv("within_k", "within_k.tsv", v=F)
       }
     }
   })
@@ -372,32 +373,35 @@ server = function(input, output, session){
     })
   })
   
-  output$ctr_part = renderTable({
+  output$elbow = renderPlot({
     tryCatch({
       if(isTRUE(input$advanced)){
         setVariables(input)
         if(checkMaxCluster()){
           setPrintFuncs()
-          observeEvent(input$ctr_part_save, writeTsv("ctr_part"))
-          ctr_part
+          observeEvent(input$elbow_save, savePlot("elbow", plotElb()))
+          plotElb()
+          #plotFus()
+          #print("Gap statistics calculation in progress...")
+          #plotGap()
         }
       }
     }, error = function(e) {
     })
-  }, rownames=T, hover=T, striped=T, digits=2, align="c")
+  })
   
-  output$ctr_clus = renderTable({
+  output$within = renderTable({
     tryCatch({
       if(isTRUE(input$advanced)){
         setVariables(input)
         if(checkMaxCluster()){
           setPrintFuncs()
-          observeEvent(input$ctr_clus_save, writeTsv("within_k", v=F))
-          within_k()
+          observeEvent(input$within_save, writeTsv("within_k", "within_k.tsv", v=F) )
+          within_k
         }
       }
     }, error = function(e) {
     })
-  }, rownames=T, hover=T, striped=T, digits=2, width="100cm", align="c", size=200)
+  }, rownames=T, hover=T, striped=T, digits=2, width="100cm", align="c", na="", size=200)
   
 }
