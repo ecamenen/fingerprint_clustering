@@ -153,8 +153,6 @@ preProcessData = function(d){
     printProgress(VERBOSE_NIV2, "Loading data")
     d = discardRowCondDoublets(d)
   }
-  
-  if ( (nrow(d) > 3500) & (CLASSIF_TYPE > 2) ) stop("With more than 3000 rows to analyse, --classType must be 1: K-medoids or 2: K-means", call.=FALSE)
 
   if ( isSymmetric(as.matrix(d)) & !HEAD) colnames(d) = rownames(d)
 

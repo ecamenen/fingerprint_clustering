@@ -35,10 +35,7 @@ server = function(input, output, session){
   #          SETTINGS
   ###################################
   
-  #Each shiny server functions run in local environment
-  #With assign, variables are forced to be in global env
-  setVariables = function(input){
-    
+  setVariables = function(input) {
     assign("data",
            refresh$data,
            .GlobalEnv)
@@ -59,7 +56,20 @@ server = function(input, output, session){
     assign("ADVANCED",
            input$advanced,
            .GlobalEnv)
-
+    
+    assign("AXIS1",
+           input$axis1,
+           .GlobalEnv)
+    assign("AXIS2",
+           input$axis2,
+           .GlobalEnv)
+  }
+  
+  #Each shiny server functions run in local environment
+  #With assign, variables are forced to be in global env
+  setClassif = function(input){
+    
+    setVariables(input)
     
     #Perform classification
     if(CLASSIF_TYPE < 3) printProgress(VERBOSE_NIV2, "Classification")
@@ -85,12 +95,21 @@ server = function(input, output, session){
            .GlobalEnv)
   }
   
+  
   setPrintFuncs = function(){
     
-    assign("sil_k",
-           sil[[optimal_nb_clusters-1]],
-           .GlobalEnv)
-
+    if(isTRUE(ADVANCED)){
+      
+      if (nrow(data) < (NB_ROW_MAX/2)){
+        printProgress(VERBOSE_NIV2, "Gap statistics calculation")
+        print("ok")
+        assign("gap",
+               getGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP),
+               .GlobalEnv)
+      }
+    }
+    
+    
     ###### plot funcs #####
     assign("plotPCA", 
            function() plotPca(pca, data, clusters, AXIS1, AXIS2),
@@ -104,7 +123,7 @@ server = function(input, output, session){
     assign("plotDend", 
            function() plotDendrogram(CLASSIF_TYPE, optimal_nb_clusters, classif, data, MAX_CLUSTERS, clusters),
            .GlobalEnv)
-
+    
     if(CLASSIF_TYPE <= 2 | isTRUE(ADVANCED)){
       assign("plotHeatmap", 
              function() heatMap(data, dis, sil_k),
@@ -115,17 +134,9 @@ server = function(input, output, session){
              .GlobalEnv)
       
     }
-    
     ##### advanced #####
     if(isTRUE(ADVANCED)){
-      
-      if (nrow(data) < (NB_ROW_MAX/2)){
-        printProgress(VERBOSE_NIV2, "Gap statistics calculation")
-        assign("gap",
-               getGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP),
-               .GlobalEnv)
-      }
-      
+
       assign("plotFus",
              function() plotFusionLevels(MAX_CLUSTERS, classif),
              .GlobalEnv)
@@ -141,7 +152,7 @@ server = function(input, output, session){
                  plotGapPerPart(gap, MAX_CLUSTERS, v=F)
                  #plotGapPerPart2(gap, MAX_CLUSTERS)
                }
-              },
+             },
              .GlobalEnv)
       assign("plotElb",
              function() plotElbow(between),
@@ -152,7 +163,7 @@ server = function(input, output, session){
     }
     
     ##### print table func #####
-
+    
     assign("summary", 
            printSummary(between, diff, mean_silhouette, ADVANCED, gap),
            .GlobalEnv)
@@ -197,10 +208,13 @@ server = function(input, output, session){
              NULL,
              .GlobalEnv)
       
+      assign("sil_k",
+             sil[[optimal_nb_clusters-1]],
+             .GlobalEnv)
+      
       #errors
       if (optimal_nb_clusters==MAX_CLUSTERS) message("\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found.")
       if(min(table(clusters))==1) message("\n[WARNING] A cluster with an only singleton biased the silhouette score.")
-      
       return(T)
     }
   }
@@ -219,7 +233,6 @@ server = function(input, output, session){
     setClassifPar()
      tryCatch({
       refresh$data <- loadData(input$infile$datapath, input$sep, input$header)
-            
     }, error = function(e) {
     message("[ERROR] Wrong separator.")
     })
@@ -247,20 +260,21 @@ server = function(input, output, session){
            .GlobalEnv)
     if(!is.null(input$infile)){
       setData()
+      setClassif(input)
     }
   })
   
   observeEvent(input$dist_type, {
     if(!is.null(input$infile)){
-      print('ok2')
       setDistance()
+      setClassif(input)
     }
   })
   
   observeEvent(c(input$max_clusters, input$classif_type), {
     if(!is.null(input$infile)){
-      print('ok3')
       setClassifPar()
+      setClassif(input)
     }
   })
 
@@ -287,7 +301,7 @@ server = function(input, output, session){
       toggle(condition = input$advanced, id="axis1")
       toggle(condition = input$advanced, id="axis2")
       
-      if(!is.null(input$infile)){ #catch condition when no data are loaded and adv is selected
+      #if(!is.null(input$infile)){ #catch condition when no data are loaded and adv is selected
       
         #responsive for a given condition
         toggle(condition = input$advanced, selector = "#navbar li a[data-value=elbow]")
@@ -297,11 +311,7 @@ server = function(input, output, session){
         toggle(condition = ( input$advanced & as.integer(getClassifValue(input$classif_type) > 2) ), selector = "#navbar li a[data-value=coph]")
         toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=dendr]")
         
-      }
-  })
-  
-  observeEvent(input$refresh, {
-      js$refresh()
+      #}
   })
   
   #function save_all
@@ -335,6 +345,7 @@ server = function(input, output, session){
       }
     }
   })
+  
   
   ###################################
   #          RENDER

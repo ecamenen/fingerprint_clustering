@@ -58,10 +58,11 @@ ui = pageWithSidebar(
     sliderInput("axis2", 
                 h5("PCA axis 2: "), 
                 min=2, max=4, value=2),
-    actionButton("refresh",
-                 "Refresh"),
     actionButton("save_all",
-                 "Save all")
+                 "Save all"),
+    checkboxInput("refresh2",
+                  "Consider first row as header",
+                  value=F)
   ),
   
   mainPanel(
