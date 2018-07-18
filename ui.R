@@ -57,7 +57,7 @@ ui = pageWithSidebar(
                 min=1, max=4, value=1),
     sliderInput("axis2", 
                 h5("PCA axis 2: "), 
-                min=1, max=4, value=2),
+                min=2, max=4, value=2),
     actionButton("refresh",
                  "Refresh"),
     actionButton("save_all",

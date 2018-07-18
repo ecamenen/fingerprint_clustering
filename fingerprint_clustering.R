@@ -68,6 +68,8 @@ TEXT = T #print values on graph (for optimum partition and heatmap)
 NB_ROW_MAX = 200 #max row to have pdf, otherwise, some plots are in png
 DIM_PNG = 2000
 VERBOSE_NIV2=F
+VERBOSE=F
+MAX_CHAR_LEN=25 #maximum length of individual s names
 
 #Loading data
 #dec=".")
@@ -182,10 +184,10 @@ renameRowname = function(d){
   d=d[,-1]
   names.row = renameRownameDoublets(names.row)
   tryCatch({
-    substr(names.row, 1, 25) -> rownames(d)
+    substr(names.row, 1, MAX_CHAR_LEN) -> rownames(d)
     return(d)
   }, warning = function(w) {
-    names.row = renameRownameDoublets(substr(names.row, 1, 25))
+    names.row = renameRownameDoublets(substr(names.row, 1, MAX_CHAR_LEN))
     names.row -> rownames(d)
     return(d)
   }, error = function(e) {
@@ -483,7 +485,7 @@ writeClusters = function(f, v=FALSE){
   # (because writeTsv use only global variables)
   #assign("clusters", clusters,.GlobalEnv)
   #writeTsv("clusters", cl=T, v=v)
-  cluster = cbind(sil_k[,1], sil_k[,3], pca$li[attr(sil_k,"iOrd"),])
+  cluster = cbind(sil_k[,1], sil_k[,3], pca$li[attr(sil_k,"iOrd"),c(1,2)])
   colnames(cluster) = c("Cluster","Silhouette","Axis1","Axis2")
   assign("cluster", cluster,.GlobalEnv)
   writeTsv("cluster", f, cl=F, v=v)
@@ -667,7 +669,7 @@ plotSilhouette = function(sil_k){
   #pdf(opt$output2)
   setGraphicBasic()
   par(mar=c(4, 12, 3, 2))
-  plot(sil_k, max.strlen=25, main=" ", sub= "", do.clus.stat=TRUE, xlab="Silhouette width", cex.names=0.8, col=colorClusters(sil_k[,1]), nmax.lab=100, do.n.k = FALSE, axes=F)
+  plot(sil_k, max.strlen=MAX_CHAR_LEN, main=" ", sub= "", do.clus.stat=TRUE, xlab="Silhouette width", cex.names=0.8, col=colorClusters(sil_k[,1]), nmax.lab=100, do.n.k = FALSE, axes=F)
   mtext(paste("Average silhouette width:", round(summary(sil_k)$avg.width,3)), font=2, cex=1.5, line=1)
   plotAxis(1, 0, 1, 0.2)
   #suprLog = dev.off()

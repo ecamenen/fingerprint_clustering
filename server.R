@@ -19,7 +19,7 @@ loadData = function(f, s="\t",h=F){
                  sep=s,
                  dec=".",
                  row.names=1)
-    colnames(data) <- substr(rownames(data), 1, 25) -> rownames(data)
+    colnames(data) <- substr(rownames(data), 1, MAX_CHAR_LEN) -> rownames(data)
     data = preProcessData(data)
   }
   return (data)
@@ -36,33 +36,23 @@ server = function(input, output, session){
   #Each shiny server functions run in local environment
   #With assign, variables are forced to be in global env
   setVariables = function(input){
-    assign("HEAD", 
-           input$header,
+
+    assign("MAX_CLUSTERS",
+           input$max_clusters,
            .GlobalEnv)
     assign("CLASSIF_TYPE",
            as.integer(getClassifValue(input$classif_type)),
            .GlobalEnv)
-    assign("MAX_CLUSTERS",
-           input$max_clusters,
-           .GlobalEnv)
+    
     assign("NB_CLUSTERS",
            input$nb_clusters,
            .GlobalEnv)
     assign("ADVANCED",
            input$advanced,
            .GlobalEnv)
-    assign("VERBOSE",
-           F,
-           .GlobalEnv)
-    assign("AXIS1",
-           input$axis1,
-           .GlobalEnv)
-    assign("AXIS2",
-           input$axis2,
-           .GlobalEnv)
+
     
     #Perform classification
-    printProgress(VERBOSE_NIV2, "Distance calculation")
     if(CLASSIF_TYPE < 3) printProgress(VERBOSE_NIV2, "Classification")
     assign("classif",
            getClassif(CLASSIF_TYPE, MAX_CLUSTERS, data, dis),
@@ -79,23 +69,25 @@ server = function(input, output, session){
     assign("diff",
            getBetweenDifferences(between),
            .GlobalEnv)
+    
+    printProgress(VERBOSE_NIV2, "PCA") 
+    assign("pca", 
+           dudi.pca(data, scannf=F, nf=4), 
+           .GlobalEnv)
   }
   
   setPrintFuncs = function(){
+    
+    assign("sil_k",
+           sil[[optimal_nb_clusters-1]],
+           .GlobalEnv)
 
     ###### plot funcs #####
-    printProgress(VERBOSE_NIV2, "PCA") 
-    assign("pca", 
-           dudi.pca(data, scannf=F, nf=max(AXIS1,AXIS2)), 
-           .GlobalEnv)
     assign("plotPCA", 
            function() plotPca(pca, data, clusters, AXIS1, AXIS2),
            .GlobalEnv)
     assign("plotBest", 
            function() plotSilhouettePerPart(mean_silhouette),
-           .GlobalEnv)
-    assign("sil_k",
-           sil[[optimal_nb_clusters-1]],
            .GlobalEnv)
     assign("plotSil", 
            function() plotSilhouette(sil_k),
@@ -117,12 +109,14 @@ server = function(input, output, session){
     
     ##### advanced #####
     if(isTRUE(ADVANCED)){
+      
       if (nrow(data) < (NB_ROW_MAX/2)){
         printProgress(VERBOSE_NIV2, "Gap statistics calculation")
         assign("gap",
                getGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP),
                .GlobalEnv)
       }
+      
       assign("plotFus",
              function() plotFusionLevels(MAX_CLUSTERS, classif),
              .GlobalEnv)
@@ -166,6 +160,7 @@ server = function(input, output, session){
   # post-process for data
   # check that the maximum_number of clusters fixed is not greater than the number of row of the datafile
   checkMaxCluster = function(){
+    
     assign("sil", 
            getSilhouettePerPart(data, list_clus, dis),
            .GlobalEnv)
@@ -189,16 +184,13 @@ server = function(input, output, session){
       assign("clusters", 
              list_clus[[optimal_nb_clusters-1]],
              .GlobalEnv)
-      assign("cl_temp", 
-             clusters,
-             .GlobalEnv)
       assign("gap", 
              NULL,
              .GlobalEnv)
       
       #errors
       if (optimal_nb_clusters==MAX_CLUSTERS) message("\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found.")
-      if(min(table(cl_temp))==1) message("\n[WARNING] A cluster with an only singleton biased the silhouette score.")
+      if(min(table(clusters))==1) message("\n[WARNING] A cluster with an only singleton biased the silhouette score.")
       
       return(T)
     }
@@ -214,11 +206,7 @@ server = function(input, output, session){
         suprLog = dev.off()
   }
 
-  ###################################
-  #          EVENTS
-  ###################################
-  
-  observeEvent(input$infile, {
+  setDataNDistance = reactive({
     assign("data",
            loadData(input$infile$datapath, input$sep, input$header),
            .GlobalEnv)
@@ -226,15 +214,51 @@ server = function(input, output, session){
     assign("dis",
            getDistance(data, as.integer(input$dist_type)),
            .GlobalEnv)
+    setClassifPar()
+  })
+  
+  setClassifPar = reactive({
+    assign("MAX_CLUSTERS",
+           input$max_clusters,
+           .GlobalEnv)
+    assign("CLASSIF_TYPE",
+           as.integer(getClassifValue(input$classif_type)),
+           .GlobalEnv)
+    print('ok')
+  })
+  
+  ###################################
+  #          EVENTS
+  ###################################
+  
+  observeEvent(input$infile, {
+    assign("HEAD", 
+           FALSE,
+           .GlobalEnv)
+    setDataNDistance()
+  })
+  
+  # observeEvent(c(input$max_clusters, input$classif_type), {
+  #     print('ok')
+  #     setClassifPar()
+  # })
+  
+  observeEvent(input$header, {
+    assign("HEAD",
+           input$header,
+           .GlobalEnv)
+    if(!is.null(input$infile)){
+      setDataNDistance()
+    }
   })
 
-  # events for advanced mode
-  # observeEvent(input$advanced, {
-  #   if(!is.null(input$infile) & isTRUE(input$advanced)){
-  #     cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
-  #   }
-  # })
-  # 
+  #events for advanced mode
+  observeEvent(input$advanced, {
+    if(!is.null(input$infile)){
+      #cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
+    }
+  })
+
   # hide either input options or tabs
   observe({
     
@@ -265,7 +289,7 @@ server = function(input, output, session){
   })
   
   observeEvent(input$refresh, {
-      js$refresh();
+      js$refresh()
   })
   
   #function save_all
@@ -352,6 +376,12 @@ server = function(input, output, session){
       setVariables(input)
       if(checkMaxCluster()){
         setPrintFuncs()
+        assign("AXIS1",
+               input$axis1,
+               .GlobalEnv)
+        assign("AXIS2",
+               input$axis2,
+               .GlobalEnv)
         observeEvent(input$pca_save, savePlot("pca", plotPCA()))
         plotPCA()
       }
