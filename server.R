@@ -21,12 +21,14 @@ loadData = function(f, s="\t",h=F){
                  row.names=1)
     colnames(data) <- substr(rownames(data), 1, MAX_CHAR_LEN) -> rownames(data)
     data = preProcessData(data)
+
   }
   return (data)
 }
 
 server = function(input, output, session){
-
+  
+  refresh <- reactiveValues()
   getClassifValue = function(key)  unlist(classif_methods[key])
   
   ###################################
@@ -36,12 +38,19 @@ server = function(input, output, session){
   #Each shiny server functions run in local environment
   #With assign, variables are forced to be in global env
   setVariables = function(input){
-
+    
+    assign("data",
+           refresh$data,
+           .GlobalEnv)
+    assign("dis",
+           refresh$dis,
+           .GlobalEnv)
+    
     assign("MAX_CLUSTERS",
-           input$max_clusters,
+           refresh$max,
            .GlobalEnv)
     assign("CLASSIF_TYPE",
-           as.integer(getClassifValue(input$classif_type)),
+           refresh$classif_type,
            .GlobalEnv)
     
     assign("NB_CLUSTERS",
@@ -206,49 +215,52 @@ server = function(input, output, session){
         suprLog = dev.off()
   }
 
-  setDataNDistance = reactive({
-    assign("data",
-           loadData(input$infile$datapath, input$sep, input$header),
-           .GlobalEnv)
-    printProgress(VERBOSE_NIV2, "Distance calculation")
-    assign("dis",
-           getDistance(data, as.integer(input$dist_type)),
-           .GlobalEnv)
+  setData = reactive({
     setClassifPar()
+     tryCatch({
+      refresh$data <- loadData(input$infile$datapath, input$sep, input$header)
+            
+    }, error = function(e) {
+    message("[ERROR] Wrong separator.")
+    })
+    setDistance()
+  })
+  
+  setDistance = reactive({
+    printProgress(VERBOSE_NIV2, "Distance calculation")
+    refresh$dis <- getDistance(refresh$data, as.integer(input$dist_type))
   })
   
   setClassifPar = reactive({
-    assign("MAX_CLUSTERS",
-           input$max_clusters,
-           .GlobalEnv)
-    assign("CLASSIF_TYPE",
-           as.integer(getClassifValue(input$classif_type)),
-           .GlobalEnv)
-    print('ok')
+    #if ( (nrow(data) > 3500) & (input$classif_type > 2) ) message("With more than 3000 rows to analyse, classification method must be K-medoids or K-means", call.=FALSE)
+    refresh$max <- input$max_clusters
+    refresh$classif_type <- as.integer(getClassifValue(input$classif_type))
   })
   
   ###################################
   #          EVENTS
   ###################################
   
-  observeEvent(input$infile, {
-    assign("HEAD", 
-           FALSE,
-           .GlobalEnv)
-    setDataNDistance()
-  })
-  
-  # observeEvent(c(input$max_clusters, input$classif_type), {
-  #     print('ok')
-  #     setClassifPar()
-  # })
-  
-  observeEvent(input$header, {
+  observeEvent(c(input$infile, input$header, input$sep), {
     assign("HEAD",
            input$header,
            .GlobalEnv)
     if(!is.null(input$infile)){
-      setDataNDistance()
+      setData()
+    }
+  })
+  
+  observeEvent(input$dist_type, {
+    if(!is.null(input$infile)){
+      print('ok2')
+      setDistance()
+    }
+  })
+  
+  observeEvent(c(input$max_clusters, input$classif_type), {
+    if(!is.null(input$infile)){
+      print('ok3')
+      setClassifPar()
     }
   })
 
