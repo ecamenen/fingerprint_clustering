@@ -1,4 +1,3 @@
-rm(list=ls())
 source("fingerprint_clustering.R")
 classif_methods <- list("K-menoids" = 1,  "K-means" = 2, "Ward"=3, "Complete links"=4, "Single links"=5, "UPGMA"=6, "WPGMA"=7, "WPGMC"=8, "UPGMC"=9)
 library("shinyjs")
@@ -21,6 +20,7 @@ loadData = function(f, s="\t",h=F){
                  row.names=1)
     colnames(data) <- substr(rownames(data), 1, MAX_CHAR_LEN) -> rownames(data)
     data = preProcessData(data)
+
 
   }
   return (data)
@@ -93,22 +93,49 @@ server = function(input, output, session){
     assign("pca", 
            dudi.pca(data, scannf=F, nf=4), 
            .GlobalEnv)
+    
+    assign("sil", 
+           getSilhouettePerPart(data, list_clus, dis),
+           .GlobalEnv)
+    assign("mean_silhouette", 
+           getMeanSilhouettePerPart(sil),
+           .GlobalEnv)
+    
+    
+    if(NB_CLUSTERS > 0) 
+      assign("optimal_nb_clusters",
+             NB_CLUSTERS,
+             .GlobalEnv)
+    else assign("optimal_nb_clusters", 
+                which.max(mean_silhouette)+1,
+                .GlobalEnv)
+    
+    #cl_temp, because writeTsv(clusters) recreate a different object named clusters
+    assign("clusters", 
+           list_clus[[optimal_nb_clusters-1]],
+           .GlobalEnv)
+    
+    if(!input$advanced){
+    assign("gap", 
+           NULL,
+           .GlobalEnv)
+    }
+    
+    assign("sil_k",
+           sil[[optimal_nb_clusters-1]],
+           .GlobalEnv)
+    
+    #errors
+    if (optimal_nb_clusters==MAX_CLUSTERS) message("\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found.")
+    if(min(table(clusters))==1) message("\n[WARNING] A cluster with an only singleton biased the silhouette score.")
+    
+    writeClusters("clusters.tsv", v=F)
+    
+    setPrintFuncs()
   }
   
   
   setPrintFuncs = function(){
-    
-    if(isTRUE(ADVANCED)){
-      
-      if (nrow(data) < (NB_ROW_MAX/2)){
-        printProgress(VERBOSE_NIV2, "Gap statistics calculation")
-        print("ok")
-        assign("gap",
-               getGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP),
-               .GlobalEnv)
-      }
-    }
-    
     
     ###### plot funcs #####
     assign("plotPCA", 
@@ -174,47 +201,17 @@ server = function(input, output, session){
     #        100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data),
     #        .GlobalEnv)
     
-    writeClusters("clusters.tsv", v=F)
+
   }
   
   # post-process for data
   # check that the maximum_number of clusters fixed is not greater than the number of row of the datafile
   checkMaxCluster = function(){
     
-    assign("sil", 
-           getSilhouettePerPart(data, list_clus, dis),
-           .GlobalEnv)
-    assign("mean_silhouette", 
-           getMeanSilhouettePerPart(sil),
-           .GlobalEnv)
-    
     if(MAX_CLUSTERS > (nrow(data) - 1)){
       message(paste("[WARNING] Max number of clusters must be lower (and not equal) to the number of line of the dataset (", nrow(data), ")", sep=""))
       return (F)
     }else{
-      if(NB_CLUSTERS > 0) 
-        assign("optimal_nb_clusters",
-               NB_CLUSTERS,
-               .GlobalEnv)
-      else assign("optimal_nb_clusters", 
-             which.max(mean_silhouette)+1,
-             .GlobalEnv)
-      
-      #cl_temp, because writeTsv(clusters) recreate a different object named clusters
-      assign("clusters", 
-             list_clus[[optimal_nb_clusters-1]],
-             .GlobalEnv)
-      assign("gap", 
-             NULL,
-             .GlobalEnv)
-      
-      assign("sil_k",
-             sil[[optimal_nb_clusters-1]],
-             .GlobalEnv)
-      
-      #errors
-      if (optimal_nb_clusters==MAX_CLUSTERS) message("\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found.")
-      if(min(table(clusters))==1) message("\n[WARNING] A cluster with an only singleton biased the silhouette score.")
       return(T)
     }
   }
@@ -277,11 +274,33 @@ server = function(input, output, session){
       setClassif(input)
     }
   })
+  
+  observeEvent(input$nb_clusters, {
+    if(!is.null(input$infile) & input$nb_clusters > 2){
+      setClassif(input)
+    }
+  })
+  
 
   #events for advanced mode
   observeEvent(input$advanced, {
     if(!is.null(input$infile)){
-      #cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
+
+      if(isTRUE(input$advanced)){
+        cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
+        
+        if (nrow(data) < (NB_ROW_MAX/2)){
+          printProgress(VERBOSE_NIV2, "Gap statistics calculation")
+          
+          assign("gap",
+                 getGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP),
+                 .GlobalEnv)
+        }
+      }else{
+        assign("gap",
+               NULL,
+               .GlobalEnv)
+      }
     }
   })
 
@@ -355,7 +374,6 @@ server = function(input, output, session){
     tryCatch({
       setVariables(input)
       if(checkMaxCluster()){
-        setPrintFuncs()
         observeEvent(input$summary_save, writeTsv("summary", "summary.tsv", v=F)); summary
       }
     }, error = function(e) {
@@ -366,14 +384,7 @@ server = function(input, output, session){
 
     tryCatch({
       setVariables(input)
-
       if(checkMaxCluster()){
-        setPrintFuncs()
-        #plotFusionLevels(getClassifValue(input$CLASSIF_TYPE), MAX_CLUSTERS, classif, data)
-        #TODO: pass an event into a nested function (actually not working)
-        # plot2(input$sil_save,
-        #       "best_clustering",
-        #       plotSilhouettePerPart(CLASSIF_TYPE, MAX_CLUSTERS + 1, classif, data))
         observeEvent(input$best_save, savePlot("best_clustering", plotBest()))
         plotBest()
 
@@ -386,7 +397,6 @@ server = function(input, output, session){
     tryCatch({
       setVariables(input)
       if(checkMaxCluster()){
-        setPrintFuncs()
         observeEvent(input$sil_save, savePlot("silhouette", plotSil()))
         plotSil()
       }
@@ -398,7 +408,6 @@ server = function(input, output, session){
     tryCatch({
       setVariables(input)
       if(checkMaxCluster()){
-        setPrintFuncs()
         assign("AXIS1",
                input$axis1,
                .GlobalEnv)
@@ -417,7 +426,6 @@ server = function(input, output, session){
       setVariables(input)
       if(checkMaxCluster()){
         par(mar=c(0,0,0,0)) ; plot(0:1,0:1, axes=F, type="n") #delete sil plot
-        setPrintFuncs()
         observeEvent(input$heatmap_save, savePlot("heatmap", plotHeatmap()))
         plotHeatmap()
       }
@@ -430,7 +438,6 @@ server = function(input, output, session){
       if(isTRUE(input$advanced) & CLASSIF_TYPE > 2){
         setVariables(input)
         if(checkMaxCluster()){
-          setPrintFuncs()
           observeEvent(input$coph_save, savePlot("cohenetic", plotCoph()))
           plotCoph()
         }
@@ -444,7 +451,6 @@ server = function(input, output, session){
       if( CLASSIF_TYPE > 2){
         setVariables(input)
         if(checkMaxCluster()){
-          setPrintFuncs()
           observeEvent(input$dendr_save, savePlot("dendrogram", plotDend()))
           plotDend()
         }
@@ -458,7 +464,6 @@ server = function(input, output, session){
       if(isTRUE(input$advanced) & CLASSIF_TYPE > 2){
         setVariables(input)
         if(checkMaxCluster()){
-          setPrintFuncs()
           observeEvent(input$fusion_save, savePlot("fusion", plotFus()))
           plotFus()
         }
@@ -472,7 +477,6 @@ server = function(input, output, session){
       if(isTRUE(input$advanced)){
         setVariables(input)
         if(checkMaxCluster()){
-          setPrintFuncs()
           observeEvent(input$gap_save, savePlot("gap", plotGap()))
           plotGap()
         }
@@ -486,12 +490,8 @@ server = function(input, output, session){
       if(isTRUE(input$advanced)){
         setVariables(input)
         if(checkMaxCluster()){
-          setPrintFuncs()
           observeEvent(input$elbow_save, savePlot("elbow", plotElb()))
           plotElb()
-          #plotFus()
-          #print("Gap statistics calculation in progress...")
-          #plotGap()
         }
       }
     }, error = function(e) {
@@ -503,7 +503,6 @@ server = function(input, output, session){
       if(isTRUE(input$advanced)){
         setVariables(input)
         if(checkMaxCluster()){
-          setPrintFuncs()
           observeEvent(input$within_save, writeTsv("within_k", "within_k.tsv", v=F) )
           within_k
         }

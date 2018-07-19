@@ -1,3 +1,4 @@
+rm(list=ls())
 classif_methods = list("K-menoids" = 1,  "K-means" = 2, "Ward"=3, "Complete links"=4, "Single links"=5, "UPGMA"=6, "WPGMA"=7, "WPGMC"=8, "UPGMC"=9)
 library("shinyjs")
 jscode <- "shinyjs.refresh = function() { location.reload(); }"
@@ -59,10 +60,7 @@ ui = pageWithSidebar(
                 h5("PCA axis 2: "), 
                 min=2, max=4, value=2),
     actionButton("save_all",
-                 "Save all"),
-    checkboxInput("refresh2",
-                  "Consider first row as header",
-                  value=F)
+                 "Save all")
   ),
   
   mainPanel(

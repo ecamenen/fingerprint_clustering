@@ -1,51 +1,3 @@
-# getArgs = function(){
-#   option_list = list(
-#     make_option(c("-i", "--infile"), type="character", metavar="character",
-#                 help="Fingerprint file name"),
-#     make_option(c( "--output1"), type="character", default="average_silhouette.pdf", 
-#                 metavar="character", help="Average silhouettes file name [default: %default]"),
-#     make_option(c( "--output2"), type="character", default="silhouette.pdf", 
-#                 metavar="character", help="Silhouette file name [default: %default]"),
-#     make_option(c( "--output3"), type="character", default="pca.pdf", 
-#                 metavar="character", help="PCA file name [default: %default]"),
-#     make_option(c( "--output4"), type="character", default="heatmap.pdf", 
-#                 metavar="character", help="Heatmap file name [default: %default]"),
-#     make_option(c( "--output5"), type="character", default="summary.tsv", 
-#                 metavar="character", help="Summary file name [default: %default]"),
-#     make_option(c( "--output6"), type="character", default="clusters.tsv", 
-#                 metavar="character", help="Clusters file name [default: %default]"),
-#     make_option(c( "--output7"), type="character", default="dendrogram.pdf", 
-#                 metavar="character", help="Dendrogram file name [default: %default]"),
-#     make_option(c( "--output8"), type="character", default="shepard_graph.pdf", 
-#                 metavar="character", help="Shepard graph file name [default: %default]"),
-#     make_option(c( "--output9"), type="character", default="fusion_levels.pdf", 
-#                 metavar="character", help="Fusion levels file name [default: %default]"),
-#     make_option(c("-m", "--maxClusters"), type="integer", default=6, metavar="integer",
-#                 help="Maximum number of clusters [default: %default]"),
-#     make_option(c("-t", "--classifType"), type="integer", default=4, metavar="integer",
-#                 help="Type of classification [default: Complete links] (1: K-menoids; 2: K-means; 3: Ward; 4: Complete links; 5: Single links; 6: UPGMA; 7: WPGMA; 8: WPGMC; 9: UPGMC)"),
-#     make_option(c("-a", "--advanced"), type="logical", action="store_true", 
-#                 help="Activate advanced mode (print more outputs)"),
-#     make_option(c("-q", "--quiet"), type="logical", action="store_true",
-#                 help="Activate quiet mode"),
-#     make_option(c("-v", "--verbose"), type="logical", action="store_true",
-#                 help="Activate \"super-verbose\" mode"),
-#     make_option(c("-n", "--nbClusters"), type="integer", metavar="integer",
-#                 help="Fix the number of clusters"),
-#     make_option(c("-d", "--distance"), type="integer", default=1, metavar="integer",
-#                 help="Type of distance [default: Euclidian] (1: Euclidian, 2: Manhattan, 3: Jaccard, 4: Sokal & Michener, 5 Sorensen (Dice), 6: Ochiai)"),
-#     make_option(c("-H", "--header"), type="logical", action="store_true",
-#                 help="Consider first row as header of columns"),
-#     make_option(c("-s", "--separator"), type="integer", metavar="integer", default=1,
-#                 help="Type of separator [default: tabulation] (1: Tabulation, 2: Semicolon"),
-#     make_option(c("-N", "--nbAxis"), type="integer", default=2, metavar="integer",
-#                 help="Number of axis for pca (default: 2)")
-#   )
-#   #if -h, avoid exit with error
-#   args = commandArgs(trailingOnly=T)
-#   if ("-h" %in% args)  q("no", status=0, runLast = F)
-#   return (OptionParser(option_list=option_list))
-# }
 
 ################################
 #            MAIN
@@ -75,31 +27,6 @@ MAX_CHAR_LEN=25 #maximum length of individual s names
 #dec=".")
 #if (isTRUE(VERBOSE_NIV2)) start_time = Sys.time()
 
-#Indexes
-# if(CLASSIF_TYPE > 2){
-#   plotFusionLevels(MAX_CLUSTERS, classif)
-# }
-
-#ADVANCED indexes
-ADVANCED=F
-if (isTRUE(ADVANCED)){
-  
-  if (nrow(data) < 100){
-    printProgress(VERBOSE_NIV2, "Gap statistics calculation")
-    gap = plotGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP, v=VERBOSE)
-    plotGapPerPart2(gap, MAX_CLUSTERS)
-  }
-  
-  plotElbow(between)
-  #decomment to have contribution per variable to the inertia of each clusters and to each partionning
-  #contribution = 100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data)
-  #discriminant_power = 100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data)
-  within_k = getRelativeWithinPerCluster(list_clus, data)
-  
-  # for (i in c("contribution", "discriminant_power"))
-  #   writeTsv(i, v=F)
-  writeTsv("within_k", v=F)
-}
 
 #decomment to have the mean of the variables for each clusters
 #getClusterCentroids(data, clusters)
@@ -456,33 +383,6 @@ colorClusters = function(cl){
 # f : filename
 # r: ordered alphabetically
 writeClusters = function(f, v=FALSE){
-#writeClusters = function(d, cl, f, r=FALSE, v=FALSE){
-  # nb_cl = length(levels(as.factor(cl)))
-  # clusters = matrix(NA, length(cl), nb_cl)
-  # for (i in 1:nb_cl ){
-  #   if (r == FALSE){
-  #     #get metabolites from clusters and put into a column of the output matrix
-  #     # from the begining of the column to the end of the vector of metabolites names
-  #     clusters[c(1:length(cl[cl==i])),i] =  names(cl[cl==i])
-  #   }else if (r == TRUE){
-  #     #ordering alphabetically
-  #     clusters[c(1:length(cl[cl==i])),i] = sort(names(cl[cl==i]))
-  #   }
-  #   #ordering by clusters size
-  #   length_cl = colSums(!is.na(clusters))
-  #   for (i in 2:nb_cl) {
-  #     #inversion if a column as more metabolites than the previous
-  #     if (length_cl[i] > length_cl[i-1]){
-  #       temp = clusters[,i-1]
-  #       clusters[,i-1] = clusters[,i]
-  #       clusters[,i] = temp
-  #     }
-  #   }
-  # }
-  #dirty way to force saving a local variable
-  # (because writeTsv use only global variables)
-  #assign("clusters", clusters,.GlobalEnv)
-  #writeTsv("clusters", cl=T, v=v)
   cluster = cbind(sil_k[,1], sil_k[,3], pca$li[attr(sil_k,"iOrd"),c(1,2)])
   colnames(cluster) = c("Cluster","Silhouette","Axis1","Axis2")
   assign("cluster", cluster,.GlobalEnv)
