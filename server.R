@@ -20,8 +20,6 @@ loadData = function(f, s="\t",h=F){
                  row.names=1)
     colnames(data) <- substr(rownames(data), 1, MAX_CHAR_LEN) -> rownames(data)
     data = preProcessData(data)
-
-
   }
   return (data)
 }
@@ -35,7 +33,7 @@ server = function(input, output, session){
   #          SETTINGS
   ###################################
   
-  setVariables = function(input) {
+  setVariables = reactive({
     assign("data",
            refresh$data,
            .GlobalEnv)
@@ -63,13 +61,13 @@ server = function(input, output, session){
     assign("AXIS2",
            input$axis2,
            .GlobalEnv)
-  }
+  })
   
   #Each shiny server functions run in local environment
   #With assign, variables are forced to be in global env
-  setClassif = function(input){
+  setClassif = reactive({
     
-    setVariables(input)
+    setVariables()
     
     #Perform classification
     if(CLASSIF_TYPE < 3) printProgress(VERBOSE_NIV2, "Classification")
@@ -132,7 +130,7 @@ server = function(input, output, session){
     writeClusters("clusters.tsv", v=F)
     
     setPrintFuncs()
-  }
+  })
   
   
   setPrintFuncs = function(){
@@ -257,27 +255,27 @@ server = function(input, output, session){
            .GlobalEnv)
     if(!is.null(input$infile)){
       setData()
-      setClassif(input)
+      setClassif()
     }
   })
   
   observeEvent(input$dist_type, {
     if(!is.null(input$infile)){
       setDistance()
-      setClassif(input)
+      setClassif()
     }
   })
   
   observeEvent(c(input$max_clusters, input$classif_type), {
     if(!is.null(input$infile)){
       setClassifPar()
-      setClassif(input)
+      setClassif()
     }
   })
   
   observeEvent(input$nb_clusters, {
     if(!is.null(input$infile) & input$nb_clusters > 2){
-      setClassif(input)
+      setClassif()
     }
   })
   
@@ -295,6 +293,8 @@ server = function(input, output, session){
           assign("gap",
                  getGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP),
                  .GlobalEnv)
+          
+          setPrintFuncs()
         }
       }else{
         assign("gap",
@@ -336,7 +336,7 @@ server = function(input, output, session){
   #function save_all
   observeEvent(input$save_all, {
     if(is.data.frame(data)){
-      setVariables(input)
+      setVariables()
       setPrintFuncs()
       writeTsv("summary", "summary.tsv", v=F)
       
@@ -372,7 +372,7 @@ server = function(input, output, session){
   
   output$summary = renderTable({
     tryCatch({
-      setVariables(input)
+      setVariables()
       if(checkMaxCluster()){
         observeEvent(input$summary_save, writeTsv("summary", "summary.tsv", v=F)); summary
       }
@@ -383,7 +383,7 @@ server = function(input, output, session){
   output$best_cluster = renderPlot({
 
     tryCatch({
-      setVariables(input)
+      setVariables()
       if(checkMaxCluster()){
         observeEvent(input$best_save, savePlot("best_clustering", plotBest()))
         plotBest()
@@ -395,7 +395,7 @@ server = function(input, output, session){
   
   output$silhouette = renderPlot({
     tryCatch({
-      setVariables(input)
+      setVariables()
       if(checkMaxCluster()){
         observeEvent(input$sil_save, savePlot("silhouette", plotSil()))
         plotSil()
@@ -406,7 +406,7 @@ server = function(input, output, session){
   
   output$pca = renderPlot({
     tryCatch({
-      setVariables(input)
+      setVariables()
       if(checkMaxCluster()){
         assign("AXIS1",
                input$axis1,
@@ -423,7 +423,7 @@ server = function(input, output, session){
   
   output$heatmap = renderPlot({
     tryCatch({
-      setVariables(input)
+      setVariables()
       if(checkMaxCluster()){
         par(mar=c(0,0,0,0)) ; plot(0:1,0:1, axes=F, type="n") #delete sil plot
         observeEvent(input$heatmap_save, savePlot("heatmap", plotHeatmap()))
@@ -436,7 +436,7 @@ server = function(input, output, session){
   output$cophenetic = renderPlot({
     tryCatch({
       if(isTRUE(input$advanced) & CLASSIF_TYPE > 2){
-        setVariables(input)
+        setVariables()
         if(checkMaxCluster()){
           observeEvent(input$coph_save, savePlot("cohenetic", plotCoph()))
           plotCoph()
@@ -449,7 +449,7 @@ server = function(input, output, session){
   output$dendrogram = renderPlot({
     tryCatch({
       if( CLASSIF_TYPE > 2){
-        setVariables(input)
+        setVariables()
         if(checkMaxCluster()){
           observeEvent(input$dendr_save, savePlot("dendrogram", plotDend()))
           plotDend()
@@ -462,7 +462,7 @@ server = function(input, output, session){
   output$fusion = renderPlot({
     tryCatch({
       if(isTRUE(input$advanced) & CLASSIF_TYPE > 2){
-        setVariables(input)
+        setVariables()
         if(checkMaxCluster()){
           observeEvent(input$fusion_save, savePlot("fusion", plotFus()))
           plotFus()
@@ -475,7 +475,7 @@ server = function(input, output, session){
   output$gap = renderPlot({
     tryCatch({
       if(isTRUE(input$advanced)){
-        setVariables(input)
+        setVariables()
         if(checkMaxCluster()){
           observeEvent(input$gap_save, savePlot("gap", plotGap()))
           plotGap()
@@ -488,7 +488,7 @@ server = function(input, output, session){
   output$elbow = renderPlot({
     tryCatch({
       if(isTRUE(input$advanced)){
-        setVariables(input)
+        setVariables()
         if(checkMaxCluster()){
           observeEvent(input$elbow_save, savePlot("elbow", plotElb()))
           plotElb()
@@ -501,7 +501,7 @@ server = function(input, output, session){
   output$within = renderTable({
     tryCatch({
       if(isTRUE(input$advanced)){
-        setVariables(input)
+        setVariables()
         if(checkMaxCluster()){
           observeEvent(input$within_save, writeTsv("within_k", "within_k.tsv", v=F) )
           within_k
