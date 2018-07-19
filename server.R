@@ -19,8 +19,8 @@ loadData = function(f, s="\t",h=F){
                  sep=s,
                  dec=".",
                  row.names=1)
-    substr(rownames(data), 1, MAX_CHAR_LEN) -> rownames(data)
     data = preProcessData(data)
+    #substr(rownames(data), 1, MAX_CHAR_LEN) -> rownames(data)
   }
   return (data)
 }
@@ -80,6 +80,7 @@ server = function(input, output, session){
     assign("classif",
            getClassif(CLASSIF_TYPE, MAX_CLUSTERS, data, dis),
            .GlobalEnv)
+    if(VERBOSE_NIV2) cat("done.\n")
     assign("list_clus",
            getClusterPerPart(MAX_CLUSTERS+1, classif),
            .GlobalEnv)
@@ -96,6 +97,7 @@ server = function(input, output, session){
     assign("pca", 
            dudi.pca(data, scannf=F, nf=4), 
            .GlobalEnv)
+    if(VERBOSE_NIV2) cat("done.\n")
     
     assign("sil", 
            getSilhouettePerPart(data, list_clus, dis),
@@ -170,6 +172,7 @@ server = function(input, output, session){
              .GlobalEnv)
       
     }
+  
     ##### advanced #####
     if(isTRUE(ADVANCED)){
 
@@ -180,6 +183,7 @@ server = function(input, output, session){
              function()  {
                printProgress(VERBOSE_NIV2, "Cophenetic calculation")
                plotCohenetic(dis, classif)
+               if(VERBOSE_NIV2) cat("done.\n")
              },
              .GlobalEnv)
       assign("plotGap",
@@ -247,7 +251,7 @@ server = function(input, output, session){
 
   setData = reactive({
     setClassifPar()
-     #tryCatch({
+     tryCatch({
     
       if(input$infile$size > 3000000) {
         assign("VERBOSE_NIV2",
@@ -260,17 +264,19 @@ server = function(input, output, session){
       }
     
       refresh$data <- loadData(input$infile$datapath, input$sep, input$header)
+      if(VERBOSE_NIV2) cat("done.\n")
       if ( isSymmetric(as.matrix(refresh$data)) & !input$header) colnames(refresh$data) = rownames(refresh$data)
       
-    # }, error = function(e) {
-    # message("[WARNING] Wrong separator, please selects another one.")
-    # })
+    }, error = function(e) {
+    message("[WARNING] Wrong separator, please selects another one.")
+    })
     setDistance()
   })
   
   setDistance = reactive({
     printProgress(VERBOSE_NIV2, "Distance calculation")
     refresh$dis <- getDistance(refresh$data, as.integer(input$dist_type))
+    if(VERBOSE_NIV2) cat("done.\n")
     setClassif()
   })
   
@@ -325,7 +331,7 @@ server = function(input, output, session){
           assign("gap",
                  getGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP),
                  .GlobalEnv)
-          
+          if(VERBOSE_NIV2) cat("done.\n")
         }else{
           assign("gap",
                  NULL,
@@ -488,7 +494,14 @@ server = function(input, output, session){
       setVariables()
       if(isTRUE(input$advanced) & CLASSIF_TYPE > 2){
         if(checkMaxCluster()){
-          observeEvent(input$coph_save, savePlot("cohenetic", plotCoph()))
+          observeEvent(input$coph_save, 
+                       {
+                         if(nrow(as.matrix(data)) > NB_ROW_MAX ) {
+                           savePng("cohenetic", plotCoph())
+                         }else{
+                           savePlot("cohenetic", plotCoph())
+                         }
+                       })
           plotCoph()
         }
       }

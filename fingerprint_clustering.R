@@ -21,7 +21,7 @@ NB_ROW_MAX = 200 #max row to have pdf, otherwise, some plots are in png
 DIM_PNG = 2000
 VERBOSE_NIV2=F
 VERBOSE=F
-MAX_CHAR_LEN=100 #maximum length of individual s names
+MAX_CHAR_LEN=25 #maximum length of individual s names
 PNG = F
 
 #Loading data
@@ -45,7 +45,7 @@ PNG = F
 
 printProgress = function (v, val){
   if(isTRUE(v)) 
-    cat(paste("\n[", format(Sys.time(), "%X"), "] ", val ,"in progress...\n"), sep="")
+    cat(paste("\n[", format(Sys.time(), "%X"), "] ", val ,"in progress..."), sep="")
 }
 
 getTimeElapsed = function(start_time){
@@ -402,7 +402,7 @@ plotCohenetic=function(d, cah){
   cor_coph = cor(d, coph_matrix)
   if (isTRUE(VERBOSE)) cat(paste("\nCOPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation with the data:",round(cor_coph,3),"\n"))
   
-  # if(nrow(as.matrix(d)) > NB_ROW_MAX ) {
+  # if(PNG ) {
   #   #png(paste(opt$output8, ".png", sep=""), DIM_PNG/2, DIM_PNG/2)
   #   par(cex.lab=1.5*2, font.lab=3, font.axis=3, cex.axis=0.8*2, cex.main=2*2, cex=1, lwd=3*2)
   #   par(mar=c(5.1,5.1,5.1,2.1)+7)
@@ -734,6 +734,7 @@ heatMap = function(df, d, s=NULL, c=NULL, cl=NULL){
   text(x=x_lab, y = seq(0,1,l=3), labels = round(seq(max(matrix),0,l=3)),cex=cex.lab, pos=4)
   
   options(warn = 0)
+  if(VERBOSE_NIV2) cat("done.\n")
   #suprLog = dev.off()
 }
 
