@@ -37,6 +37,15 @@ server = function(input, output, session){
     assign("data",
            refresh$data,
            .GlobalEnv)
+    if(nrow(data) > NB_ROW_MAX) {
+      assign("VERBOSE_NIV2",
+           T,
+           .GlobalEnv)
+    }else{ assign("VERBOSE_NIV2",
+           F,
+           .GlobalEnv)
+    }
+    
     assign("dis",
            refresh$dis,
            .GlobalEnv)
@@ -72,7 +81,7 @@ server = function(input, output, session){
     if ( (nrow(data) > 3000) & (input$classif_type > 2) ) message("[WARNING] With more than 3000 rows to analyse, classification method must be K-medoids or K-means", call.=FALSE)
 
     #Perform classification
-    if(CLASSIF_TYPE < 3) printProgress(VERBOSE_NIV2, "Classification")
+    printProgress(VERBOSE_NIV2, "Classification")
     assign("classif",
            getClassif(CLASSIF_TYPE, MAX_CLUSTERS, data, dis),
            .GlobalEnv)
