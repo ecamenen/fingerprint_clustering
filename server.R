@@ -1,3 +1,4 @@
+options(shiny.maxRequestSize=30*1024^2)
 source("fingerprint_clustering.R")
 classif_methods <- list("K-menoids" = 1,  "K-means" = 2, "Ward"=3, "Complete links"=4, "Single links"=5, "UPGMA"=6, "WPGMA"=7, "WPGMC"=8, "UPGMC"=9)
 library("shinyjs")
@@ -18,7 +19,7 @@ loadData = function(f, s="\t",h=F){
                  sep=s,
                  dec=".",
                  row.names=1)
-    colnames(data) <- substr(rownames(data), 1, MAX_CHAR_LEN) -> rownames(data)
+    substr(rownames(data), 1, MAX_CHAR_LEN) -> rownames(data)
     data = preProcessData(data)
   }
   return (data)
@@ -34,18 +35,11 @@ server = function(input, output, session){
   ###################################
   
   setVariables = reactive({
+    
     assign("data",
            refresh$data,
            .GlobalEnv)
-    if(nrow(data) > NB_ROW_MAX) {
-      assign("VERBOSE_NIV2",
-           T,
-           .GlobalEnv)
-    }else{ assign("VERBOSE_NIV2",
-           F,
-           .GlobalEnv)
-    }
-    
+
     assign("dis",
            refresh$dis,
            .GlobalEnv)
@@ -82,6 +76,7 @@ server = function(input, output, session){
 
     #Perform classification
     printProgress(VERBOSE_NIV2, "Classification")
+    
     assign("classif",
            getClassif(CLASSIF_TYPE, MAX_CLUSTERS, data, dis),
            .GlobalEnv)
@@ -90,7 +85,6 @@ server = function(input, output, session){
            .GlobalEnv)
     
     #inertia
-    printProgress(VERBOSE_NIV2, "Index calculation")
     assign("between",
            getRelativeBetweenPerPart(MAX_CLUSTERS, data, list_clus),
            .GlobalEnv)
@@ -109,7 +103,6 @@ server = function(input, output, session){
     assign("mean_silhouette", 
            getMeanSilhouettePerPart(sil),
            .GlobalEnv)
-    
     
     setClusters()
     
@@ -232,27 +225,49 @@ server = function(input, output, session){
 
   # f: filename
   # func: plot function
-  savePlot = function(f, func, adv=F){
-        f = paste(f, ".pdf", sep="")
-        if(isTRUE(adv)) savePdf(f)
-        else pdf(f)
-        func
-        suprLog = dev.off()
+  savePlot = function(f, func){
+    f = paste(f, ".pdf", sep="")
+    pdf(f)
+    func
+    suprLog = dev.off()
+  }
+
+  savePng = function(f, func){
+    assign("PNG", T, .GlobalEnv)
+    f = paste(f, ".png", sep="")
+    png(f,DIM_PNG, DIM_PNG)
+    func
+    suprLog = dev.off()
+    assign("PNG", F, .GlobalEnv)
   }
 
   setData = reactive({
     setClassifPar()
-     tryCatch({
+     #tryCatch({
+    
+      if(input$infile$size > 3000000) {
+        assign("VERBOSE_NIV2",
+               T,
+               .GlobalEnv)
+      }else{ 
+        assign("VERBOSE_NIV2",
+               F,
+               .GlobalEnv)
+      }
+    
       refresh$data <- loadData(input$infile$datapath, input$sep, input$header)
-    }, error = function(e) {
-    message("[ERROR] Wrong separator.")
-    })
+      if ( isSymmetric(as.matrix(refresh$data)) & !input$header) colnames(refresh$data) = rownames(refresh$data)
+      
+    # }, error = function(e) {
+    # message("[WARNING] Wrong separator, please selects another one.")
+    # })
     setDistance()
   })
   
   setDistance = reactive({
     printProgress(VERBOSE_NIV2, "Distance calculation")
     refresh$dis <- getDistance(refresh$data, as.integer(input$dist_type))
+    setClassif()
   })
   
   setClassifPar = reactive({
@@ -270,14 +285,12 @@ server = function(input, output, session){
            .GlobalEnv)
     if(!is.null(input$infile)){
       setData()
-      setClassif()
     }
   })
   
   observeEvent(input$dist_type, {
     if(!is.null(input$infile)){
       setDistance()
-      setClassif()
     }
   })
   
@@ -309,10 +322,10 @@ server = function(input, output, session){
                  getGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP),
                  .GlobalEnv)
           
-          setPrintFuncs()
         }else{
           message("\n[WARNING] Dataset too big to calculate a gap statistics.")
         }
+        setPrintFuncs()
       }else{
         assign("gap",
                NULL,
@@ -431,7 +444,13 @@ server = function(input, output, session){
         assign("AXIS2",
                input$axis2,
                .GlobalEnv)
-        observeEvent(input$pca_save, savePlot("pca", plotPCA()))
+        observeEvent(input$pca_save, {
+            if(nrow(as.matrix(data)) > NB_ROW_MAX ) {
+              savePng("pca", plotPCA())
+            }else{
+              savePlot("pca", plotPCA())
+            }
+          })
         plotPCA()
       }
     }, error = function(e) {
@@ -443,7 +462,14 @@ server = function(input, output, session){
       setVariables()
       if(checkMaxCluster()){
         par(mar=c(0,0,0,0)) ; plot(0:1,0:1, axes=F, type="n") #delete sil plot
-        observeEvent(input$heatmap_save, savePlot("heatmap", plotHeatmap()))
+        observeEvent(input$heatmap_save, 
+                     {
+                       if(nrow(as.matrix(data)) > NB_ROW_MAX ) {
+                         savePng("heatmap", plotHeatmap())
+                       }else{
+                         savePlot("heatmap", plotHeatmap())
+                       }
+                     })
         plotHeatmap()
       }
     }, error = function(e) {

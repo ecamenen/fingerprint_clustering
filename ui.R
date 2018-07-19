@@ -11,7 +11,7 @@ getClassifKeys = function(min, max)
 ui = pageWithSidebar(
 
   
-  headerPanel("Fingerprint clustering"), #titre appl
+  headerPanel("Automatic clustering"), #titre appl
   
   #pannel de cote
   sidebarPanel( #elements de controle de l'apli

@@ -21,7 +21,8 @@ NB_ROW_MAX = 200 #max row to have pdf, otherwise, some plots are in png
 DIM_PNG = 2000
 VERBOSE_NIV2=F
 VERBOSE=F
-MAX_CHAR_LEN=25 #maximum length of individual s names
+MAX_CHAR_LEN=100 #maximum length of individual s names
+PNG = F
 
 #Loading data
 #dec=".")
@@ -70,7 +71,6 @@ preProcessData = function(d){
   }
   
   REMOVE_DOUBLETS = (nrow(d) > NB_ROW_MAX) #Discard line containing the same information on all columns from analysis
-  
   d = renameRowname(d)
   #remove columns containing characters
   #if(nrow(d) > NB_ROW_MAX) VERBOSE_NIV2 = T
@@ -402,18 +402,18 @@ plotCohenetic=function(d, cah){
   cor_coph = cor(d, coph_matrix)
   if (isTRUE(VERBOSE)) cat(paste("\nCOPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation with the data:",round(cor_coph,3),"\n"))
   
-  if(nrow(as.matrix(d)) > NB_ROW_MAX ) {
-    #png(paste(opt$output8, ".png", sep=""), DIM_PNG/2, DIM_PNG/2)
-    par(cex.lab=1.5*2, font.lab=3, font.axis=3, cex.axis=0.8*2, cex.main=2*2, cex=1, lwd=3*2)
-    par(mar=c(5.1,5.1,5.1,2.1)+7)
-    lwd=3*2
-    line.lab = 5
-  }else{
+  # if(nrow(as.matrix(d)) > NB_ROW_MAX ) {
+  #   #png(paste(opt$output8, ".png", sep=""), DIM_PNG/2, DIM_PNG/2)
+  #   par(cex.lab=1.5*2, font.lab=3, font.axis=3, cex.axis=0.8*2, cex.main=2*2, cex=1, lwd=3*2)
+  #   par(mar=c(5.1,5.1,5.1,2.1)+7)
+  #   lwd=3*2
+  #   line.lab = 5
+  # }else{
     setGraphic()
     #savePdf(paste(opt$output8, ".pdf", sep=""))
     lwd = 3
     line.lab = 3
-  }
+  # }
   
   plot(d, coph_matrix, pch=19, col=alpha("red",0.2), axes=F, xlim=c(0,max(d)), xlab="", ylab="", ylim=c(0,max(coph_matrix)), asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
   title(xlab="Distance between metabolites",ylab="Cophenetic distance", line=line.lab)
@@ -707,9 +707,9 @@ heatMap = function(df, d, s=NULL, c=NULL, cl=NULL){
   #image(1:ncol(matrix), 1:ncol(matrix), t(matrix), axes=F, xlab="", ylab="")
   
   options(warn = -1)
-  if(nrow(df) > NB_ROW_MAX ){
+  if(nrow(df) > NB_ROW_MAX ) labels=order
     #png(opt$output4,DIM_PNG, DIM_PNG)
-    labels=order
+  if(PNG) {  
     cex.main = 5; cex.legend = 3; cex.lab = 2; y_top = 12; x_lab = 0.6; lwd.rect=6
   }else{
     #pdf(opt$output4)
@@ -785,13 +785,18 @@ plotPca = function(pca, d, cl, axis1=1, axis2=2){
   k = length(levels(as.factor(cl)))
   
   if(nrow(d) > NB_ROW_MAX ) {
-    #png(opt$output3, DIM_PNG, DIM_PNG)
+    cpoint=0; cstar=0; cellipse=0; clabel=0; labels=1:nrow(d)
+  }else{
+    cpoint=1; cstar=1; cellipse=1; clabel=1; labels=rownames(d)
+  }
+    
+  if(PNG) {   
     par(mar=c(0,0,18,0), lwd=4)
-    cex=2; cex.main=6; cstar=0; cellipse=0; lwd.line=8; clabel=0; labels=1:nrow(d); line.main=7; cpoint=0
+    cex=2; cex.main=6; lwd.line=8; line.main=7; 
   }else{
     #pdf(opt$output3)
     par(mar=c(0,0,4.1,0))
-    cex=0.6; cex.main=1.5; cstar=1; cellipse=1; lwd.line=2; clabel=1; labels=rownames(d); line.main=1; cpoint=1
+    cex=0.6; cex.main=1.5;  lwd.line=2;  line.main=1
   }
   
   title = paste("Cumulated inertia:", round((pca$eig[axis1]+pca$eig[axis2])/sum(pca$eig),4)*100, "%")
