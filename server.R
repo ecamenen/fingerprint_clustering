@@ -69,6 +69,8 @@ server = function(input, output, session){
     
     setVariables()
     
+    if ( (nrow(data) > 3000) & (input$classif_type > 2) ) message("[WARNING] With more than 3000 rows to analyse, classification method must be K-medoids or K-means", call.=FALSE)
+
     #Perform classification
     if(CLASSIF_TYPE < 3) printProgress(VERBOSE_NIV2, "Classification")
     assign("classif",
@@ -100,9 +102,15 @@ server = function(input, output, session){
            .GlobalEnv)
     
     
+    setClusters()
+    
+    setPrintFuncs()
+  })
+  
+  setClusters = reactive({
     if(NB_CLUSTERS > 0) 
       assign("optimal_nb_clusters",
-             NB_CLUSTERS,
+             input$nb_clusters,
              .GlobalEnv)
     else assign("optimal_nb_clusters", 
                 which.max(mean_silhouette)+1,
@@ -114,9 +122,9 @@ server = function(input, output, session){
            .GlobalEnv)
     
     if(!input$advanced){
-    assign("gap", 
-           NULL,
-           .GlobalEnv)
+      assign("gap", 
+             NULL,
+             .GlobalEnv)
     }
     
     assign("sil_k",
@@ -128,10 +136,7 @@ server = function(input, output, session){
     if(min(table(clusters))==1) message("\n[WARNING] A cluster with an only singleton biased the silhouette score.")
     
     writeClusters("clusters.tsv", v=F)
-    
-    setPrintFuncs()
   })
-  
   
   setPrintFuncs = function(){
     
@@ -176,6 +181,8 @@ server = function(input, output, session){
                if (nrow(data) < (NB_ROW_MAX/2)){
                  plotGapPerPart(gap, MAX_CLUSTERS, v=F)
                  #plotGapPerPart2(gap, MAX_CLUSTERS)
+               }else{
+                 message("\n[WARNING] Dataset too big to calculate a gap statistics.")
                }
              },
              .GlobalEnv)
@@ -240,7 +247,6 @@ server = function(input, output, session){
   })
   
   setClassifPar = reactive({
-    #if ( (nrow(data) > 3500) & (input$classif_type > 2) ) message("With more than 3000 rows to analyse, classification method must be K-medoids or K-means", call.=FALSE)
     refresh$max <- input$max_clusters
     refresh$classif_type <- as.integer(getClassifValue(input$classif_type))
   })
@@ -274,7 +280,7 @@ server = function(input, output, session){
   })
   
   observeEvent(input$nb_clusters, {
-    if(!is.null(input$infile) & input$nb_clusters > 2){
+    if(!is.null(input$infile) & input$nb_clusters > 1){
       setClassif()
     }
   })
@@ -295,6 +301,8 @@ server = function(input, output, session){
                  .GlobalEnv)
           
           setPrintFuncs()
+        }else{
+          message("\n[WARNING] Dataset too big to calculate a gap statistics.")
         }
       }else{
         assign("gap",
