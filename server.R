@@ -142,7 +142,7 @@ server = function(input, output, session){
     writeClusters("clusters.tsv", v=F)
   })
   
-  setPrintFuncs = reactive({
+  setPrintFuncs = function(){
     
     assign("ADVANCED",
            input$advanced,
@@ -217,7 +217,7 @@ server = function(input, output, session){
     #        .GlobalEnv)
     
 
-  })
+  }
   
   # post-process for data
   # check that the maximum_number of clusters fixed is not greater than the number of row of the datafile
