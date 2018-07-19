@@ -140,7 +140,11 @@ server = function(input, output, session){
     writeClusters("clusters.tsv", v=F)
   })
   
-  setPrintFuncs = function(){
+  setPrintFuncs = reactive({
+    
+    assign("ADVANCED",
+           input$advanced,
+           .GlobalEnv)
     
     ###### plot funcs #####
     assign("plotPCA", 
@@ -209,7 +213,7 @@ server = function(input, output, session){
     #        .GlobalEnv)
     
 
-  }
+  })
   
   # post-process for data
   # check that the maximum_number of clusters fixed is not greater than the number of row of the datafile
@@ -323,6 +327,9 @@ server = function(input, output, session){
                  .GlobalEnv)
           
         }else{
+          assign("gap",
+                 NULL,
+                 .GlobalEnv)
           message("\n[WARNING] Dataset too big to calculate a gap statistics.")
         }
         setPrintFuncs()
@@ -478,8 +485,8 @@ server = function(input, output, session){
   
   output$cophenetic = renderPlot({
     tryCatch({
+      setVariables()
       if(isTRUE(input$advanced) & CLASSIF_TYPE > 2){
-        setVariables()
         if(checkMaxCluster()){
           observeEvent(input$coph_save, savePlot("cohenetic", plotCoph()))
           plotCoph()
@@ -491,8 +498,8 @@ server = function(input, output, session){
   
   output$dendrogram = renderPlot({
     tryCatch({
+      setVariables()
       if( CLASSIF_TYPE > 2){
-        setVariables()
         if(checkMaxCluster()){
           observeEvent(input$dendr_save, savePlot("dendrogram", plotDend()))
           plotDend()
@@ -504,8 +511,8 @@ server = function(input, output, session){
   
   output$fusion = renderPlot({
     tryCatch({
+      setVariables()
       if(isTRUE(input$advanced) & CLASSIF_TYPE > 2){
-        setVariables()
         if(checkMaxCluster()){
           observeEvent(input$fusion_save, savePlot("fusion", plotFus()))
           plotFus()
@@ -517,8 +524,8 @@ server = function(input, output, session){
   
   output$gap = renderPlot({
     tryCatch({
+      setVariables()
       if(isTRUE(input$advanced)){
-        setVariables()
         if(checkMaxCluster()){
           observeEvent(input$gap_save, savePlot("gap", plotGap()))
           plotGap()
@@ -530,8 +537,8 @@ server = function(input, output, session){
   
   output$elbow = renderPlot({
     tryCatch({
+      setVariables()
       if(isTRUE(input$advanced)){
-        setVariables()
         if(checkMaxCluster()){
           observeEvent(input$elbow_save, savePlot("elbow", plotElb()))
           plotElb()
@@ -543,8 +550,8 @@ server = function(input, output, session){
   
   output$within = renderTable({
     tryCatch({
+      setVariables()
       if(isTRUE(input$advanced)){
-        setVariables()
         if(checkMaxCluster()){
           observeEvent(input$within_save, writeTsv("within_k", "within_k.tsv", v=F) )
           within_k
