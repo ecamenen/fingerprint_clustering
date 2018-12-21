@@ -123,10 +123,10 @@ ui = pageWithSidebar(
                actionButton("within_save","Save")),
       tabPanel("Discriminant variables",
                plotOutput("ctr_clus"),
-               actionButton("ctr_clus_save","Save")),
-      tabPanel("Discriminant power",
-               tableOutput("ctr_part"),
-               actionButton("ctr_part_save","Save"))
+               actionButton("ctr_clus_save","Save"))
+      # tabPanel("Discriminant power",
+      #          tableOutput("ctr_part"),
+      #          actionButton("ctr_part_save","Save"))
     )
   )
   

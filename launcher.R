@@ -1,6 +1,6 @@
 getArgs = function(){
   option_list = list(
-    make_option(c("-i", "--infile"), type="character", metavar="character", default="../rgccaLauncher/data2/TranscriptomiqueM.tsv",
+    make_option(c("-i", "--infile"), type="character", metavar="character", default="data/Transcriptomique_cur.tsv",
                 help="Fingerprint file name"),
     make_option(c( "--output1"), type="character", default="average_silhouette.pdf", 
                 metavar="character", help="Average silhouettes file name [default: %default]"),
@@ -160,26 +160,29 @@ clusters = list_clus[[optimal_nb_clusters - 1]]
 
 
 
+source("plot.R")
 NB_BIOMARK = 20
-plotDiscriminantVariables(CLASSIF_TYPE, optimal_nb_clusters, clusters, data, NB_BIOMARK)
+discr = getDiscriminantVariables(CLASSIF_TYPE, optimal_nb_clusters, clusters, data, NB_BIOMARK)
+plotDiscriminantVariables(discr)
+
 
 plotDiscriminantVariables = function(t, n, cl, d, m){
-  options(warn = -1)
-  if(m > ncol(data))
-    m = ncol(data)
-    
+  
+  if(m > ncol(d))
+    m = ncol(d)
+  
   ctr = 100 * getCtrVar(t, n, cl, d)
-  max_ctr= apply(ctr, 2, max)
-  which_max_ctr= apply(ctr, 2, which.max)
-  df = data.frame(max_ctr[order(max_ctr, decreasing = TRUE)], order = length(max_ctr):1)[0:(m), ]
-  df$color = paste("G", as.character(which_max_ctr), sep="")
-  color2 = as.factor(which_max_ctr); levels(color2) = hue_pal()(length(max_ctr))
+  max_ctr= apply(ctr, 2, sum)
+  #which_max_ctr= apply(ctr, 2, which.max)
+  max_ctr = max_ctr[order(max_ctr, decreasing = TRUE)]
+  df = data.frame(max_ctr,  color = as.character(max_ctr), order = length(max_ctr):1)[0:(m), ]
+  color2 = as.factor(max_ctr); levels(color2) = hue_pal()(length(max_ctr))
   p = ggplot(df, aes(order, df[,1], fill = color))
-  options(warn = 0)
+  
   plotHistogram(p, df, "Main discriminant variables")
 }
 
-row.names(df)
+
 
 
 discriminant_power = 100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data)

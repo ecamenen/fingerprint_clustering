@@ -217,16 +217,20 @@ server = function(input, output, session){
     assign("summary", 
            printSummary(between, diff, mean_silhouette, ADVANCED, gap),
            .GlobalEnv)
-    assign("ctr_part",
-           100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data),
+    # assign("ctr_part",
+    #        100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data),
+    #        .GlobalEnv)
+    assign("discr",
+           getDiscriminantVariables(CLASSIF_TYPE, optimal_nb_clusters, clusters, data, input$max_biomark),
            .GlobalEnv)
     assign("ctr_clus",
-           function() plotDiscriminantVariables(CLASSIF_TYPE, optimal_nb_clusters, clusters, data, input$max_biomark),
+           function() plotDiscriminantVariables(discr),
            .GlobalEnv)
     # assign("ctr_clus",
     #        100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data),
     #        .GlobalEnv)
     
+    writeTsv("discr", "discr_var.tsv", v=F)
 
   }
   
@@ -610,14 +614,14 @@ server = function(input, output, session){
     })
   })
 
-  output$ctr_part = renderTable({
-    tryCatch({
-      setVariables()
-      if(checkMaxCluster()){
-        observeEvent(input$ctr_part_save, writeTsv("ctr_part", "ctr_part.tsv", v = F)); ctr_part
-      }
-    }, error = function(e) {
-    })
-  })
+  # output$ctr_part = renderTable({
+  #   tryCatch({
+  #     setVariables()
+  #     if(checkMaxCluster()){
+  #       observeEvent(input$ctr_part_save, writeTsv("ctr_part", "ctr_part.tsv", v = F)); ctr_part
+  #     }
+  #   }, error = function(e) {
+  #   })
+  # })
   
 }

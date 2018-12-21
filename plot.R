@@ -366,17 +366,21 @@ plotHistogram = function(p, df, title = "", color = "black"){
       plot.subtitle = element_text(hjust = 0.5, size = 16, face = "italic"))
 }
 
-plotDiscriminantVariables = function(t, n, cl, d, m){
-
+getDiscriminantVariables = function(t, n, cl, d, m){
   if(m > ncol(d))
     m = ncol(d)
-
+  
   ctr = 100 * getCtrVar(t, n, cl, d)
-  max_ctr= apply(ctr, 2, max)
-  which_max_ctr= apply(ctr, 2, which.max)
-  df = data.frame(max_ctr[order(max_ctr, decreasing = TRUE)], color = as.character(which_max_ctr), order = length(max_ctr):1)[0:(m), ]
-  color2 = as.factor(which_max_ctr); levels(color2) = hue_pal()(length(max_ctr))
-  p = ggplot(df, aes(order, df[,1], fill = color))
+  max_ctr= apply(ctr, 2, sum)
+  #which_max_ctr= apply(ctr, 2, which.max)
+  #color = as.character(which_max_ctr), 
+  res = data.frame(discr_var = max_ctr[order(max_ctr, decreasing = TRUE)], order = length(max_ctr):1)[0:(m), ]
+  #color2 = as.factor(which_max_ctr); levels(color2) = hue_pal()(length(max_ctr))
+  # fill = color
+}
 
-  plotHistogram(p, df, "Main discriminant variables")
+plotDiscriminantVariables = function(discr){
+
+  p = ggplot(discr, aes(order, discr[,1]))
+  plotHistogram(p, discr, "Main discriminant variables")
 }
