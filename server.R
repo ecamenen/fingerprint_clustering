@@ -1,12 +1,12 @@
-options(shiny.maxRequestSize=30*1024^2)
+options(shiny.maxRequestSize = 30*1024^2)
 source("fingerprint_clustering.R")
-classif_methods <- list("K-menoids" = 1,  "K-means" = 2, "Ward"=3, "Complete links"=4, "Single links"=5, "UPGMA"=6, "WPGMA"=7, "WPGMC"=8, "UPGMC"=9)
+classif_methods <- list("K-menoids" = 1,  "K-means" = 2, "Ward" = 3, "Complete links" = 4, "Single links" = 5, "UPGMA" = 6, "WPGMA"=7, "WPGMC"=8, "UPGMC"=9)
 library("shinyjs")
 
 tryCatch({
   data <- loadData("matrix.txt")
   }, warning = function(w) {
-    data=NULL
+    data = NULL
     message("Default file \"matrix.txt\" is not in the folder. Please, load another one.")
   }, error = function(e) {
   })
@@ -15,10 +15,10 @@ loadData = function(f, s="\t",h=F){
   #!file.exists(
   if(!is.null(f)){
     data = read.table(f,
-                 header=h,
-                 sep=s,
-                 dec=".",
-                 row.names=1)
+                 header = h,
+                 sep = s,
+                 dec = ".",
+                 row.names = 1)
     data = preProcessData(data)
     #substr(rownames(data), 1, MAX_CHAR_LEN) -> rownames(data)
   }
@@ -28,14 +28,16 @@ loadData = function(f, s="\t",h=F){
 server = function(input, output, session){
   
   refresh <- reactiveValues()
-  getClassifValue = function(key)  unlist(classif_methods[key])
+  refresh$classif_type = ""
+  getClassifValue = function(key) unlist(classif_methods[key])
   
   ###################################
   #          SETTINGS
   ###################################
   
   setVariables = reactive({
-    
+    refresh2 = c(refresh$classif_type)
+
     assign("data",
            refresh$data,
            .GlobalEnv)
@@ -95,7 +97,7 @@ server = function(input, output, session){
     
     printProgress(VERBOSE_NIV2, "PCA") 
     assign("pca", 
-           dudi.pca(data, scannf=F, nf=4), 
+           dudi.pca(data, scannf = F, scale = input$scale, nf = 4), 
            .GlobalEnv)
     if(VERBOSE_NIV2) cat("done.\n")
     
@@ -112,17 +114,20 @@ server = function(input, output, session){
   })
   
   setClusters = reactive({
+    
+    refr = c(refresh$classif_type, input$advanced, input$nb_clusters, input$scale, input$transpose)
+    
     if(NB_CLUSTERS > 0) 
       assign("optimal_nb_clusters",
              input$nb_clusters,
              .GlobalEnv)
     else assign("optimal_nb_clusters", 
-                which.max(mean_silhouette)+1,
+                which.max(mean_silhouette) + 1,
                 .GlobalEnv)
     
     #cl_temp, because writeTsv(clusters) recreate a different object named clusters
     assign("clusters", 
-           list_clus[[optimal_nb_clusters-1]],
+           list_clus[[optimal_nb_clusters - 1]],
            .GlobalEnv)
     
     if(!input$advanced){
@@ -132,21 +137,23 @@ server = function(input, output, session){
     }
     
     assign("sil_k",
-           sil[[optimal_nb_clusters-1]],
+           sil[[optimal_nb_clusters - 1]],
            .GlobalEnv)
     
     #errors
-    if (optimal_nb_clusters==MAX_CLUSTERS) message("\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found.")
-    if(min(table(clusters))==1) message("\n[WARNING] A cluster with an only singleton biased the silhouette score.")
+    if (optimal_nb_clusters == MAX_CLUSTERS)
+      message("\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found.")
+    if(min(table(clusters)) == 1)
+      message("\n[WARNING] A cluster with an only singleton biased the silhouette score.")
     
-    writeClusters("clusters.tsv", v=F)
+    writeClusters("clusters.tsv", v = F)
   })
   
   setPrintFuncs = function(){
-    
     assign("ADVANCED",
            input$advanced,
            .GlobalEnv)
+    refr = input$nb_clusters
     
     ###### plot funcs #####
     assign("plotPCA", 
@@ -168,7 +175,7 @@ server = function(input, output, session){
              .GlobalEnv)
     }else{
       assign("plotHeatmap",
-             function() heatMap(data, dis, c=classif, cl=clusters),
+             function() heatMap(data, dis, c = classif, cl = clusters),
              .GlobalEnv)
       
     }
@@ -209,12 +216,12 @@ server = function(input, output, session){
     assign("summary", 
            printSummary(between, diff, mean_silhouette, ADVANCED, gap),
            .GlobalEnv)
-    # assign("ctr_part", 
-    #        100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data),
-    #        .GlobalEnv)
-    # assign("ctr_clus", 
-    #        100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data),
-    #        .GlobalEnv)
+    assign("ctr_part",
+           100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data),
+           .GlobalEnv)
+    assign("ctr_clus",
+           100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data),
+           .GlobalEnv)
     
 
   }
@@ -264,8 +271,21 @@ server = function(input, output, session){
       }
     
       refresh$data <- loadData(input$infile$datapath, input$sep, input$header)
-      if(VERBOSE_NIV2) cat("done.\n")
-      if ( isSymmetric(as.matrix(refresh$data)) & !input$header) colnames(refresh$data) = rownames(refresh$data)
+      
+      if(input$scale)
+        refresh$data = scale(refresh$data)
+      else{
+        refresh$data = scale(refresh$data, scale = F)
+      }
+      
+      if(input$transpose)
+        refresh$data = t(refresh$data)
+      
+      if(VERBOSE_NIV2)
+        cat("done.\n")
+      
+      if ( isSymmetric(as.matrix(refresh$data)) & !input$header) 
+        colnames(refresh$data) = rownames(refresh$data)
       
     }, error = function(e) {
     message("[WARNING] Wrong separator, please selects another one.")
@@ -289,7 +309,7 @@ server = function(input, output, session){
   #          EVENTS
   ###################################
   
-  observeEvent(c(input$infile, input$header, input$sep), {
+  observeEvent(c(input$infile, input$header, input$sep, input$scale, input$transpose), {
     assign("HEAD",
            input$header,
            .GlobalEnv)
@@ -323,7 +343,8 @@ server = function(input, output, session){
     if(!is.null(input$infile)){
 
       if(isTRUE(input$advanced)){
-        cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
+        if(refresh$classif_type > 2)
+          cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif),3), "\n", sep=""))
         
         if (nrow(data) < (NB_ROW_MAX/2)){
           printProgress(VERBOSE_NIV2, "Gap statistics calculation")
@@ -401,8 +422,8 @@ server = function(input, output, session){
         #if (nrow(data) < (NB_ROW_MAX/2)){
           savePlot("gap", plotGap())
         #}
-        # writeTsv("ctr_clus", "ctr_clus.tsv", v=F)
-        # writeTsv("ctr_part", "ctr_part.tsv", v=F)
+        writeTsv("ctr_clus", "ctr_clus.tsv", v=F)
+        writeTsv("ctr_part", "ctr_part.tsv", v=F)
         writeTsv("within_k", "within_k.tsv", v=F)
       }
     }
@@ -417,7 +438,7 @@ server = function(input, output, session){
     tryCatch({
       setVariables()
       if(checkMaxCluster()){
-        observeEvent(input$summary_save, writeTsv("summary", "summary.tsv", v=F)); summary
+        observeEvent(input$summary_save, writeTsv("summary", "summary.tsv", v = F)); summary
       }
     }, error = function(e) {
     })
@@ -573,5 +594,25 @@ server = function(input, output, session){
     }, error = function(e) {
     })
   }, rownames=T, hover=T, striped=T, digits=2, width="100cm", align="c", na="", size=200)
+  
+  output$ctr_clus = renderTable({
+    tryCatch({
+      setVariables()
+      if(checkMaxCluster()){
+        observeEvent(input$ctr_clus_save, writeTsv("ctr_clus", "ctr_clus.tsv", v = F)); ctr_clus
+      }
+    }, error = function(e) {
+    })
+  })
+
+  output$ctr_part = renderTable({
+    tryCatch({
+      setVariables()
+      if(checkMaxCluster()){
+        observeEvent(input$ctr_part_save, writeTsv("ctr_part", "ctr_part.tsv", v = F)); ctr_part
+      }
+    }, error = function(e) {
+    })
+  })
   
 }

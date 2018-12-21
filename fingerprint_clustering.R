@@ -5,7 +5,7 @@
 
 #Pseudo-random settings: 
 #milisec * PID
-set.seed(as.numeric(format(Sys.time(), "%OS2"))*100 * Sys.getpid())
+set.seed(as.numeric(format(Sys.time(), "%OS2")) * 100 * Sys.getpid())
 
 #Loading librairies
 librairies = c("shiny","shinyjs","cluster", "optparse", "gclus", "ade4", "scales")
@@ -19,9 +19,9 @@ NB_BOOTSTRAP = 500 #should be comprise between 100 and 1000
 TEXT = T #print values on graph (for optimum partition and heatmap)
 NB_ROW_MAX = 200 #max row to have pdf, otherwise, some plots are in png
 DIM_PNG = 2000
-VERBOSE_NIV2=F
-VERBOSE=F
-MAX_CHAR_LEN=25 #maximum length of individual s names
+VERBOSE_NIV2 = F
+VERBOSE = F
+MAX_CHAR_LEN = 25 #maximum length of individual s names
 PNG = F
 
 #Loading data
@@ -42,21 +42,24 @@ PNG = F
 # if (!isTRUE(VERBOSE)) cat(paste("Optimal number of clusters:", optimal_nb_clusters,"\n"))
 # if (isTRUE(VERBOSE_NIV2)) getTimeElapsed(start_time)
 
-
 printProgress = function (v, val){
   if(isTRUE(v)) 
     cat(paste("\n[", format(Sys.time(), "%X"), "] ", val ,"in progress..."), sep="")
 }
 
 getTimeElapsed = function(start_time){
-  time = as.numeric(as.difftime(Sys.time()-start_time), units="secs")
+  
+  time = as.numeric(as.difftime(Sys.time()-  start_time), units = "secs")
   secs = time %% 60
   time = (time - secs) /60
   mins = time %% 60
   hours = time / 60
-  time = paste(mins, "min ", round(secs), "s\n", sep="")
-  if (hours >= 1)  time = paste(round(hours), "h ", time, sep="")
-  cat(paste("\nTime to run the process : ", time, sep=""))
+  time = paste(mins, "min ", round(secs), "s\n", sep = "")
+  
+  if (hours >= 1)
+    time = paste(round(hours), "h ", time, sep = "")
+  
+  cat(paste("\nTime to run the process : ", time, sep = ""))
 }
 
 ################################
@@ -66,8 +69,8 @@ getTimeElapsed = function(start_time){
 
 #rename row and avoid doublets errors
 preProcessData = function(d){
-  if(ncol(d)==1){
-    stop(paste("Check for the separator (by default, tabulation)."), call.=FALSE)
+  if(ncol(d) == 1){
+    stop(paste("Check for the separator (by default, tabulation)."), call. = FALSE)
   }
   
   REMOVE_DOUBLETS = (nrow(d) > NB_ROW_MAX) #Discard line containing the same information on all columns from analysis
@@ -76,13 +79,15 @@ preProcessData = function(d){
   #if(nrow(d) > NB_ROW_MAX) VERBOSE_NIV2 = T
   #get only columns with numeric values
   d = d[, unlist(sapply(1:ncol(d), function(i) is.numeric(d[,i])))]
+  
   if(isTRUE(REMOVE_DOUBLETS)){
     printProgress(VERBOSE_NIV2, "Loading data")
     d = discardRowCondDoublets(d)
   }
-
-  if ( isSymmetric(as.matrix(d)) & !HEAD) colnames(d) = rownames(d)
-
+  
+  if ( isSymmetric(as.matrix(d)) & !HEAD)
+    colnames(d) = rownames(d)
+  
   return(d)
 }
 
@@ -90,7 +95,9 @@ preProcessData = function(d){
 #avoid doublets in row names
 #r: row names vector
 renameRownameDoublets = function(names.row){
-  j=1
+  
+  j = 1
+  
   for (i in 2:length(names.row)){
     if (names.row[i] == names.row[i-1]){
       j = j+1
@@ -104,17 +111,22 @@ renameRownameDoublets = function(names.row){
 
 #rename row and avoid doublets errors
 renameRowname = function(d){
+  
   #names.row = as.character(d[,1])
-  names.row=rownames(d)
-  d=d[,-1]
+  names.row = rownames(d)
+  d = d[,-1]
   names.row = renameRownameDoublets(names.row)
+  
   tryCatch({
+    
     substr(names.row, 1, MAX_CHAR_LEN) -> rownames(d)
     return(d)
+    
   }, warning = function(w) {
     names.row = renameRownameDoublets(substr(names.row, 1, MAX_CHAR_LEN))
     names.row -> rownames(d)
     return(d)
+    
   }, error = function(e) {
     return(d)
   })
@@ -123,58 +135,64 @@ renameRowname = function(d){
 # Discard row from a reaction dataset that have the same conditions in each columns
 #x: dataframe
 discardRowCondDoublets = function(x){
+  
   row_doublets <- list()
   j = 0
+  
   for (i in 1:nrow(x)){
     #uniq remove doublets in a vector, so return 1 only if there is only 1
-    if( (length(unique(as.integer(x[i,])))==1)){
+    if( (length(unique(as.integer(x[i,]))) == 1)){
       #print(row.names(x[i,]))
       j = j +1
       row_doublets[[j]] = i
     }
   }
-  if(length(row_doublets)!=0){
-    removed_reacs = row.names(x[unlist(row_doublets),])
+  
+  if(length(row_doublets) != 0){
+    removed_reacs = row.names(x[unlist(row_doublets), ])
     removed_conds = x[unlist(row_doublets), 1]
     removed = cbind(removed_reacs, removed_conds)
     colnames(removed) = c("condition", "")
-    assign("removed", removed,.GlobalEnv)
-    writeTsv("removed", v=F)
+    assign("removed", removed, .GlobalEnv)
+    writeTsv("removed", v = F)
   }
-  if(length(row_doublets)>0) return (x[-unlist(row_doublets),])
-  else return (x)
+  
+  if(length(row_doublets) > 0) 
+    return (x[-unlist(row_doublets),])
+  else 
+    return (x)
 }
 
 #Inputs: x : a matrix
 #filename of the saved file
 #Prints the matrix, save the matrix
-writeTsv = function(x, f=NULL, cl=F, v=T){
+writeTsv = function(x, f = NULL, cl = F, v = T){
   #print on stdout
   if (isTRUE(v)) cat(paste("\n", gsub("_", " ", toupper(x)), ":\n", sep=""))
   #disabling warning
   options(warn = -1)
   #get variable
   tab = get(x)
-  if(!isTRUE(cl)) output=as.matrix(rbind(c("", colnames(tab)), cbind(rownames(tab),tab)))
+  if(!isTRUE(cl)) output = as.matrix(rbind(c("", colnames(tab)), cbind(rownames(tab), tab)))
   else output = tab
   #discard empty rows
   output = output[rowSums(is.na(output)) != ncol(output),]
   #TODOD:
   #output = output[,colSums(is.na(output)) != nrow(output)]
   output[is.na(output)] = ""
-  colnames(output)=rep("", ncol(output)); rownames(output)=rep("", nrow(output))
+  colnames(output) = rep("", ncol(output)); rownames(output) = rep("", nrow(output))
   if (isTRUE(v)){
     if (!isTRUE(cl)){
-      printed = round(apply(output[-1,-1],2,as.numeric),2)
+      printed = round(apply(output[-1, -1],2, as.numeric), 2)
       rownames(printed) = rownames(tab)
       colnames(printed) = colnames(tab)
     }else{
       printed = output
     }
-    print(printed,  quote=F)
+    print(printed,  quote = F)
   }
-  if (is.null(f)) f= paste(x,".tsv",sep="")
-  write(t(output), f, ncolumns=ncol(output), sep="\t")
+  if (is.null(f)) f = paste(x, ".tsv", sep="")
+  write(t(output), f, ncolumns = ncol(output), sep = "\t")
   options(warn = 0)
 }
 
@@ -184,49 +202,63 @@ writeTsv = function(x, f=NULL, cl=F, v=T){
 
 #Usage: colPers(x), x a number of colours in output
 #Gradient of color
-colPers = colorRampPalette(c(rgb(0.6,0.1,0.5,1), rgb(1,0,0,1), rgb(0.9,0.6,0,1), rgb(0.1,0.6,0.3,1), rgb(0.1,0.6,0.5,1), rgb(0,0,1,1)), alpha = TRUE)
+colPers = colorRampPalette(c(rgb(0.6, 0.1, 0.5, 1), 
+                             rgb(1, 0, 0, 1), 
+                             rgb(0.9, 0.6, 0, 1),
+                             rgb(0.1, 0.6, 0.3, 1),
+                             rgb(0.1, 0.6, 0.5, 1), 
+                             rgb(0, 0, 1, 1)), alpha = TRUE)
 
 
 setGraphic = function(){
   setGraphicBasic()
-  par(mar=c(5.1,5.1,5.1,2.1))
+  par(mar=c(5.1, 5.1, 5.1, 2.1))
 }
 
 setGraphicBasic = function(){
-  par(cex.lab=1.5, font.lab=3, font.axis=3, cex.axis=0.8, cex.main=2, cex=1, lwd=3)
+  par(cex.lab = 1.5, font.lab = 3, font.axis = 3, cex.axis = 0.8, cex.main = 2, cex = 1, lwd = 3)
 }
 
-plotAxis = function (side, min, max, interval = 1, lwd=3){
-  axis(side, seq(min,max, interval), lwd=lwd)
+plotAxis = function (side, min, max, interval = 1, lwd = 3){
+  axis(side, seq(min, max, interval), lwd = lwd)
 }
 
-plotBestClustering = function(sub_title, values, values_type, optimal_nb_clusters, interval = 1, min_x=2, best=NULL, val2=NULL){
+plotBestClustering = function(sub_title, values, values_type, optimal_nb_clusters, interval = 1, min_x = 2, best = NULL, val2 = NULL){
   plotAxis(1, 2, MAX_CLUSTERS)
   
-  if (interval >= 1) axisSeq=round(values)
-  else axisSeq = c(0, max(values) +0.1)
+  if (interval >= 1) axisSeq = round(values)
+  else axisSeq = c(0, max(values) + 0.1)
   
   #case of plotting gap statistics
-  if (min_x < 2) best_y=values[optimal_nb_clusters]
+  if (min_x < 2) 
+    best_y = values[optimal_nb_clusters]
   #case of fusion levels
-  else if (!is.null(val2)) best_y=values[optimal_nb_clusters -1]
-  else best_y = max(values)
+  else if (!is.null(val2)) 
+    best_y = values[optimal_nb_clusters -1]
+  else 
+    best_y = max(values)
   
   #for non-elbow plots
-  if (!is.null(val2)) best = round(max(val2),2)
-  else if (is.null(best)) best = round(max(values),2)
+  if (!is.null(val2)) 
+    best = round(max(val2), 2)
+  else if (is.null(best)) 
+    best = round(max(values), 2)
   
   plotAxis(2, min(axisSeq), max(axisSeq), interval)
-  title(main="Optimal number of clusters", line=2, cex.main=2)
-  mtext(text=sub_title, font=3, cex=1.2, line = 0.5)
-  abline(v=optimal_nb_clusters, col="red", lty=2, lwd=2)
-  points(optimal_nb_clusters, best_y, pch=19, col="red", cex=2)
+  title(main = "Optimal number of clusters", line = 2, cex.main = 2)
+  mtext(text = sub_title, font = 3, cex = 1.2, line = 0.5)
+  abline(v = optimal_nb_clusters, col = "red", lty = 2, lwd = 2)
+  points(optimal_nb_clusters, best_y, pch = 19, col = "red", cex = 2)
   
-  if (!is.null(val2)) t_values = val2
-  else t_values = values
+  if (!is.null(val2)) 
+    t_values = val2
+  else 
+    t_values = values
   
-  if(isTRUE(TEXT)) text(y=values, x=min_x:MAX_CLUSTERS, labels=round(t_values,2), cex=1.2, pos=4, col="red")
-  if (isTRUE(VERBOSE)) cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a", values_type, " of ", best, "\n", sep="")
+  if(isTRUE(TEXT)) 
+    text(y = values, x = min_x:MAX_CLUSTERS, labels = round(t_values, 2), cex = 1.2, pos = 4, col = "red")
+  if (isTRUE(VERBOSE)) 
+    cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n","With a", values_type, " of ", best, "\n", sep="")
 }
 
 #f: filename
@@ -244,7 +276,7 @@ savePdf = function (f){
 # for each column, the mean=0 and the variance is the same
 scalecenter = function(d) {
   #output scale function: for each column, mean=0, sd=1
-  return(scale(d) * sqrt(nrow(d)/(nrow(d)-1)))
+  return(scale(d) * sqrt(nrow(d) / (nrow(d) - 1)))
   # ponderation for sampling index (var use n-1)
   # without this constante, for advanced outputs, total (max_cluster=nrow(data)) will be different from 1
 }
@@ -252,25 +284,29 @@ scalecenter = function(d) {
 #df: dataframe
 #d: distance type
 getDistance = function(df, d){
-  dists=c("euclidian", "manhattan", 1, 2, 5, 7)
-  if(d < 3) dist(df, method = dists[d])
-  else dist.binary(df, method = as.integer(dists[d]))
+  
+  dists = c("euclidian", "manhattan", 1, 2, 5, 7)
+  
+  if(d < 3)
+    dist(df, method = dists[d])
+  else 
+    dist.binary(df, method = as.integer(dists[d]))
 }
 
 #d distance object
 checkEuclidean = function(d){
   if(attributes(d)$method != "euclidean") 
-    stop("Distance should be euclidean with this classification method.", call.=FALSE)
+    stop("Distance should be euclidean with this classification method.", call. = FALSE)
 }
 
 isSymmetric = function (d){
   if(nrow(d) == ncol(d)) {
-    isReflexivity = unique(d[cbind(1:nrow(d),1:nrow(d))] == 0)
+    isReflexivity = unique(d[cbind(1:nrow(d), 1:nrow(d))] == 0)
     
-    if ( length(isReflexivity)==1 & isTRUE(isReflexivity) ) {
+    if ( length(isReflexivity) == 1 & isTRUE(isReflexivity) ) {
       isCommutativity = unique(d[lower.tri(d)] == t(d)[lower.tri(d)])
       
-      if ( length(isCommutativity)==1 & isTRUE(isCommutativity) )
+      if ( length(isCommutativity) == 1 & isTRUE(isCommutativity) )
         return (T)
     }
   }
@@ -287,10 +323,13 @@ isSymmetric = function (d){
 # d: distance matrix
 #Ouput: Hierarchical classification
 getCAH = function(t, df, d){
-  if(t>2){
-    if (t==8 | t==9 ) checkEuclidean(d)
+  
+  if(t > 2){
+    if (t == 8 | t == 9 ) 
+      checkEuclidean(d)
+    
     #cah: classification hierarchic ascending
-    cah = hclust(d, method=getClassifType(t))
+    cah = hclust(d, method = getClassifType(t))
     #automaticly ordering by clusters
     return (reorder.hclust(cah, d))
   }
@@ -299,18 +338,18 @@ getCAH = function(t, df, d){
 # Selects best algo based on cophenetic calculation
 # df: data
 #d: distance matrix
-selectBestCAH = function (df, d, v=F){
+selectBestCAH = function (df, d, v = F){
   temp = 0
   for (i in 3:9){
     cah = getCAH(df, i)
     res = cor(d, cophenetic(cah))
-    if (isTRUE(v)) cat(paste(getClassifType(i), ":",round(res,3), "\n"))
+    if (isTRUE(v)) cat(paste(getClassifType(i), ":", round(res, 3), "\n"))
     if (res > temp){ 
       temp = res
       t = i
     }
   }
-  cat(paste("Selected:", getClassifType(t),"\n"))
+  cat(paste("Selected:", getClassifType(t), "\n"))
   return (t)
 }
 
@@ -332,18 +371,20 @@ getCoefAggl = function(c)
 # k: number of clusterting
 #Ouput: Non-hierarchical classification
 getCNH = function(t, df, d, k){
-  if (t==1) return (pam(d, k, diss=T))
-  else if (t==2){
+  if (t == 1) 
+    return (pam(d, k, diss = T))
+  else if (t == 2){
     checkEuclidean(d)
-    return (kmeans(df, centers=k, nstart=100))
+    return (kmeans(df, centers = k, nstart = 100))
   }
 }
 
 getClassif = function(t, n, df, d){
-  if(t>2) getCAH(t, df, d)
+  if( t > 2) getCAH(t, df, d)
   else {
-    list_cnh = list("method"=getClassifType(t))
-    for (k in 2:(n+1)) list_cnh[[k]] = getCNH(t, df, d, k)
+    list_cnh = list("method" =  getClassifType(t))
+    for (k in 2:(n + 1))
+      list_cnh[[k]] = getCNH(t, df, d, k)
     return(list_cnh)
   }
 }
@@ -382,11 +423,11 @@ colorClusters = function(cl){
 # cl: clusters
 # f : filename
 # r: ordered alphabetically
-writeClusters = function(f, v=FALSE){
-  cluster = cbind(sil_k[,1], sil_k[,3], pca$li[attr(sil_k,"iOrd"),c(1,2)])
-  colnames(cluster) = c("Cluster","Silhouette","Axis1","Axis2")
-  assign("cluster", cluster,.GlobalEnv)
-  writeTsv("cluster", f, cl=F, v=v)
+writeClusters = function(f, v = FALSE){
+  cluster = cbind(sil_k[,1], sil_k[,3], pca$li[attr(sil_k, "iOrd"), c(1,2)])
+  colnames(cluster) = c("Cluster", "Silhouette", "Axis1", "Axis2")
+  assign("cluster", cluster, .GlobalEnv)
+  writeTsv("cluster", f, cl = F, v = v)
 }
 
 ############################################################
@@ -397,10 +438,10 @@ writeClusters = function(f, v=FALSE){
 #Inputs:
 # d : distance matrix
 # cah : hierarchical classification
-plotCohenetic=function(d, cah){
+plotCohenetic = function(d, cah){
   coph_matrix = cophenetic(cah)
   cor_coph = cor(d, coph_matrix)
-  if (isTRUE(VERBOSE)) cat(paste("\nCOPHENETIC:\nExplained variance (%):", round(cor_coph^2,3), "\nCorrelation with the data:",round(cor_coph,3),"\n"))
+  if (isTRUE(VERBOSE)) cat(paste("\nCOPHENETIC:\nExplained variance (%):", round(cor_coph^2, 3), "\nCorrelation with the data:", round(cor_coph, 3), "\n"))
   
   # if(PNG ) {
   #   #png(paste(opt$output8, ".png", sep=""), DIM_PNG/2, DIM_PNG/2)
@@ -409,17 +450,17 @@ plotCohenetic=function(d, cah){
   #   lwd=3*2
   #   line.lab = 5
   # }else{
-    setGraphic()
-    #savePdf(paste(opt$output8, ".pdf", sep=""))
-    lwd = 3
-    line.lab = 3
+  setGraphic()
+  #savePdf(paste(opt$output8, ".pdf", sep=""))
+  lwd = 3
+  line.lab = 3
   # }
   
-  plot(d, coph_matrix, pch=19, col=alpha("red",0.2), axes=F, xlim=c(0,max(d)), xlab="", ylab="", ylim=c(0,max(coph_matrix)), asp=1, main=paste("Cophenetic correlation: ",round(cor_coph,3)))
+  plot(d, coph_matrix, pch = 19, col = alpha("red", 0.2), axes = F, xlim = c(0, max(d)), xlab = "", ylab = "", ylim = c(0, max(coph_matrix)), asp = 1, main = paste("Cophenetic correlation: ", round(cor_coph, 3)))
   title(xlab="Distance between metabolites",ylab="Cophenetic distance", line=line.lab)
-  plotAxis(2, 0, max(coph_matrix), lwd=lwd)
-  plotAxis(1, 0, max(d), lwd=lwd)
-  abline(0, 1, col="grey", lty=2, lwd=lwd)
+  plotAxis(2, 0, max(coph_matrix), lwd = lwd)
+  plotAxis(1, 0, max(d), lwd = lwd)
+  abline(0, 1, col = "grey", lty = 2, lwd = lwd)
   #suprLog = dev.off()
 }
 
@@ -433,8 +474,8 @@ plotCohenetic=function(d, cah){
 # d: dataframe
 # cl: list of clusters per partition
 getRelativeBetweenPerPart = function(n, d, cl){
-  d=as.matrix(d)
-  between = rep(0, n-1)
+  d = as.matrix(d)
+  between = rep(0, n - 1)
   # total sum of square
   TSS = sum(scale(d, scale = FALSE)^2)
   for (i in 2:n) {
@@ -442,9 +483,9 @@ getRelativeBetweenPerPart = function(n, d, cl){
     # apply(d, 2, mean) : centroids for each column
     # as.vector(table(cl) : size of each clusters
     # t : vector rotation for arithmetic with other row or column vectors
-    between[i-1] = sum(t((t(getClusterCentroids(d,cl_k))-apply(d, 2, mean))^2) * as.vector(table(cl_k)))/TSS
+    between[i-1] = sum(t((t(getClusterCentroids(d, cl_k)) - apply(d, 2, mean))^2) * as.vector(table(cl_k))) / TSS
   }
-  return (100*between)
+  return (100 * between)
 }
 
 # tapply(data[,i], Cla, mean) :
@@ -458,22 +499,22 @@ getClusterCentroids = function(d, cl){
 # Difference between each case of a vector
 getBetweenDifferences = function(between){
   # apply produce a list, unlist convert in vector
-  diff = unlist(sapply(1:length(between), function(i) between[i]-between[i-1]))
+  diff = unlist(sapply(1:length(between), function(i) between[i] - between[i - 1]))
   return (as.vector(cbind(between[1], t(diff))))
   #-n-1 to remove the last NA value (pairwise comparison)
   #between[1] to get the difference with 1 cluster
 }
 
 getWithin = function(d, cl, k) {
-  nk = length(cl[cl==k]) #number of individuals in the cluster
+  nk = length(cl[cl == k]) #number of individuals in the cluster
   d1 = scalecenter(d)
-  return( nk * sum(getClusterCentroids(d1,cl)[k,]^2) / nrow(d))
+  return( nk * sum(getClusterCentroids(d1, cl)[k,]^2) / nrow(d))
 }
 
 # cl: list of clusters per partition
 getRelativeWithinPerCluster = function(cls, d) {
   n = length(cls)
-  within = matrix(NA, n-1, n)
+  within = matrix(NA, n - 1, n)
   rownames(within) = seq(2, n)
   colnames(within) = paste("G", seq(1, n), sep="")
   for (k in 2:n){
@@ -481,7 +522,7 @@ getRelativeWithinPerCluster = function(cls, d) {
     for (i in 1:length(table(cl)) ){
       within[k-1, i] = getWithin(d, cl, i)
     }
-    within[k-1,] = within[k-1,] / sum(as.numeric(na.omit(within[k-1,])))
+    within[k-1,] = within[k - 1, ] / sum(as.numeric(na.omit(within[k - 1, ])))
   }
   return (within)
 }
@@ -489,10 +530,10 @@ getRelativeWithinPerCluster = function(cls, d) {
 # Between inertia differences between a partionning and the previous
 plotBetweenDiff = function(between_diff) {
   if (isTRUE(VERBOSE)) cat("\nBETWEEN DIFFERENCES:\n")
-  optimal_nb_clusters = which.max(between_diff)+1
+  optimal_nb_clusters = which.max(between_diff) + 1
   #savePdf("between_differences.pdf")
   setGraphic()
-  plot(2:(length(between_diff)+1), between_diff, type="b", ylim=c(round(min(between_diff))-1,round(max(between_diff))+1), xlim=c(2,(length(between_diff)+2)), xlab="Nb. of clusters", ylab="Between-cluster variation (%)", col="grey", axes=F)
+  plot(2:(length(between_diff) + 1), between_diff, type = "b", ylim = c(round(min(between_diff)) - 1, round(max(between_diff)) + 1), xlim = c(2, (length(between_diff) + 2)), xlab = "Nb. of clusters", ylab = "Between-cluster variation (%)", col = "grey", axes = F)
   plotBestClustering("Largest between differences method", between_diff, " variation with the previous partitionning (%)", optimal_nb_clusters)
   #suprLog = dev.off()
 }
@@ -500,13 +541,13 @@ plotBetweenDiff = function(between_diff) {
 plotFusionLevels = function(n, c) {
   if (isTRUE(VERBOSE)) cat("\nFUSION LEVELS:\n")
   fusion = rev(c$height)
-  diff = unlist(sapply(1:n, function(i) fusion[i-1]-fusion[i]))
+  diff = unlist(sapply(1:n, function(i) fusion[i-1]-  fusion[i]))
   fusion = fusion[1:(n-1)]
-  optimal_nb_clusters = which.max(diff)+1
+  optimal_nb_clusters = which.max(diff) + 1
   setGraphic()
   #savePdf(paste(opt$output9, ".pdf", sep=""))
-  plot(2:n, fusion, type="b", ylim=c(round(min(fusion))-1,round(max(fusion))+1), xlim=c(2,n+1), xlab="Nb. of clusters", ylab="Cophenetic distance", col="grey", axes=F)
-  plotBestClustering("Fusion level method", fusion, " gain with the previous fusion level", optimal_nb_clusters, val2=diff)
+  plot(2:n, fusion, type = "b", ylim = c(round(min(fusion)) - 1,round(max(fusion)) + 1), xlim = c(2, n + 1), xlab = "Nb. of clusters", ylab = "Cophenetic distance", col = "grey", axes = F)
+  plotBestClustering("Fusion level method", fusion, " gain with the previous fusion level", optimal_nb_clusters, val2 = diff)
   #suprLog = dev.off()
 }
 
@@ -686,17 +727,17 @@ getOrderedClusterSize = function(cl){
 heatMap = function(df, d, s=NULL, c=NULL, cl=NULL){
   
   printProgress(VERBOSE_NIV2, "Heatmap calculation")
-  text = isTRUE(  isTRUE(TEXT) & (nrow(data) < 100) )
+  text = isTRUE( isTRUE(TEXT) & (nrow(data) < 100) )
   
   if(!is.null(s)){
     order = attr(s,"iOrd")
     cl_sizes = summary(s)$clus.size
     title = "silhouette\'s scores"
-    colors = colPers(length(levels(as.factor(s[,1]))))
+    colors = colPers(length(levels(as.factor(s[, 1]))))
   }else{
     order = c$order
     cl_sizes = getOrderedClusterSize(cl[order])
-    title="dendrogram"
+    title = "dendrogram"
     colors = orderColors(c, cl)
   }
   
@@ -707,13 +748,13 @@ heatMap = function(df, d, s=NULL, c=NULL, cl=NULL){
   #image(1:ncol(matrix), 1:ncol(matrix), t(matrix), axes=F, xlab="", ylab="")
   
   options(warn = -1)
-  if(nrow(df) > NB_ROW_MAX ) labels=order
-    #png(opt$output4,DIM_PNG, DIM_PNG)
+  if(nrow(df) > NB_ROW_MAX ) labels = order
+  #png(opt$output4,DIM_PNG, DIM_PNG)
   if(PNG) {  
     cex.main = 5; cex.legend = 3; cex.lab = 2; y_top = 12; x_lab = 0.6; lwd.rect=6
   }else{
     #pdf(opt$output4)
-    cex.main = 1.5; cex.legend = 0.85; cex.lab = 0.7; y_top = 8; x_lab = 0.5; lwd.rect=3
+    cex.main = 1.5; cex.legend = 0.85; cex.lab = 0.7; y_top = 8; x_lab = 0.5; lwd.rect = 3
   }
   
   par(fig=c(0,0.9,0,1), new=TRUE)
@@ -731,7 +772,7 @@ heatMap = function(df, d, s=NULL, c=NULL, cl=NULL){
   plot(c(0,1),c(0,1),type = 'n', axes = F,xlab = '', ylab = '', main = '')
   rasterImage(legend_image, 0.4, 0, 0.5, 1)
   mtext('   Distance', 3, line=0.5, cex=cex.legend, font=2)
-  text(x=x_lab, y = seq(0,1,l=3), labels = round(seq(max(matrix),0,l=3)),cex=cex.lab, pos=4)
+  text(x = x_lab, y = seq(0,1,l = 3), labels = round(seq(max(matrix), 2, l=3)),cex=cex.lab, pos=4)
   
   options(warn = 0)
   if(VERBOSE_NIV2) cat("done.\n")
@@ -790,7 +831,7 @@ plotPca = function(pca, d, cl, axis1=1, axis2=2){
   }else{
     cpoint=1; cstar=1; cellipse=1; clabel=1; labels=rownames(d)
   }
-    
+  
   if(PNG) {   
     par(mar=c(0,0,18,0), lwd=4)
     cex=2; cex.main=6; lwd.line=8; line.main=7; 
@@ -806,7 +847,7 @@ plotPca = function(pca, d, cl, axis1=1, axis2=2){
   abline(h=0, v=0, lty=2, lwd=lwd.line, col="grey")
   text(x=pca$li[,axis1], y=pca$li[,axis2], labels=labels, col=colorClusters(cl), cex=cex)
   #colnames(pca_coord) = c("Chemicals", "Axis 1", "Axis 2")
-
+  
   if(isTRUE(ADVANCED)){
     par(fig=c(0.8,1,0.82,1),new=T)
     plotInertiaPca(pca, d, pca$nf)
@@ -843,18 +884,22 @@ plotInertiaPca = function (pca, d, nf=4){
 # d: data
 # cl: clusters object
 getDistPerVariable = function(d, cl){
+  
   #Distance between the centroid of each variables 
   #ponderation by the sd of the variable (=total inertia per var)
   d = scalecenter(d)
   nb_cl = length(levels(as.factor(cl)))
   ctr = matrix(0, nrow=nb_cl, ncol=ncol(d))
-  for (i in 1:ncol(d)) {
+  
+  for (i in 1:nrow(d)) {
     #get the group number for each row
     cli = cl[i]
     #in the dataset, for a metabolite row, loop an each metadabolite column
     #values are affected the corresponding cluster row and metabolite column in ctr
-    for (j in 1:ncol(d)) ctr[cli,j] = ctr[cli,j] + d[i,j]
+    for (j in 1:ncol(d)) 
+      ctr[cli,j] = ctr[cli,j] + d[i,j]
   }
+  
   return (ctr)
 }
 
@@ -865,15 +910,23 @@ getDistPerVariable = function(d, cl){
 # k: number of clusters
 # c: hierarchical classification
 # d: data
-getCtrVar = function(t, k, cl, d) {
+getCtrVar = function(t, k, cl, d, scale = T) {
+  
   #if NA values appear, scale 0/0 could produce NA values, NA could correspond to 0
   nb_cl = length(levels(as.factor(cl)))
   ncol = ncol(d)
-  
   ctr = getDistPerVariable(d, cl)
+
   rownames(ctr) = paste("G", seq(1, k), sep=""); colnames(ctr) = colnames(d)
+
+  #ctr_part = getPdis(t, k, cl, d)
+  
   for (i in 1:nb_cl)
-    for (j in 1:ncol(d)) ctr[i,j] = ctr[i,j]^2 / (nrow(d) * length(cl[cl==i]))
+    for (j in 1:ncol(d)) 
+      ctr[i,j] = ctr[i,j]^2 / (nrow(d) * length(cl[cl==i]))
+      #if(scale)
+        #ctr[i,j] = ctr[i,j] / ctr_part[j]
+  #  }
   
   return(ctr)
 }

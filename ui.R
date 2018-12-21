@@ -1,5 +1,5 @@
 rm(list=ls())
-classif_methods = list("K-menoids" = 1,  "K-means" = 2, "Ward"=3, "Complete links"=4, "Single links"=5, "UPGMA"=6, "WPGMA"=7, "WPGMC"=8, "UPGMC"=9)
+classif_methods = list("K-menoids" = 1,  "K-means" = 2, "Ward"=  3, "Complete links" = 4, "Single links" = 5, "UPGMA" = 6, "WPGMA" = 7, "WPGMC" = 8, "UPGMC" = 9)
 library("shinyjs")
 jscode <- "shinyjs.refresh = function() { location.reload(); }"
 
@@ -26,7 +26,7 @@ ui = pageWithSidebar(
               ),
     checkboxInput("header",
                   "Consider first row as header",
-                  value=F),
+                  value = TRUE),
     radioButtons("sep", 
                  "Separator",
                  choices = c(Comma = ",",
@@ -34,6 +34,12 @@ ui = pageWithSidebar(
                              Tab = "\t"),
                  selected = "\t"),
     #checkValues and checkNames do not works on selectInput but only on checkbox
+    checkboxInput("scale",
+                  "Scale",
+                  value = TRUE),
+    checkboxInput("transpose",
+                  "Transpose",
+                  value = FALSE),
     selectInput("dist_type",
                 h5("Distance method: "),
                 selected = 1,
@@ -41,7 +47,7 @@ ui = pageWithSidebar(
                                `Similarity` = c("Jaccard" = 3, "Sokal & Michener" = 4, "Sorensen (Dice)" = 5, "Ochiai" = 6))),
     selectInput("classif_type",
                 h5("Classification method: "),
-                selected = "Complete links",
+                selected = "Ward",
                 choices = list(`Partitionning clustering` =  getClassifKeys(1,2),
                                `Hierarchical clustering` = getClassifKeys(3,9))),
     sliderInput("max_clusters", 
@@ -105,7 +111,13 @@ ui = pageWithSidebar(
       tabPanel("Within-inertia",
                value="within",
                tableOutput("within"),
-               actionButton("within_save","Save"))
+               actionButton("within_save","Save")),
+      tabPanel("Variable contribution",
+               tableOutput("ctr_clus"),
+               actionButton("ctr_clus_save","Save")),
+      tabPanel("Discriminant power",
+               tableOutput("ctr_part"),
+               actionButton("ctr_part_save","Save"))
     )
   )
   
