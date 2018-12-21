@@ -910,7 +910,7 @@ getDistPerVariable = function(d, cl){
 # k: number of clusters
 # c: hierarchical classification
 # d: data
-getCtrVar = function(t, k, cl, d, scale = T) {
+getCtrVar = function(t, k, cl, d) {
   
   #if NA values appear, scale 0/0 could produce NA values, NA could correspond to 0
   nb_cl = length(levels(as.factor(cl)))
@@ -918,15 +918,25 @@ getCtrVar = function(t, k, cl, d, scale = T) {
   ctr = getDistPerVariable(d, cl)
 
   rownames(ctr) = paste("G", seq(1, k), sep=""); colnames(ctr) = colnames(d)
-
-  #ctr_part = getPdis(t, k, cl, d)
   
   for (i in 1:nb_cl)
-    for (j in 1:ncol(d)) 
+    for (j in 1:ncol(d))
       ctr[i,j] = ctr[i,j]^2 / (nrow(d) * length(cl[cl==i]))
-      #if(scale)
-        #ctr[i,j] = ctr[i,j] / ctr_part[j]
-  #  }
+  
+  return(ctr)
+}
+
+getCtrVar2 = function(t, k, cl, d, scale = T) {
+  ctr = getCtrVar(t, k, cl, d)
+  
+  if (isTRUE(scale)){
+  ctr_part = getPdis(t, k, cl, d)
+  
+  for (i in 1:nb_cl)
+    for (j in 1:ncol(d))
+      if(scale)
+        ctr[i,j] = ctr[i,j] / ctr_part[j]
+  }
   
   return(ctr)
 }
@@ -964,3 +974,7 @@ getPdisPerPartition = function(t, n, cls, d){
   }
   return (pdis_per_partition)
 }
+
+
+
+

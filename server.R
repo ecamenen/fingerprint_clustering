@@ -1,5 +1,6 @@
 options(shiny.maxRequestSize = 30*1024^2)
 source("fingerprint_clustering.R")
+source("plot.R")
 classif_methods <- list("K-menoids" = 1,  "K-means" = 2, "Ward" = 3, "Complete links" = 4, "Single links" = 5, "UPGMA" = 6, "WPGMA"=7, "WPGMC"=8, "UPGMC"=9)
 library("shinyjs")
 
@@ -11,7 +12,7 @@ tryCatch({
   }, error = function(e) {
   })
 
-loadData = function(f, s="\t",h=F){
+loadData = function(f, s = "\t", h=F){
   #!file.exists(
   if(!is.null(f)){
     data = read.table(f,
@@ -220,8 +221,11 @@ server = function(input, output, session){
            100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data),
            .GlobalEnv)
     assign("ctr_clus",
-           100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data),
+           function() plotDiscriminantVariables(CLASSIF_TYPE, optimal_nb_clusters, clusters, data, input$max_biomark),
            .GlobalEnv)
+    # assign("ctr_clus",
+    #        100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data),
+    #        .GlobalEnv)
     
 
   }
@@ -595,11 +599,11 @@ server = function(input, output, session){
     })
   }, rownames=T, hover=T, striped=T, digits=2, width="100cm", align="c", na="", size=200)
   
-  output$ctr_clus = renderTable({
+  output$ctr_clus = renderPlot({
     tryCatch({
       setVariables()
       if(checkMaxCluster()){
-        observeEvent(input$ctr_clus_save, writeTsv("ctr_clus", "ctr_clus.tsv", v = F)); ctr_clus
+        observeEvent(input$ctr_clus_save, savePlot("discr_var", ctr_clus())); ctr_clus()
       }
     }, error = function(e) {
     })
