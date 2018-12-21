@@ -355,7 +355,7 @@ plotHistogram = function(p, df, title = "", color = "black"){
     labs(
       title = title,
       x = "", y = "",
-      fill = "Blocks") +
+      fill = "Cluster") +
     theme_classic() +
     theme_perso() +
     theme(
@@ -367,10 +367,16 @@ plotHistogram = function(p, df, title = "", color = "black"){
 }
 
 plotDiscriminantVariables = function(t, n, cl, d, m){
+
+  if(m > ncol(d))
+    m = ncol(d)
+
   ctr = 100 * getCtrVar(t, n, cl, d)
   max_ctr= apply(ctr, 2, max)
   which_max_ctr= apply(ctr, 2, which.max)
-  df = data.frame(max_ctr[order(max_ctr, decreasing = TRUE)], order = length(max_ctr):1)[0:(m), ]
-  p = ggplot(df, aes(order, df[,1]))
+  df = data.frame(max_ctr[order(max_ctr, decreasing = TRUE)], color = as.character(which_max_ctr), order = length(max_ctr):1)[0:(m), ]
+  color2 = as.factor(which_max_ctr); levels(color2) = hue_pal()(length(max_ctr))
+  p = ggplot(df, aes(order, df[,1], fill = color))
+
   plotHistogram(p, df, "Main discriminant variables")
 }

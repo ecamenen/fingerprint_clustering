@@ -603,7 +603,8 @@ server = function(input, output, session){
     tryCatch({
       setVariables()
       if(checkMaxCluster()){
-        observeEvent(input$ctr_clus_save, savePlot("discr_var", ctr_clus())); ctr_clus()
+        observeEvent(input$ctr_clus_save, savePlot("discr_var", ctr_clus()))
+        ctr_clus()
       }
     }, error = function(e) {
     })

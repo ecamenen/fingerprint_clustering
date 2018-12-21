@@ -164,11 +164,18 @@ NB_BIOMARK = 20
 plotDiscriminantVariables(CLASSIF_TYPE, optimal_nb_clusters, clusters, data, NB_BIOMARK)
 
 plotDiscriminantVariables = function(t, n, cl, d, m){
+  options(warn = -1)
+  if(m > ncol(data))
+    m = ncol(data)
+    
   ctr = 100 * getCtrVar(t, n, cl, d)
   max_ctr= apply(ctr, 2, max)
   which_max_ctr= apply(ctr, 2, which.max)
   df = data.frame(max_ctr[order(max_ctr, decreasing = TRUE)], order = length(max_ctr):1)[0:(m), ]
-  p = ggplot(df, aes(order, df[,1]))
+  df$color = paste("G", as.character(which_max_ctr), sep="")
+  color2 = as.factor(which_max_ctr); levels(color2) = hue_pal()(length(max_ctr))
+  p = ggplot(df, aes(order, df[,1], fill = color))
+  options(warn = 0)
   plotHistogram(p, df, "Main discriminant variables")
 }
 
@@ -181,7 +188,4 @@ discriminant_power = 100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_
 sil = getSilhouettePerPart(data, list_clus, dis)
 mean_silhouette = getMeanSilhouettePerPart(sil)
 plotSilhouettePerPart(mean_silhouette)
-
-
-
 

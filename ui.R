@@ -8,9 +8,15 @@ getClassifKeys = function(min, max)
   #similar to for i in min:max
   unlist(sapply(min:max, function(i) names(classif_methods)[i]))
 
+#Loading librairies
+librairies = c("shiny","shinyjs","cluster", "optparse", "gclus", "ade4", "scales")
+for (l in librairies){
+  if (! (l %in% installed.packages()[,"Package"])) install.packages(l, repos = "http://cran.us.r-project.org", quiet = T)
+  library(l, character.only = TRUE)
+}
+
 ui = pageWithSidebar(
 
-  
   headerPanel("Automatic clustering"), #titre appl
   
   #pannel de cote
