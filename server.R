@@ -2,7 +2,6 @@ options(shiny.maxRequestSize = 30*1024^2)
 source("fingerprint_clustering.R")
 source("plot.R")
 classif_methods <- list("K-menoids" = 1,  "K-means" = 2, "Ward" = 3, "Complete links" = 4, "Single links" = 5, "UPGMA" = 6, "WPGMA"=7, "WPGMC"=8, "UPGMC"=9)
-library("shinyjs")
 
 tryCatch({
   data <- loadData("matrix.txt")
@@ -37,7 +36,7 @@ server = function(input, output, session){
   ###################################
   
   setVariables = reactive({
-    refresh2 = c(refresh$classif_type)
+    refresh2 = c(refresh$classif_type, input$max_biomark)
 
     assign("data",
            refresh$data,
@@ -154,7 +153,7 @@ server = function(input, output, session){
     assign("ADVANCED",
            input$advanced,
            .GlobalEnv)
-    refr = input$nb_clusters
+    refr = c(input$nb_clusters, input$max_biomark)
     
     ###### plot funcs #####
     assign("plotPCA", 
@@ -345,6 +344,11 @@ server = function(input, output, session){
     }
   })
   
+  observeEvent(c(input$max_biomark), {
+    if(!is.null(input$infile)){
+      setPrintFuncs()
+    }
+  })
 
   #events for advanced mode
   observeEvent(input$advanced, {

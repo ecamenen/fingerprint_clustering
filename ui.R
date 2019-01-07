@@ -1,6 +1,5 @@
 rm(list=ls())
 classif_methods = list("K-menoids" = 1,  "K-means" = 2, "Ward"=  3, "Complete links" = 4, "Single links" = 5, "UPGMA" = 6, "WPGMA" = 7, "WPGMC" = 8, "UPGMC" = 9)
-library("shinyjs")
 jscode <- "shinyjs.refresh = function() { location.reload(); }"
 
 #min-max: minimum and maximum position number in the list
@@ -9,7 +8,7 @@ getClassifKeys = function(min, max)
   unlist(sapply(min:max, function(i) names(classif_methods)[i]))
 
 #Loading librairies
-librairies = c("shiny","shinyjs","cluster", "optparse", "gclus", "ade4", "scales")
+librairies = c("shiny","shinyjs","cluster", "optparse", "gclus", "ade4", "scales", "ggplot2")
 for (l in librairies){
   if (! (l %in% installed.packages()[,"Package"])) install.packages(l, repos = "http://cran.us.r-project.org", quiet = T)
   library(l, character.only = TRUE)
