@@ -359,8 +359,8 @@ plotHistogram = function(p, df, title = "", color = "black"){
     theme_classic() +
     theme_perso() +
     theme(
-      axis.text.y = element_text(size = AXIS_TEXT_SIZE, face = AXIS_FONT, color = color),
-      axis.text.x = element_text(size = AXIS_TEXT_SIZE, face = AXIS_FONT, color = "darkgrey"),
+      axis.text.y = element_text(size = 12, face = AXIS_FONT, color = color),
+      axis.text.x = element_text(size = 12, face = AXIS_FONT, color = "darkgrey"),
       axis.line = element_blank(),
       axis.ticks = element_blank(),
       plot.subtitle = element_text(hjust = 0.5, size = 16, face = "italic"))

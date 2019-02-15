@@ -200,7 +200,8 @@ colPers = colorRampPalette(c(rgb(0.6, 0.1, 0.5, 1),
                              rgb(0.9, 0.6, 0, 1),
                              rgb(0.1, 0.6, 0.3, 1),
                              rgb(0.1, 0.6, 0.5, 1), 
-                             rgb(0, 0, 1, 1)), alpha = TRUE)
+                             rgb(0, 0, 1, 1)), 
+                           alpha = TRUE)
 
 
 setGraphic = function(){
@@ -822,7 +823,7 @@ plotPca = function(pca, d, cl, axis1=1, axis2=2){
   if(nrow(d) > NB_ROW_MAX ) {
     cpoint=0; cstar=0; cellipse=0; clabel=0; labels=1:nrow(d)
   }else{
-    cpoint=1; cstar=1; cellipse=1; clabel=1; labels=rownames(d)
+    cpoint=0; cstar=1; cellipse=1; clabel=0; labels=rownames(d)
   }
   
   if(PNG) {   
@@ -831,11 +832,11 @@ plotPca = function(pca, d, cl, axis1=1, axis2=2){
   }else{
     #pdf(opt$output3)
     par(mar=c(0,0,4.1,0))
-    cex=0.6; cex.main=1.5;  lwd.line=2;  line.main=1
+    cex=0.8; cex.main=1.5;  lwd.line=2;  line.main=1
   }
   
   title = paste("Cumulated inertia:", round((pca$eig[axis1]+pca$eig[axis2])/sum(pca$eig),4)*100, "%")
-  s.class(addaxes=F, cbind(pca$li[,axis1] , pca$li[,axis2]), ylim=c(min(pca$li[,axis2])-3, max(pca$li[,axis2])+3), xlim=c(min(pca$li[,axis1])-3, max(pca$li[,axis1])+3), csub=1.5, as.factor(cl), grid=F, col=colPers(k), clabel=clabel, cstar=cstar, cellipse=cellipse, cpoint=cpoint)
+  s.class(addaxes=F, cbind(pca$li[,axis1] , pca$li[,axis2]), ylim=c(min(pca$li[,axis2]) + min(pca$li[,axis2])/4, max(pca$li[,axis2]) + max(pca$li[,axis2])/2), xlim=c(min(pca$li[,axis1]), max(pca$li[,axis1])), csub=1.5, as.factor(cl), grid=F, col=colPers(k), clabel=clabel, cstar=cstar, cellipse=cellipse, cpoint=cpoint)
   mtext(title, font=2, line=line.main, cex=cex.main)
   abline(h=0, v=0, lty=2, lwd=lwd.line, col="grey")
   text(x=pca$li[,axis1], y=pca$li[,axis2], labels=labels, col=colorClusters(cl), cex=cex)
