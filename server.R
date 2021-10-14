@@ -216,21 +216,22 @@ server = function(input, output, session){
     assign("summary", 
            printSummary(between, diff, mean_silhouette, ADVANCED, gap),
            .GlobalEnv)
-    # assign("ctr_part",
-    #        100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data),
-    #        .GlobalEnv)
+    assign("ctr_part",
+           100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data),
+           .GlobalEnv)
+    assign("centroids",
+          getDistPerVariable(data, clusters),
+           .GlobalEnv)
     assign("discr",
            getDiscriminantVariables(CLASSIF_TYPE, optimal_nb_clusters, clusters, data, input$max_biomark),
            .GlobalEnv)
-    assign("ctr_clus",
+    assign("ctr_clus_plot",
            function() plotDiscriminantVariables(discr),
            .GlobalEnv)
-    # assign("ctr_clus",
-    #        100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data),
-    #        .GlobalEnv)
-    
+    assign("ctr_clus",
+           100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data),
+           .GlobalEnv)
     writeTsv("discr", "discr_var.tsv", v=F)
-
   }
   
   # post-process for data
@@ -248,8 +249,8 @@ server = function(input, output, session){
   # f: filename
   # func: plot function
   savePlot = function(f, func){
-    f = paste(f, ".pdf", sep="")
-    pdf(f)
+    f = paste(f, ".tiff", sep="")
+    tiff(f, res = 300, width = 700, height = 800)
     func
     suprLog = dev.off()
   }
@@ -607,25 +608,46 @@ server = function(input, output, session){
     })
   }, rownames=T, hover=T, striped=T, digits=2, width="100cm", align="c", na="", size=200)
   
-  output$ctr_clus = renderPlot({
+  output$ctr_clus_plot = renderPlot({
     tryCatch({
       setVariables()
       if(checkMaxCluster()){
-        observeEvent(input$ctr_clus_save, savePlot("discr_var", ctr_clus()))
-        ctr_clus()
+        observeEvent(input$ctr_clus_plot_save, savePlot("discr_var", ctr_clus_plot()))
+        ctr_clus_plot()
       }
     }, error = function(e) {
     })
   })
 
-  # output$ctr_part = renderTable({
-  #   tryCatch({
-  #     setVariables()
-  #     if(checkMaxCluster()){
-  #       observeEvent(input$ctr_part_save, writeTsv("ctr_part", "ctr_part.tsv", v = F)); ctr_part
-  #     }
-  #   }, error = function(e) {
-  #   })
-  # })
+  output$ctr_clus = renderTable({
+    tryCatch({
+      setVariables()
+      if(checkMaxCluster()){
+        observeEvent(input$ctr_clus_save, writeTsv("ctr_clus", "ctr_clus.tsv", v = F)); ctr_clus
+      }
+    }, error = function(e) {
+    })
+  })
+
+  output$ctr_part = renderTable({
+    tryCatch({
+      setVariables()
+      if(checkMaxCluster()){
+        observeEvent(input$ctr_part_save, writeTsv("ctr_part", "ctr_part.tsv", v = F)); ctr_part
+      }
+    }, error = function(e) {
+    })
+  })
   
+  output$centroids = renderTable({
+    tryCatch({
+      setVariables()
+      if(checkMaxCluster()){
+        observeEvent(input$centroids_save, writeTsv("centroids_save", "centroids.tsv", v = F))
+        aggregate(data, list(clusters), mean)
+      }
+    }, error = function(e) {
+    })
+  })
+
 }

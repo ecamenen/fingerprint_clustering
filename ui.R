@@ -121,11 +121,17 @@ ui = pageWithSidebar(
                tableOutput("within"),
                actionButton("within_save","Save")),
       tabPanel("Discriminant variables",
-               plotOutput("ctr_clus"),
-               actionButton("ctr_clus_save","Save"))
-      # tabPanel("Discriminant power",
-      #          tableOutput("ctr_part"),
-      #          actionButton("ctr_part_save","Save"))
+               plotOutput("ctr_clus_plot"),
+               actionButton("ctr_clus_plot_save","Save")),
+      tabPanel("Discriminant variables",
+               tableOutput("ctr_clus"),
+               actionButton("ctr_clus_save","Save")),
+      tabPanel("Discriminant power",
+               tableOutput("ctr_part"),
+               actionButton("ctr_part_save","Save")),
+      tabPanel("Centroids",
+               tableOutput("centroids"),
+               actionButton("centroids_save","Save"))
     )
   )
   
