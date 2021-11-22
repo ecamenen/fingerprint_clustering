@@ -14,11 +14,14 @@ tryCatch({
 loadData = function(f, s = "\t", h=F){
   #!file.exists(
   if(!is.null(f)){
-    data = read.table(f,
-                 header = h,
-                 sep = s,
-                 dec = ".",
-                 row.names = 1)
+    if(grepl("xlsx?", f))
+      data = openxlsx::read.xlsx(f, rowNames = TRUE)
+    else
+      data = read.table(f,
+                        header = h,
+                        sep = s,
+                        dec = ".",
+                        row.names = 1)
     data = preProcessData(data)
     #substr(rownames(data), 1, MAX_CHAR_LEN) -> rownames(data)
   }
@@ -198,6 +201,15 @@ server = function(input, output, session){
                if (nrow(data) < (NB_ROW_MAX/2)){
                  plotGapPerPart(gap, MAX_CLUSTERS, v=F)
                  #plotGapPerPart2(gap, MAX_CLUSTERS)
+               }else{
+                 message("\n[WARNING] Dataset too big to calculate a gap statistics.")
+               }
+             },
+             .GlobalEnv)
+      assign("plotGap2",
+             function() {
+               if (nrow(data) < (NB_ROW_MAX/2)){
+                 plotGapPerPart2(gap, MAX_CLUSTERS)
                }else{
                  message("\n[WARNING] Dataset too big to calculate a gap statistics.")
                }
@@ -576,6 +588,19 @@ server = function(input, output, session){
         if(checkMaxCluster()){
           observeEvent(input$gap_save, savePlot("gap", plotGap()))
           plotGap()
+        }
+      }
+    }, error = function(e) {
+    })
+  })
+  
+  output$gap2 = renderPlot({
+    tryCatch({
+      setVariables()
+      if(isTRUE(input$advanced)){
+        if(checkMaxCluster()){
+          observeEvent(input$gap2_save, savePlot("gap", plotGap2()))
+          plotGap2()
         }
       }
     }, error = function(e) {

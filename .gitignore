@@ -9,3 +9,5 @@
 
 \.Rhistory
 .Rproj.user
+
+*.Rproj
