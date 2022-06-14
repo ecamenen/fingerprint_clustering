@@ -1,13 +1,8 @@
-
 *.tsv
-
 *.txt
-
 *.pdf
-
 *.png
-
 \.Rhistory
 .Rproj.user
-
 *.Rproj
+.idea/

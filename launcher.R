@@ -1,6 +1,6 @@
 getArgs = function(){
   option_list = list(
-    make_option(c("-i", "--infile"), type="character", metavar="character", default="data/Transcriptomique_cur.tsv",
+    make_option(c("-i", "--infile"), type="character", metavar="character",
                 help="Fingerprint file name"),
     make_option(c( "--output1"), type="character", default="average_silhouette.pdf", 
                 metavar="character", help="Average silhouettes file name [default: %default]"),

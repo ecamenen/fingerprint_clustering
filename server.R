@@ -22,7 +22,7 @@ loadData = function(f, s = "\t", h=F){
                         sep = s,
                         dec = ".",
                         row.names = 1)
-    data = preProcessData(data)
+    # data = preProcessData(data)
     #substr(rownames(data), 1, MAX_CHAR_LEN) -> rownames(data)
   }
   return (data)
