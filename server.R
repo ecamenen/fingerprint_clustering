@@ -402,6 +402,7 @@ server = function(input, output, session){
       show(selector = "#navbar li a[data-value=dendr]")
       hide(selector = "#navbar li a[data-value=elbow]")
       hide(selector = "#navbar li a[data-value=gap]")
+      hide(selector = "#navbar li a[data-value=gap2]")
       hide(selector = "#navbar li a[data-value=coph]")
       hide(selector = "#navbar li a[data-value=fusion]")
       hide(selector = "#navbar li a[data-value=within]")
@@ -414,6 +415,7 @@ server = function(input, output, session){
         #responsive for a given condition
         toggle(condition = input$advanced, selector = "#navbar li a[data-value=elbow]")
         toggle(condition = input$advanced, selector = "#navbar li a[data-value=gap]")
+        toggle(condition = input$advanced, selector = "#navbar li a[data-value=gap2]")
         toggle(condition = input$advanced, selector = "#navbar li a[data-value=within]")
         toggle(condition = ( input$advanced & as.integer(getClassifValue(input$classif_type) > 2) ), selector = "#navbar li a[data-value=fusion]")
         toggle(condition = ( input$advanced & as.integer(getClassifValue(input$classif_type) > 2) ), selector = "#navbar li a[data-value=coph]")
