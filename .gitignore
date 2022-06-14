@@ -1,8 +1,8 @@
 *.tsv
-*.csv
-*.zip
 *.txt
 *.pdf
 *.png
 \.Rhistory
-.~lock*
+.Rproj.user
+*.Rproj
+.idea/
