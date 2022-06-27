@@ -1,0 +1,10 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^\.idea$
+^data-raw$
+^dev$
+$run_dev.*
+^app.R$
+^.*\.tar\.gz$
+^autoCluster\.Rproj$
+^README\.Rmd$

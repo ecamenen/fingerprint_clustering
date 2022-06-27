@@ -1,0 +1,42 @@
+Package: autoCluster
+Title: Automatic Clustering
+Version: 4.0.0
+Authors@R: 
+    c(person(given = "Etienne",
+             family = "Camenen",
+             role = c("aut", "cre"),
+             email = "etienne.camenen@gmail.com"),
+      person(given = "Maxime",
+             family = "Chazalviel",
+             role = "aut"),
+      person(given = "Fabien",
+             family = "Jourdan",
+             role = "aut"))
+Description: Performs unsupervised clustering and automatically
+    determine the best number of cluster.
+License: GPL-3
+Imports:
+    ade4,
+    cluster,
+    config,
+    desc,
+    gclus,
+    ggplot2,
+    golem,
+    graphics,
+    grDevices,
+    magrittr,
+    openxlsx,
+    optparse,
+    scales,
+    shiny,
+    shinyjs,
+    stats,
+    utils
+Suggests:
+    spelling,
+    testthat
+Encoding: UTF-8
+LazyData: false
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1

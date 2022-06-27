@@ -2,7 +2,11 @@
 *.txt
 *.pdf
 *.png
-\.Rhistory
 .Rproj.user
 *.Rproj
+.Rhistory
+.RData
 .idea/
+dev/
+inst/extdata/
+*.tar.gz
