@@ -1,3 +1,13 @@
+# Global variables settings
+NB_BOOTSTRAP <- 500 # should be comprise between 100 and 1000
+TEXT <- T # print values on graph (for optimum partition and heatmap)
+NB_ROW_MAX <- 200 # max row to have pdf, otherwise, some plots are in png
+DIM_PNG <- 2000
+VERBOSE_NIV2 <- F
+VERBOSE <- F
+MAX_CHAR_LEN <- 25 # maximum length of individual s names
+PNG <- F
+
 getArgs <- function() {
     option_list <- list(
         make_option(c("-i", "--infile"),
@@ -176,8 +186,6 @@ HEAD <- !("header" %in% names(opt))
 # if (!is.null(opt$workdir)) setwd(opt$workdir)
 if (isTRUE(VERBOSE_NIV2)) start_time <- Sys.time()
 
-source("fingerprint_clustering.R")
-
 if (opt$separator == 1) {
     SEP <- "\t"
 } else if (opt$separator == 2) {
@@ -207,9 +215,6 @@ list_clus <- getClusterPerPart(MAX_CLUSTERS+1, classif)
 optimal_nb_clusters <- 2
 clusters <- list_clus[[optimal_nb_clusters - 1]]
 
-
-
-source("plot.R")
 NB_BIOMARK <- 20
 discr <- getDiscriminantVariables(CLASSIF_TYPE, optimal_nb_clusters, clusters, data, NB_BIOMARK)
 plotDiscriminantVariables(discr)
