@@ -19,8 +19,6 @@ tryCatch(
     {
         data <- loadData("matrix.txt")
     },
-    warning = function(w) {
-        data <- NULL
         warning = function(w) {
             data <- NULL
             message("Default file \"matrix.txt\" is not in the folder. Please, load another one.")
