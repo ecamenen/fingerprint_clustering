@@ -36,12 +36,12 @@ PNG <- F
 # if (isTRUE(VERBOSE_NIV2)) getTimeElapsed(start_time)
 
 printProgress <- function(v, val) {
-    if(isTRUE(v))
+    if (isTRUE(v)) {
         cat(paste("\n[", format(Sys.time(), "%X"), "] ", val, "in progress..."), sep = "")
+    }
 }
 
 getTimeElapsed <- function(start_time) {
-
     time <- as.numeric(as.difftime(Sys.time() - start_time), units = "secs")
     secs <- time %% 60
     time <- (time - secs) / 60
@@ -49,8 +49,9 @@ getTimeElapsed <- function(start_time) {
     hours <- time / 60
     time <- paste(mins, "min ", round(secs), "s\n", sep = "")
 
-    if(hours >= 1)
+    if (hours >= 1) {
         time <- paste(round(hours), "h ", time, sep = "")
+    }
 
     cat(paste("\nTime to run the process : ", time, sep = ""))
 }
@@ -62,24 +63,28 @@ getTimeElapsed <- function(start_time) {
 
 # rename row and avoid doublets errors
 preProcessData <- function(d) {
-    if(ncol(d) == 1) {
-        stop(paste("Check for the separator (by default, tabulation)."), call. = FALSE)
+    if (ncol(d) == 1) {
+        stop(paste("Check for the separator (by default, tabulation)."),
+            call. = FALSE
+        )
     }
 
-    REMOVE_DOUBLETS <- (nrow(d) > NB_ROW_MAX) # Discard line containing the same information on all columns from analysis
+    # Discard line containing the same information on all columns from analysis
+    REMOVE_DOUBLETS <- (nrow(d) > NB_ROW_MAX)
     d <- renameRowname(d)
     # remove columns containing characters
     # if(nrow(d) > NB_ROW_MAX) VERBOSE_NIV2 = T
     # get only columns with numeric values
     d <- d[, unlist(sapply(1:ncol(d), function(i) is.numeric(d[, i])))]
 
-    if(isTRUE(REMOVE_DOUBLETS)) {
+    if (isTRUE(REMOVE_DOUBLETS)) {
         printProgress(VERBOSE_NIV2, "Loading data")
         d <- discardRowCondDoublets(d)
     }
 
-    if(isSymmetric(as.matrix(d)) & !HEAD)
+    if (isSymmetric(as.matrix(d)) & !HEAD) {
         colnames(d) <- rownames(d)
+    }
 
     return(d)
 }
@@ -88,11 +93,10 @@ preProcessData <- function(d) {
 # avoid doublets in row names
 # r: row names vector
 renameRownameDoublets <- function(names.row) {
-
     j <- 1
 
     for (i in 2:length(names.row)) {
-        if(names.row[i] == names.row[i - 1]) {
+        if (names.row[i] == names.row[i - 1]) {
             j <- j + 1
             names.row[i] <- paste(names.row[i], ".", j, sep = "")
         } else {
@@ -104,7 +108,6 @@ renameRownameDoublets <- function(names.row) {
 
 # rename row and avoid doublets errors
 renameRowname <- function(d) {
-
     # names.row = as.character(d[,1])
     names.row <- rownames(d)
     d <- d[, -1]
@@ -151,10 +154,10 @@ discardRowCondDoublets <- function(x) {
     }
 
     if (length(row_doublets) > 0) {
-          return(x[-unlist(row_doublets), ])
-      } else {
-          return(x)
-      }
+        return(x[-unlist(row_doublets), ])
+    } else {
+        return(x)
+    }
 }
 
 # rename row and avoid doublets errors
@@ -211,7 +214,9 @@ discardRowCondDoublets <- function(x) {
 # Prints the matrix, save the matrix
 writeTsv <- function(x, f = NULL, cl = F, v = T) {
     # print on stdout
-    if (isTRUE(v)) cat(paste("\n", gsub("_", " ", toupper(x)), ":\n", sep = ""))
+    if (isTRUE(v)) {
+        cat(paste("\n", gsub("_", " ", toupper(x)), ":\n", sep = ""))
+    }
     # disabling warning
     options(warn = -1)
     # get variable
@@ -238,7 +243,9 @@ writeTsv <- function(x, f = NULL, cl = F, v = T) {
         }
         print(printed, quote = F)
     }
-    if (is.null(f)) f <- paste(x, ".tsv", sep = "")
+    if (is.null(f)) {
+        f <- paste(x, ".tsv", sep = "")
+    }
     write(t(output), f, ncolumns = ncol(output), sep = "\t")
     options(warn = 0)
 }
@@ -267,49 +274,111 @@ setGraphic <- function() {
 }
 
 setGraphicBasic <- function() {
-    par(cex.lab = 1.5, font.lab = 3, font.axis = 3, cex.axis = 0.8, cex.main = 2, cex = 1, lwd = 3)
+    par(
+        cex.lab = 1.5,
+        font.lab = 3,
+        font.axis = 3,
+        cex.axis = 0.8,
+        cex.main = 2,
+        cex = 1,
+        lwd = 3
+    )
 }
 
 plotAxis <- function(side, min, max, interval = 1, lwd = 3) {
     axis(side, seq(min, max, interval), lwd = lwd)
 }
 
-plotBestClustering <- function(sub_title, values, values_type, optimal_nb_clusters, interval = 1, min_x = 2, best = NULL, val2 = NULL) {
+plotBestClustering <- function(
+    sub_title,
+     values,
+     values_type,
+     optimal_nb_clusters,
+     interval = 1,
+     min_x = 2,
+     best = NULL,
+     val2 = NULL) {
+  
     plotAxis(1, 2, MAX_CLUSTERS)
 
-    if(interval >= 1) axisSeq <- round(values)
-    else axisSeq <- c(0, max(values) + 0.1)
+    if (interval >= 1) {
+        axisSeq <- round(values)
+    } else {
+        axisSeq <- c(0, max(values) + 0.1)
+    }
 
     # case of plotting gap statistics
-    if(min_x < 2)
+    if (min_x < 2) {
         best_y <- values[optimal_nb_clusters]
-    # case of fusion levels
-    else if(!is.null(val2))
+    } # case of fusion levels
+    else if (!is.null(val2)) {
         best_y <- values[optimal_nb_clusters - 1]
-    else
+    } else {
         best_y <- max(values)
+    }
 
     # for non-elbow plots
-    if(!is.null(val2))
+    if (!is.null(val2)) {
         best <- round(max(val2), 2)
-    else if(is.null(best))
+    } else if (is.null(best)) {
         best <- round(max(values), 2)
+    }
 
     plotAxis(2, min(axisSeq), max(axisSeq), interval)
-    title(main = "Optimal number of clusters", line = 2, cex.main = 2)
-    mtext(text = sub_title, font = 3, cex = 1.2, line = 0.5)
-    abline(v = optimal_nb_clusters, col = "red", lty = 2, lwd = 2)
-    points(optimal_nb_clusters, best_y, pch = 19, col = "red", cex = 2)
+    title(
+        main = "Optimal number of clusters",
+        line = 2,
+        cex.main = 2
+    )
+    mtext(
+        text = sub_title,
+        font = 3,
+        cex = 1.2,
+        line = 0.5
+    )
+    abline(
+        v = optimal_nb_clusters,
+        col = "red",
+        lty = 2,
+        lwd = 2
+    )
+    points(
+        optimal_nb_clusters,
+        best_y,
+        pch = 19,
+        col = "red",
+        cex = 2
+    )
 
-    if(!is.null(val2))
+    if (!is.null(val2)) {
         t_values <- val2
-    else
+    } else {
         t_values <- values
+    }
 
-    if(isTRUE(TEXT))
-        text(y = values, x = min_x:MAX_CLUSTERS, labels = round(t_values, 2), cex = 1.2, pos = 4, col = "red")
-    if(isTRUE(VERBOSE))
-        cat("Optimal number of clusters k = ", optimal_nb_clusters, "\n", "With a", values_type, " of ", best, "\n", sep = "")
+    if (isTRUE(TEXT)) {
+        text(
+            y = values,
+            x = min_x:MAX_CLUSTERS,
+            labels = round(t_values, 2),
+            cex = 1.2,
+            pos = 4,
+            col = "red"
+        )
+    }
+    if (isTRUE(VERBOSE)) {
+        cat(
+            "Optimal number of clusters k = ",
+            optimal_nb_clusters,
+            "\n",
+            "With a",
+            values_type,
+            " of ",
+            best,
+            "\n",
+            sep = ""
+        )
+    }
 }
 
 # f: filename
@@ -335,30 +404,32 @@ scalecenter <- function(d) {
 # df: dataframe
 # d: distance type
 getDistance <- function(df, d) {
-
     dists <- c("euclidian", "manhattan", 1, 2, 5, 7)
 
-    if(d < 3)
+    if (d < 3) {
         dist(df, method = dists[d])
-    else
+    } else {
         dist.binary(df, method = as.integer(dists[d]))
+    }
 }
 
 # d distance object
 checkEuclidean <- function(d) {
-    if(attributes(d)$method != "euclidean")
+    if (attributes(d)$method != "euclidean") {
         stop("Distance should be euclidean with this classification method.", call. = FALSE)
+    }
 }
 
 isSymmetric <- function(d) {
-    if(nrow(d) == ncol(d)) {
+    if (nrow(d) == ncol(d)) {
         isReflexivity <- unique(d[cbind(1:nrow(d), 1:nrow(d))] == 0)
 
-        if(length(isReflexivity) == 1 & isTRUE(isReflexivity)) {
+        if (length(isReflexivity) == 1 & isTRUE(isReflexivity)) {
             isCommutativity <- unique(d[lower.tri(d)] == t(d)[lower.tri(d)])
 
-            if(length(isCommutativity) == 1 & isTRUE(isCommutativity))
+            if (length(isCommutativity) == 1 & isTRUE(isCommutativity)) {
                 return(T)
+            }
         }
     }
     return(F)
@@ -374,10 +445,10 @@ isSymmetric <- function(d) {
 # d: distance matrix
 # Ouput: Hierarchical classification
 getCAH <- function(t, df, d) {
-
-    if(t > 2) {
-        if(t == 8 | t == 9)
+    if (t > 2) {
+        if (t == 8 | t == 9) {
             checkEuclidean(d)
+        }
 
         # cah: classification hierarchic ascending
         cah <- hclust(d, method = getClassifType(t))
@@ -394,8 +465,10 @@ selectBestCAH <- function(df, d, v = F) {
     for (i in 3:9) {
         cah <- getCAH(df, i)
         res <- cor(d, cophenetic(cah))
-        if(isTRUE(v)) cat(paste(getClassifType(i), ":", round(res, 3), "\n"))
-        if(res > temp) {
+        if (isTRUE(v)) {
+            cat(paste(getClassifType(i), ":", round(res, 3), "\n"))
+        }
+        if (res > temp) {
             temp <- res
             t <- i
         }
@@ -407,13 +480,24 @@ selectBestCAH <- function(df, d, v = F) {
 # Inputs:
 # t: number of type of classification
 getClassifType <- function(t) {
-    methods <- c("kmedoids", "kmeans", "ward.D2", "complete", "single", "average", "mcquitty", "median", "centroid")
+    methods <- c(
+        "kmedoids",
+        "kmeans",
+        "ward.D2",
+        "complete",
+        "single",
+        "average",
+        "mcquitty",
+        "median",
+        "centroid"
+    )
     methods[t]
 }
 
 # Agglomerative coefficient ()
-getCoefAggl <- function(c)
+getCoefAggl <- function(c) {
     coef.hclust(c)
+}
 
 # Inputs:
 # t: number of type of classification
@@ -422,20 +506,22 @@ getCoefAggl <- function(c)
 # k: number of clusterting
 # Ouput: Non-hierarchical classification
 getCNH <- function(t, df, d, k) {
-    if(t == 1)
+    if (t == 1) {
         return(pam(d, k, diss = T))
-    else if(t == 2) {
+    } else if (t == 2) {
         checkEuclidean(d)
         return(kmeans(df, centers = k, nstart = 100))
     }
 }
 
 getClassif <- function(t, n, df, d) {
-    if(t > 2) getCAH(t, df, d)
-    else {
+    if (t > 2) {
+        getCAH(t, df, d)
+    } else {
         list_cnh <- list("method" = getClassifType(t))
-        for (k in 2:(n + 1))
+        for (k in 2:(n + 1)) {
             list_cnh[[k]] <- getCNH(t, df, d, k)
+        }
         return(list_cnh)
     }
 }
@@ -447,9 +533,13 @@ getClassif <- function(t, n, df, d) {
 # d: data
 # Output: partitionning contening k clusters
 getClusters <- function(k, c) {
-    if(c$method == "kmedoids") c[[k]]$clustering
-    else if(c$method == "kmeans") c[[k]]$cluster
-    else cutree(c, k)
+    if (c$method == "kmedoids") {
+        c[[k]]$clustering
+    } else if (c$method == "kmeans") {
+        c[[k]]$cluster
+    } else {
+        cutree(c, k)
+    }
 }
 
 getClusterPerPart <- function(n, c) {
@@ -492,7 +582,17 @@ writeClusters <- function(f, v = FALSE) {
 plotCohenetic <- function(d, cah) {
     coph_matrix <- cophenetic(cah)
     cor_coph <- cor(d, coph_matrix)
-    if(isTRUE(VERBOSE)) cat(paste("\nCOPHENETIC:\nExplained variance (%):", round(cor_coph^2, 3), "\nCorrelation with the data:", round(cor_coph, 3), "\n"))
+    if (isTRUE(VERBOSE)) {
+        cat(
+            paste(
+                "\nCOPHENETIC:\nExplained variance (%):",
+                round(cor_coph^2, 3),
+                "\nCorrelation with the data:",
+                round(cor_coph, 3),
+                "\n"
+            )
+        )
+    }
 
     # if(PNG ) {
     #   #png(paste(opt$output8, ".png", sep=""), DIM_PNG/2, DIM_PNG/2)
@@ -507,8 +607,24 @@ plotCohenetic <- function(d, cah) {
     line.lab <- 3
     # }
 
-    plot(d, coph_matrix, pch = 19, col = alpha("red", 0.2), axes = F, xlim = c(0, max(d)), xlab = "", ylab = "", ylim = c(0, max(coph_matrix)), asp = 1, main = paste("Cophenetic correlation: ", round(cor_coph, 3)))
-    title(xlab = "Distance between metabolites", ylab = "Cophenetic distance", line = line.lab)
+    plot(
+        d,
+        coph_matrix,
+        pch = 19,
+        col = alpha("red", 0.2),
+        axes = F,
+        xlim = c(0, max(d)),
+        xlab = "",
+        ylab = "",
+        ylim = c(0, max(coph_matrix)),
+        asp = 1,
+        main = paste("Cophenetic correlation: ", round(cor_coph, 3))
+    )
+    title(
+        xlab = "Distance between metabolites",
+        ylab = "Cophenetic distance",
+        line = line.lab
+    )
     plotAxis(2, 0, max(coph_matrix), lwd = lwd)
     plotAxis(1, 0, max(d), lwd = lwd)
     abline(0, 1, col = "grey", lty = 2, lwd = lwd)
@@ -580,31 +696,68 @@ getRelativeWithinPerCluster <- function(cls, d) {
 
 # Between inertia differences between a partionning and the previous
 plotBetweenDiff <- function(between_diff) {
-    if(isTRUE(VERBOSE)) cat("\nBETWEEN DIFFERENCES:\n")
+    if (isTRUE(VERBOSE)) {
+        cat("\nBETWEEN DIFFERENCES:\n")
+    }
     optimal_nb_clusters <- which.max(between_diff) + 1
     # savePdf("between_differences.pdf")
     setGraphic()
-    plot(2:(length(between_diff) + 1), between_diff, type = "b", ylim = c(round(min(between_diff)) - 1, round(max(between_diff)) + 1), xlim = c(2, (length(between_diff) + 2)), xlab = "Nb. of clusters", ylab = "Between-cluster variation (%)", col = "grey", axes = F)
-    plotBestClustering("Largest between differences method", between_diff, " variation with the previous partitionning (%)", optimal_nb_clusters)
+    plot(
+        2:(length(between_diff) + 1),
+        between_diff,
+        type = "b",
+        ylim = c(round(min(between_diff)) - 1, round(max(between_diff)) + 1),
+        xlim = c(2, (length(between_diff) + 2)),
+        xlab = "Nb. of clusters",
+        ylab = "Between-cluster variation (%)",
+        col = "grey",
+        axes = F
+    )
+    plotBestClustering(
+        "Largest between differences method",
+        between_diff,
+        " variation with the previous partitionning (%)",
+        optimal_nb_clusters
+    )
     # suprLog = dev.off()
 }
 
 plotFusionLevels <- function(n, c) {
-    if(isTRUE(VERBOSE)) cat("\nFUSION LEVELS:\n")
+    if (isTRUE(VERBOSE)) {
+        cat("\nFUSION LEVELS:\n")
+    }
     fusion <- rev(c$height)
     diff <- unlist(sapply(1:n, function(i) fusion[i - 1] - fusion[i]))
     fusion <- fusion[1:(n - 1)]
     optimal_nb_clusters <- which.max(diff) + 1
     setGraphic()
     # savePdf(paste(opt$output9, ".pdf", sep=""))
-    plot(2:n, fusion, type = "b", ylim = c(round(min(fusion)) - 1, round(max(fusion)) + 1), xlim = c(2, n + 1), xlab = "Nb. of clusters", ylab = "Cophenetic distance", col = "grey", axes = F)
-    plotBestClustering("Fusion level method", fusion, " gain with the previous fusion level", optimal_nb_clusters, val2 = diff)
+    plot(
+        2:n,
+        fusion,
+        type = "b",
+        ylim = c(round(min(fusion)) - 1, round(max(fusion)) + 1),
+        xlim = c(2, n + 1),
+        xlab = "Nb. of clusters",
+        ylab = "Cophenetic distance",
+        col = "grey",
+        axes = F
+    )
+    plotBestClustering(
+        "Fusion level method",
+        fusion,
+        " gain with the previous fusion level",
+        optimal_nb_clusters,
+        val2 = diff
+    )
     # suprLog = dev.off()
 }
 
 # x: vector of between inertia for k partitions
 plotElbow <- function(x) {
-    if(isTRUE(VERBOSE)) cat("\nELBOW:\n")
+    if (isTRUE(VERBOSE)) {
+        cat("\nELBOW:\n")
+    }
     n <- length(between) + 1
     within <- c(100, 100 - x)
     ratio <- within[1:(n - 1)] / within[2:n]
@@ -612,8 +765,26 @@ plotElbow <- function(x) {
     optimal_nb_clusters <- which.min(ratio)
     setGraphic()
     # savePdf("elbow.pdf")
-    plot(1:n, within, type = "b", ylim = c(min(within) - 1, 101), xlim = c(1, n + 1), xlab = "Nb. of clusters", ylab = "Relative within inertia (%)", col = "grey", axes = F)
-    plotBestClustering("Elbow method", within, " Wk/Wk+1 ratio ", optimal_nb_clusters, 5, 1, best)
+    plot(
+        1:n,
+        within,
+        type = "b",
+        ylim = c(min(within) - 1, 101),
+        xlim = c(1, n + 1),
+        xlab = "Nb. of clusters",
+        ylab = "Relative within inertia (%)",
+        col = "grey",
+        axes = F
+    )
+    plotBestClustering(
+        "Elbow method",
+        within,
+        " Wk/Wk+1 ratio ",
+        optimal_nb_clusters,
+        5,
+        1,
+        best
+    )
     # suprLog = dev.off()
 }
 
@@ -644,12 +815,30 @@ getMeanSilhouettePerPart <- function(sils) {
 # Plot the best average silhouette width for all clustering possible
 # mean_sils: vector of silhouette average width
 plotSilhouettePerPart <- function(mean_silhouette) {
-    if(isTRUE(VERBOSE)) cat("\nSILHOUETTE:\n")
+    if (isTRUE(VERBOSE)) {
+        cat("\nSILHOUETTE:\n")
+    }
     setGraphic()
     # savePdf(opt$output1)
     optimal_nb_clusters <- which.max(mean_silhouette) + 1
-    plot(2:(length(sil) + 1), mean_silhouette, type = "b", xlim = c(2, length(sil) + 2), ylim = c(0, max(mean_silhouette) + 0.1), col = "grey", xlab = "Nb. of clusters", ylab = "Average silhouette width", axes = F)
-    plotBestClustering("Silhouette method", mean_silhouette, "n average width", optimal_nb_clusters, 0.1)
+    plot(
+        2:(length(sil) + 1),
+        mean_silhouette,
+        type = "b",
+        xlim = c(2, length(sil) + 2),
+        ylim = c(0, max(mean_silhouette) + 0.1),
+        col = "grey",
+        xlab = "Nb. of clusters",
+        ylab = "Average silhouette width",
+        axes = F
+    )
+    plotBestClustering(
+        "Silhouette method",
+        mean_silhouette,
+        "n average width",
+        optimal_nb_clusters,
+        0.1
+    )
     # suprLog = dev.off()
     # return (optimal_nb_clusters)
 }
@@ -659,8 +848,25 @@ plotSilhouette <- function(sil_k) {
     # pdf(opt$output2)
     setGraphicBasic()
     par(mar = c(4, 12, 3, 2))
-    plot(sil_k, max.strlen = MAX_CHAR_LEN, main = " ", sub = "", do.clus.stat = TRUE, xlab = "Silhouette width", cex.names = 0.8, col = colorClusters(sil_k[, 1]), nmax.lab = 100, do.n.k = FALSE, axes = F)
-    mtext(paste("Average silhouette width:", round(summary(sil_k)$avg.width, 3)), font = 2, cex = 1.5, line = 1)
+    plot(
+        sil_k,
+        max.strlen = MAX_CHAR_LEN,
+        main = " ",
+        sub = "",
+        do.clus.stat = TRUE,
+        xlab = "Silhouette width",
+        cex.names = 0.8,
+        col = colorClusters(sil_k[, 1]),
+        nmax.lab = 100,
+        do.n.k = FALSE,
+        axes = F
+    )
+    mtext(
+        paste("Average silhouette width:", round(summary(sil_k)$avg.width, 3)),
+        font = 2,
+        cex = 1.5,
+        line = 1
+    )
     plotAxis(1, 0, 1, 0.2)
     # suprLog = dev.off()
 }
@@ -673,13 +879,18 @@ plotSilhouette <- function(sil_k) {
 getGapPerPart <- function(n, d, c, B = 500, v = F) {
     # FUN mus have only two args in this order and return a list with an object cluster
 
-    if (isTRUE(v)) cat("\nGAP STATISTICS:\n")
+    if (isTRUE(v)) {
+        cat("\nGAP STATISTICS:\n")
+    }
     if (classif$method == "kmeans" & (n > 10 | nrow(d) >= 100)) {
         plural <- c("few ", "s")
     } else {
         plural <- c("", "")
     }
-    if (classif$method == "kmeans" | nrow(d) >= 100) cat(paste("It could take a ", plural[1], "minute", plural[2], "...\n", sep = ""))
+    if (classif$method == "kmeans" |
+        nrow(d) >= 100) {
+        cat(paste("It could take a ", plural[1], "minute", plural[2], "...\n", sep = ""))
+    }
 
     gapFun <- function(x, k) list(cluster = getClusters(k, c))
     clusGap(d, FUN = gapFun, K.max = n, verbose = F, B = B)
@@ -698,9 +909,36 @@ plotGapPerPart <- function(g, n, v = T) {
     optimal_nb_clusters <- getGapBest(g)
     gap_k <- round(g$Tab, 3)
     best <- gap_k[, "gap"][optimal_nb_clusters]
-    if(optimal_nb_clusters < n) best <- paste(best, ">", gap_k[, "gap"][optimal_nb_clusters + 1], "-", gap_k[, "SE.sim"][optimal_nb_clusters + 1])
-    plot(g, arrowArgs = list(col = "gray", length = 1 / 15, lwd = 2, angle = 90, code = 3), type = "b", xlim = c(1, n + 1), ylim = c(0, max(g$Tab[, "gap"]) + 0.1), col = "grey", xlab = "Nb. of clusters", ylab = expression(Gap[k]), main = "", axes = F)
-    plotBestClustering("Gap statistics method", g$Tab[, "gap"], " gap value", optimal_nb_clusters, 0.1, 1, best)
+    if (optimal_nb_clusters < n) {
+        best <- paste(best, ">", gap_k[, "gap"][optimal_nb_clusters + 1], "-", gap_k[, "SE.sim"][optimal_nb_clusters + 1])
+    }
+    plot(
+        g,
+        arrowArgs = list(
+            col = "gray",
+            length = 1 / 15,
+            lwd = 2,
+            angle = 90,
+            code = 3
+        ),
+        type = "b",
+        xlim = c(1, n + 1),
+        ylim = c(0, max(g$Tab[, "gap"]) + 0.1),
+        col = "grey",
+        xlab = "Nb. of clusters",
+        ylab = expression(Gap[k]),
+        main = "",
+        axes = F
+    )
+    plotBestClustering(
+        "Gap statistics method",
+        g$Tab[, "gap"],
+        " gap value",
+        optimal_nb_clusters,
+        0.1,
+        1,
+        best
+    )
     # cat(paste("With a corrected index, optimal number of clusters k =",getGapBest(gap,"firstSEmax"), "\n"))
     # suprLog = dev.off()
 }
@@ -711,23 +949,58 @@ plotGapPerPart2 <- function(g, n) {
     # savePdf("log_w_diff.pdf")
     min_y <- round(min(g$Tab[, c(1, 2)]), 1)
     max_y <- round(max(g$Tab[, c(1, 2)]), 1)
-    plot(0, 0, xlim = c(1, n), ylim = c(min_y - 0.1, max_y + 0.1), type = "n", xlab = "Nb. of clusters", ylab = "log(within-inertia)", axes = F)
-    title(main = "Optimal number of clusters", line = 2, cex.main = 2)
-    mtext(text = "Gap statistics method", font = 3, cex = 1.2, line = 0.5)
+    plot(
+        0,
+        0,
+        xlim = c(1, n),
+        ylim = c(min_y - 0.1, max_y + 0.1),
+        type = "n",
+        xlab = "Nb. of clusters",
+        ylab = "log(within-inertia)",
+        axes = F
+    )
+    title(
+        main = "Optimal number of clusters",
+        line = 2,
+        cex.main = 2
+    )
+    mtext(
+        text = "Gap statistics method",
+        font = 3,
+        cex = 1.2,
+        line = 0.5
+    )
     optimal_nb_clusters <- getGapBest(g)
-    abline(v = optimal_nb_clusters, col = "gray", lty = 2, lwd = 2)
+    abline(
+        v = optimal_nb_clusters,
+        col = "gray",
+        lty = 2,
+        lwd = 2
+    )
     lines(seq(1:n), g$Tab[, 1], type = "b", col = "red")
     lines(seq(1:n), g$Tab[, 2], type = "b", col = "blue")
     plotAxis(1, 1, n)
     plotAxis(2, min_y, max_y, 0.1)
-    legend("topright", c("log(W)", "E.log(W)"), col = c("red", "blue"), lty = 1, box.lwd = - 1, bg = "white")
+    legend(
+        "topright",
+        c("log(W)", "E.log(W)"),
+        col = c("red", "blue"),
+        lty = 1,
+        box.lwd = -1,
+        bg = "white"
+    )
     # suprLog = dev.off()
 }
 
 printSummary <- function(between, diff, sil, adv, gap = NULL) {
     # TODO: no n = nrow(data)
     summary <- cbind(between, diff, 100 - between, sil)
-    names <- c("Between-inertia (%)", "Between-differences (%)", "Within-inertia (%)", "Silhouette index")
+    names <- c(
+        "Between-inertia (%)",
+        "Between-differences (%)",
+        "Within-inertia (%)",
+        "Silhouette index"
+    )
     if (!is.null(gap)) {
         summary <- cbind(summary, gap$Tab[, "gap"][-1], gap$Tab[, "SE.sim"][-1])
         names <- c(names, "Gap", "Gap SE")
@@ -750,7 +1023,14 @@ plotRect <- function(cl_sizes, colors, lwd = 3) {
         # y begin at the top, so sum(cl_sizes) must be substracted to y coord.
         # rect(xleft, ybottom, xright, ytop)
         # +0.5 because x, y coord are shifted to 0.5 comparativly to plotcolors functions
-        rect(temp_size + 0.5, sum(cl_sizes) - temp_size - cl_sizes[i] + 0.5, cl_sizes[i] + temp_size + 0.5, sum(cl_sizes) - temp_size + 0.5, border = colors[i], lwd = lwd)
+        rect(
+            temp_size + 0.5,
+            sum(cl_sizes) - temp_size - cl_sizes[i] + 0.5,
+            cl_sizes[i] + temp_size + 0.5,
+            sum(cl_sizes) - temp_size + 0.5,
+            border = colors[i],
+            lwd = lwd
+        )
         # memorize the size of the cluster (for a bottom-right shift)
         temp_size <- temp_size + cl_sizes[i]
     }
@@ -765,7 +1045,9 @@ getOrderedClusterSize <- function(cl) {
     j <- 0
 
     for (i in 1:length(cl)) {
-        if(!cl[i] %in% temp_cl) j <- j + 1
+        if (!cl[i] %in% temp_cl) {
+            j <- j + 1
+        }
         size_cl[j] <- size_cl[j] + 1
         temp_cl[i] <- cl[i]
     }
@@ -801,7 +1083,9 @@ heatMap <- function(df, d, s = NULL, c = NULL, cl = NULL) {
     # image(1:ncol(matrix), 1:ncol(matrix), t(matrix), axes=F, xlab="", ylab="")
 
     options(warn = -1)
-    if (nrow(df) > NB_ROW_MAX) labels <- order
+    if (nrow(df) > NB_ROW_MAX) {
+        labels <- order
+    }
     # png(opt$output4,DIM_PNG, DIM_PNG)
     if (PNG) {
         cex.main <- 5
@@ -822,23 +1106,74 @@ heatMap <- function(df, d, s = NULL, c = NULL, cl = NULL) {
 
     par(fig = c(0, 0.9, 0, 1), new = TRUE)
     par(mar = c(1, 8, y_top, 1))
-    plotcolors(dmat.color(matrix, colors = heat.colors(1000), byrank = FALSE), ptype = "image", na.color = "red", rlabels = FALSE, clabels = FALSE, border = 0)
-    mtext(paste("Distance matrix ordered by", title), 3, line = 6, font = 4, cex = cex.main)
-    text(-0.5, 0:(ncol(matrix) - 1) + 1, rev(labels), xpd = NA, adj = 1, cex = 0.7)
-    text(0.5:(ncol(matrix) - 0.5), ncol(matrix) + 1, substr(labels, 0, 20), xpd = NA, cex = 0.7, srt = 65, pos = 4)
+    plotcolors(
+        dmat.color(matrix, colors = heat.colors(1000), byrank = FALSE),
+        ptype = "image",
+        na.color = "red",
+        rlabels = FALSE,
+        clabels = FALSE,
+        border = 0
+    )
+    mtext(
+        paste("Distance matrix ordered by", title),
+        3,
+        line = 6,
+        font = 4,
+        cex = cex.main
+    )
+    text(
+        -0.5,
+        0:(ncol(matrix) - 1) + 1,
+        rev(labels),
+        xpd = NA,
+        adj = 1,
+        cex = 0.7
+    )
+    text(
+        0.5:(ncol(matrix) - 0.5),
+        ncol(matrix) + 1,
+        substr(labels, 0, 20),
+        xpd = NA,
+        cex = 0.7,
+        srt = 65,
+        pos = 4
+    )
     plotRect(cl_sizes, colors, lwd.rect)
-    if (isTRUE(text)) text(expand.grid(1:ncol(matrix), ncol(matrix):1), sprintf("%d", matrix), cex = 0.4)
+    if (isTRUE(text)) {
+        text(expand.grid(1:ncol(matrix), ncol(matrix):1), sprintf("%d", matrix), cex = 0.4)
+    }
 
     par(fig = c(0.85, 1, 0.3, 0.8), new = TRUE)
     par(mar = c(5, 0, 4, 0) + 0.1)
     legend_image <- as.raster(matrix(heat.colors(1000), ncol = 1))
-    plot(c(0, 1), c(0, 1), type = "n", axes = F, xlab = "", ylab = "", main = "")
+    plot(
+        c(0, 1),
+        c(0, 1),
+        type = "n",
+        axes = F,
+        xlab = "",
+        ylab = "",
+        main = ""
+    )
     rasterImage(legend_image, 0.4, 0, 0.5, 1)
-    mtext("   Distance", 3, line = 0.5, cex = cex.legend, font = 2)
-    text(x = x_lab, y = seq(0, 1, l = 3), labels = round(seq(max(matrix), 2, l = 3)), cex = cex.lab, pos = 4)
+    mtext("   Distance",
+        3,
+        line = 0.5,
+        cex = cex.legend,
+        font = 2
+    )
+    text(
+        x = x_lab,
+        y = seq(0, 1, l = 3),
+        labels = round(seq(max(matrix), 2, l = 3)),
+        cex = cex.lab,
+        pos = 4
+    )
 
     options(warn = 0)
-    if (VERBOSE_NIV2) cat("done.\n")
+    if (VERBOSE_NIV2) {
+        cat("done.\n")
+    }
     # suprLog = dev.off()
 }
 
@@ -858,7 +1193,18 @@ plotDendrogram <- function(t, k, c, d, n, cl) {
     # pdf(opt$output7)
     setGraphicBasic()
     par(mar = c(2, 5, 5, 1))
-    plot(c, hang = -1, ylim = c(0, max(c$height)), xlim = c(0, length(c$labels)), sub = "", cex = cex, font = 3, ylab = "Cophenetic distance", main = "Dendrogram", axes = F)
+    plot(
+        c,
+        hang = -1,
+        ylim = c(0, max(c$height)),
+        xlim = c(0, length(c$labels)),
+        sub = "",
+        cex = cex,
+        font = 3,
+        ylab = "Cophenetic distance",
+        main = "Dendrogram",
+        axes = F
+    )
     plotAxis(2, 0, max(c$height))
     abline(h = rev(c$height)[1:n], col = "gray", lty = 2, lwd = 1)
     # projection of the clusters
@@ -873,7 +1219,7 @@ orderColors <- function(c, cl) {
     col_ordered <- rep(NA, length(table(clusters)))
     col_ordered[1] <- col_in[1]
     for (i in 2:length(col_in)) {
-        if(col_in[i] != col_in[i - 1]) {
+        if (col_in[i] != col_in[i - 1]) {
             j <- j + 1
             col_ordered[j] <- col_in[i]
         }
@@ -890,29 +1236,62 @@ orderColors <- function(c, cl) {
 plotPca <- function(pca, d, cl, axis1 = 1, axis2 = 2) {
     k <- length(levels(as.factor(cl)))
 
-    if(nrow(d) > NB_ROW_MAX) {
-        cpoint <- 0; cstar <- 0; cellipse <- 0; clabel <- 0; labels <- 1:nrow(d)
+    if (nrow(d) > NB_ROW_MAX) {
+        cpoint <- 0
+        cstar <- 0
+        cellipse <- 0
+        clabel <- 0
+        labels <- 1:nrow(d)
     } else {
-        cpoint <- 0; cstar <- 1; cellipse <- 1; clabel <- 0; labels <- rownames(d)
+        cpoint <- 0
+        cstar <- 1
+        cellipse <- 1
+        clabel <- 0
+        labels <- rownames(d)
     }
 
-    if(PNG) {
+    if (PNG) {
         par(mar = c(0, 0, 18, 0), lwd = 4)
-        cex <- 2; cex.main <- 6; lwd.line <- 8; line.main <- 7;
+        cex <- 2
+        cex.main <- 6
+        lwd.line <- 8
+        line.main <- 7
     } else {
         # pdf(opt$output3)
         par(mar = c(0, 0, 4.1, 0))
-        cex <- 0.8; cex.main <- 1.5;  lwd.line <- 2;  line.main <- 1
+        cex <- 0.8
+        cex.main <- 1.5
+        lwd.line <- 2
+        line.main <- 1
     }
 
     title <- paste("Cumulated inertia:", round((pca$eig[axis1] + pca$eig[axis2]) / sum(pca$eig), 4) * 100, "%")
-    s.class(addaxes = F, cbind(pca$li[, axis1], pca$li[, axis2]), ylim = c(min(pca$li[, axis2]) + min(pca$li[, axis2]) / 4, max(pca$li[, axis2]) + max(pca$li[, axis2]) / 2), xlim = c(min(pca$li[, axis1]), max(pca$li[, axis1])), csub = 1.5, as.factor(cl), grid = F, col = colPers(k), clabel = clabel, cstar = cstar, cellipse = cellipse, cpoint = cpoint)
+    s.class(
+        addaxes = F,
+        cbind(pca$li[, axis1], pca$li[, axis2]),
+        ylim = c(min(pca$li[, axis2]) + min(pca$li[, axis2]) / 4, max(pca$li[, axis2]) + max(pca$li[, axis2]) / 2),
+        xlim = c(min(pca$li[, axis1]), max(pca$li[, axis1])),
+        csub = 1.5,
+        as.factor(cl),
+        grid = F,
+        col = colPers(k),
+        clabel = clabel,
+        cstar = cstar,
+        cellipse = cellipse,
+        cpoint = cpoint
+    )
     mtext(title, font = 2, line = line.main, cex = cex.main)
     abline(h = 0, v = 0, lty = 2, lwd = lwd.line, col = "grey")
-    text(x = pca$li[, axis1], y = pca$li[, axis2], labels = labels, col = colorClusters(cl), cex = cex)
+    text(
+        x = pca$li[, axis1],
+        y = pca$li[, axis2],
+        labels = labels,
+        col = colorClusters(cl),
+        cex = cex
+    )
     # colnames(pca_coord) = c("Chemicals", "Axis 1", "Axis 2")
 
-    if(isTRUE(ADVANCED)) {
+    if (isTRUE(ADVANCED)) {
         par(fig = c(0.8, 1, 0.82, 1), new = T)
         plotInertiaPca(pca, d, pca$nf)
     }
@@ -921,20 +1300,46 @@ plotPca <- function(pca, d, cl, axis1 = 1, axis2 = 2) {
 
 # nf: number of inertia bar plot corresponding to factorial axis
 plotInertiaPca <- function(pca, d, nf = 4) {
-
-    if(nrow(d) > NB_ROW_MAX) {
-        r_lim <- c(8, 0, 4, 5); r_main_cex <- 2.7; r_main_text <- 2.4; lwd.hist <- 40; line.hist <- 2
+    if (nrow(d) > NB_ROW_MAX) {
+        r_lim <- c(8, 0, 4, 5)
+        r_main_cex <- 2.7
+        r_main_text <- 2.4
+        lwd.hist <- 40
+        line.hist <- 2
     } else {
         # r_lim = c(-0.2, 0.3, 1.1, 1.1);
-        r_lim <- c(2, 0, 1, 1); r_main_cex <- 0.7; r_main_text <- 0.6; lwd.hist <- 10; line.hist <- 0
+        r_lim <- c(2, 0, 1, 1)
+        r_main_cex <- 0.7
+        r_main_text <- 0.6
+        lwd.hist <- 10
+        line.hist <- 0
     }
 
     inertia <- round(pca$eig / sum(pca$eig) * 100, 1)
     par(mar = c(r_lim[1], r_lim[2], r_lim[3], r_lim[4]) + 0.1)
-    plot(inertia, type = "h", lwd = lwd.hist, lend = 1, xlim = c(0, nf + 0.2), ylim = c(0, max(inertia + 7)), col = "grey75", font = 2, axes = F, xlab = "", ylab = "")
-    title(sub = " Inertia (in %)", line = line.hist, cex.sub = r_main_cex, font.sub = 3)
+    plot(
+        inertia,
+        type = "h",
+        lwd = lwd.hist,
+        lend = 1,
+        xlim = c(0, nf + 0.2),
+        ylim = c(0, max(inertia + 7)),
+        col = "grey75",
+        font = 2,
+        axes = F,
+        xlab = "",
+        ylab = ""
+    )
+    title(
+        sub = " Inertia (in %)",
+        line = line.hist,
+        cex.sub = r_main_cex,
+        font.sub = 3
+    )
     text(1:nf, inertia[1:nf] + 5, inertia[1:nf], cex = r_main_text)
-    par(new = TRUE); par(mar = c(0, 0, 0, 0)) ; plot(0:1, 0:1, axes = F, type = "n")
+    par(new = TRUE)
+    par(mar = c(0, 0, 0, 0))
+    plot(0:1, 0:1, axes = F, type = "n")
     rect(0, 0.1, 0.9, 0.9, border = "grey65")
 }
 
@@ -948,7 +1353,6 @@ plotInertiaPca <- function(pca, d, nf = 4) {
 # d: data
 # cl: clusters object
 getDistPerVariable <- function(d, cl) {
-
     # Distance between the centroid of each variables
     # ponderation by the sd of the variable (=total inertia per var)
     d <- scalecenter(d)
@@ -960,8 +1364,9 @@ getDistPerVariable <- function(d, cl) {
         cli <- cl[i]
         # in the dataset, for a metabolite row, loop an each metadabolite column
         # values are affected the corresponding cluster row and metabolite column in ctr
-        for (j in 1:ncol(d))
+        for (j in 1:ncol(d)) {
             ctr[cli, j] <- ctr[cli, j] + d[i, j]
+        }
     }
 
     return(ctr)
@@ -975,17 +1380,20 @@ getDistPerVariable <- function(d, cl) {
 # c: hierarchical classification
 # d: data
 getCtrVar <- function(t, k, cl, d) {
-
     # if NA values appear, scale 0/0 could produce NA values, NA could correspond to 0
     nb_cl <- length(levels(as.factor(cl)))
     ncol <- ncol(d)
     ctr <- getDistPerVariable(d, cl)
 
-    rownames(ctr) <- paste("G", seq(1, k), sep = ""); colnames(ctr) <- colnames(d)
+    rownames(ctr) <- paste("G", seq(1, k), sep = "")
+    colnames(ctr) <- colnames(d)
 
-    for (i in 1:nb_cl)
-        for (j in 1:ncol(d))
-            ctr[i, j] <- ctr[i, j]^2 / (nrow(d) * length(cl[cl == i]))
+    for (i in 1:nb_cl) {
+        for (j in 1:ncol(d)) {
+            ctr[i, j] <-
+                ctr[i, j]^2 / (nrow(d) * length(cl[cl == i]))
+        }
+    }
 
     return(ctr)
 }
@@ -993,13 +1401,16 @@ getCtrVar <- function(t, k, cl, d) {
 getCtrVar2 <- function(t, k, cl, d, scale = T) {
     ctr <- getCtrVar(t, k, cl, d)
 
-    if(isTRUE(scale)) {
+    if (isTRUE(scale)) {
         ctr_part <- getPdis(t, k, cl, d)
 
-        for (i in 1:nb_cl)
-            for (j in 1:ncol(d))
-                if(scale)
+        for (i in 1:nb_cl) {
+            for (j in 1:ncol(d)) {
+                if (scale) {
                     ctr[i, j] <- ctr[i, j] / ctr_part[j]
+                }
+            }
+        }
     }
 
     return(ctr)
@@ -1013,7 +1424,6 @@ getCtrVar2 <- function(t, k, cl, d, scale = T) {
 # c: hierarchical classification
 # d: data
 getPdis <- function(t, k, cl, d) {
-
     # for each metabolite contribution (in column), sum the k clusters values
     return(apply(getCtrVar(t, k, cl, d), 2, sum))
 }
@@ -1025,14 +1435,13 @@ getPdis <- function(t, k, cl, d) {
 # d: data
 # index: pdis or rho2 calculation
 getPdisPerPartition <- function(t, n, cls, d) {
-
     pdis_per_partition <- matrix(NA, n - 1, ncol(d))
     rownames(pdis_per_partition) <- seq(2, n)
     colnames(pdis_per_partition) <- colnames(d)
 
     for (k in 2:n) {
         res <- getPdis(t, k, cls[[k - 1]], d)
-        for(i in 1:length(res)) {
+        for (i in 1:length(res)) {
             pdis_per_partition[k - 1, i] <- res[i]
         }
     }

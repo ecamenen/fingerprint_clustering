@@ -8,11 +8,15 @@ COLOR_SAMPLES_DEF <- "#000099"
 
 #' Default font for plots
 theme_perso <- function() {
-
     theme(
         legend.text = element_text(size = 13),
         legend.title = element_text(face = "bold.italic", size = 16),
-        plot.title = element_text(size = 25, face = "bold", hjust = 0.5, margin = margin(0, 0, 20, 0))
+        plot.title = element_text(
+            size = 25,
+            face = "bold",
+            hjust = 0.5,
+            margin = margin(0, 0, 20, 0)
+        )
     )
 }
 
@@ -35,7 +39,6 @@ theme_perso <- function() {
 #' plotHistogram(p, df, "Histogram", as.character(df$color))
 #' @export plotHistogram
 plotHistogram <- function(p, df, title = "", color = "black") {
-
     p +
         # TODO: if NB_ROW > X, uncomment this
         # geom_hline(yintercept = c(-.5,.5), col="grey", linetype="dotted", size=1) +
@@ -45,23 +48,37 @@ plotHistogram <- function(p, df, title = "", color = "black") {
         scale_x_continuous(breaks = df$order, labels = rownames(df)) +
         labs(
             title = title,
-            x = "", y = "",
+            x = "",
+            y = "",
             fill = "Cluster"
         ) +
         theme_classic() +
         theme_perso() +
         theme(
-            axis.text.y = element_text(size = 12, face = AXIS_FONT, color = color),
-            axis.text.x = element_text(size = 12, face = AXIS_FONT, color = "darkgrey"),
+            axis.text.y = element_text(
+                size = 12,
+                face = AXIS_FONT,
+                color = color
+            ),
+            axis.text.x = element_text(
+                size = 12,
+                face = AXIS_FONT,
+                color = "darkgrey"
+            ),
             axis.line = element_blank(),
             axis.ticks = element_blank(),
-            plot.subtitle = element_text(hjust = 0.5, size = 16, face = "italic")
+            plot.subtitle = element_text(
+                hjust = 0.5,
+                size = 16,
+                face = "italic"
+            )
         )
 }
 
 getDiscriminantVariables <- function(t, n, cl, d, m) {
-    if(m > ncol(d))
+    if (m > ncol(d)) {
         m <- ncol(d)
+    }
 
     ctr <- 100 * getCtrVar(t, n, cl, d)
     max_ctr <- apply(ctr, 2, sum)
@@ -73,7 +90,6 @@ getDiscriminantVariables <- function(t, n, cl, d, m) {
 }
 
 plotDiscriminantVariables <- function(discr) {
-
     p <- ggplot(discr, aes(order, discr[, 1]))
     plotHistogram(p, discr, "Main discriminant variables")
 }

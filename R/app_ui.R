@@ -3,7 +3,17 @@
 #' @param request Internal parameter for `{shiny}`.
 #' @noRd
 app_ui <- function(request) {
-    classif_methods <- list("K-menoids" = 1, "K-means" = 2, "Ward" = 3, "Complete links" = 4, "Single links" = 5, "UPGMA" = 6, "WPGMA" = 7, "WPGMC" = 8, "UPGMC" = 9)
+    classif_methods <- list(
+        "K-menoids" = 1,
+        "K-means" = 2,
+        "Ward" = 3,
+        "Complete links" = 4,
+        "Single links" = 5,
+        "UPGMA" = 6,
+        "WPGMA" = 7,
+        "WPGMC" = 8,
+        "UPGMC" = 9
+    )
     jscode <- "shinyjs.refresh = function() { location.reload(); }"
 
     # min-max: minimum and maximum position number in the list
@@ -32,7 +42,6 @@ app_ui <- function(request) {
             ),
             sidebarLayout(
                 sidebarPanel(
-
                     useShinyjs(),
                     extendShinyjs(text = jscode, functions = "refresh"),
                     fileInput(
@@ -43,7 +52,8 @@ app_ui <- function(request) {
                         "Consider first row as header",
                         value = TRUE
                     ),
-                    radioButtons("sep",
+                    radioButtons(
+                        "sep",
                         "Separator",
                         choices = c(
                             Comma = ",",
@@ -60,15 +70,22 @@ app_ui <- function(request) {
                         "Transpose",
                         value = FALSE
                     ),
-                    selectInput("dist_type",
+                    selectInput(
+                        "dist_type",
                         h5("Distance method: "),
                         selected = 1,
                         choices = list(
                             `Distance` = c("Euclidean" = 1, "Manhattan" = 2),
-                            `Similarity` = c("Jaccard" = 3, "Sokal & Michener" = 4, "Sorensen (Dice)" = 5, "Ochiai" = 6)
+                            `Similarity` = c(
+                                "Jaccard" = 3,
+                                "Sokal & Michener" = 4,
+                                "Sorensen (Dice)" = 5,
+                                "Ochiai" = 6
+                            )
                         )
                     ),
-                    selectInput("classif_type",
+                    selectInput(
+                        "classif_type",
                         h5("Classification method: "),
                         selected = "Ward",
                         choices = list(
@@ -76,29 +93,44 @@ app_ui <- function(request) {
                             `Hierarchical clustering` = getClassifKeys(3, 9)
                         )
                     ),
-                    sliderInput("max_clusters",
+                    sliderInput(
+                        "max_clusters",
                         h5("Maximum number of clusters: "),
-                        min = 2, max = 100, value = 6
+                        min = 2,
+                        max = 100,
+                        value = 6
                     ),
-                    sliderInput("max_biomark",
+                    sliderInput(
+                        "max_biomark",
                         h5("Maximum number of biomarkers: "),
-                        min = 10, max = 100, value = 10
+                        min = 10,
+                        max = 100,
+                        value = 10
                     ),
                     checkboxInput("advanced",
                         "Advanced mode",
                         value = F
                     ),
-                    sliderInput("nb_clusters",
+                    sliderInput(
+                        "nb_clusters",
                         h5("Number of clusters: "),
-                        min = 0, max = 10, value = 0
+                        min = 0,
+                        max = 10,
+                        value = 0
                     ),
-                    sliderInput("axis1",
+                    sliderInput(
+                        "axis1",
                         h5("PCA axis 1: "),
-                        min = 1, max = 4, value = 1
+                        min = 1,
+                        max = 4,
+                        value = 1
                     ),
-                    sliderInput("axis2",
+                    sliderInput(
+                        "axis2",
                         h5("PCA axis 2: "),
-                        min = 2, max = 4, value = 2
+                        min = 2,
+                        max = 4,
+                        value = 2
                     ),
                     actionButton(
                         "save_all",
@@ -134,37 +166,44 @@ app_ui <- function(request) {
                             plotOutput("heatmap"),
                             actionButton("heatmap_save", "Save")
                         ),
-                        tabPanel("Cophenetic",
+                        tabPanel(
+                            "Cophenetic",
                             value = "coph",
                             plotOutput("cophenetic"),
                             actionButton("coph_save", "Save")
                         ),
-                        tabPanel("Dendrogram",
+                        tabPanel(
+                            "Dendrogram",
                             value = "dendr",
                             plotOutput("dendrogram"),
                             actionButton("dendr_save", "Save")
                         ),
-                        tabPanel("Elbow",
+                        tabPanel(
+                            "Elbow",
                             value = "elbow",
                             plotOutput("elbow"),
                             actionButton("elbow_save", "Save")
                         ),
-                        tabPanel("Gap",
+                        tabPanel(
+                            "Gap",
                             value = "gap",
                             plotOutput("gap"),
                             actionButton("gap_save", "Save")
                         ),
-                        tabPanel("Gap2",
+                        tabPanel(
+                            "Gap2",
                             value = "gap2",
                             plotOutput("gap2"),
                             actionButton("gap2_save", "Save")
                         ),
-                        tabPanel("Fusion",
+                        tabPanel(
+                            "Fusion",
                             value = "fusion",
                             plotOutput("fusion"),
                             actionButton("fusion_save", "Save")
                         ),
-                        tabPanel("Within-inertia",
+                        tabPanel(
+                            "Within-inertia",
                             value = "within",
                             tableOutput("within"),
                             actionButton("within_save", "Save")
@@ -204,9 +243,7 @@ app_ui <- function(request) {
 #' @importFrom golem add_resource_path activate_js favicon bundle_resources
 #' @noRd
 golem_add_external_resources <- function() {
-    add_resource_path(
-        "www", app_sys("app/www")
-    )
+    add_resource_path("www", app_sys("app/www"))
 
     tags$head(
         favicon(),

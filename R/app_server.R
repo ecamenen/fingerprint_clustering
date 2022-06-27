@@ -13,12 +13,21 @@ app_server <- function(input, output, session) {
     VERBOSE <- F
     MAX_CHAR_LEN <- 25 # maximum length of individual s names
     PNG <- F
-    classif_methods <- list("K-menoids" = 1, "K-means" = 2, "Ward" = 3, "Complete links" = 4, "Single links" = 5, "UPGMA" = 6, "WPGMA" = 7, "WPGMC" = 8, "UPGMC" = 9)
-
-tryCatch(
-    {
+    classif_methods <- list(
+      "K-menoids" = 1,
+      "K-means" = 2,
+      "Ward" = 3,
+      "Complete links" = 4,
+      "Single links" = 5,
+      "UPGMA" = 6,
+      "WPGMA" = 7,
+      "WPGMC" = 8,
+      "UPGMC" = 9
+    )
+    tryCatch(
+      {
         data <- loadData("matrix.txt")
-    },
+      },
         warning = function(w) {
             data <- NULL
             message("Default file \"matrix.txt\" is not in the folder. Please, load another one.")
@@ -34,7 +43,8 @@ tryCatch(
             if (grepl("xlsx?", f)) {
                 data <- openxlsx::read.xlsx(f, rowNames = TRUE)
             } else {
-                data <- read.table(f,
+                data <- read.table(
+                    f,
                     header = h,
                     sep = s,
                     dec = ".",
@@ -49,7 +59,9 @@ tryCatch(
 
     refresh <- reactiveValues()
     refresh$classif_type <- ""
-    getClassifValue <- function(key) unlist(classif_methods[key])
+    getClassifValue <- function(key) {
+        unlist(classif_methods[key])
+    }
 
     ###################################
     #          SETTINGS
@@ -110,8 +122,13 @@ tryCatch(
         setVariables()
         req(input$infile)
 
-        if ((nrow(data) > 3000) & (input$classif_type > 2)) message("[WARNING] With more than 3000 rows to analyse, classification method must be K-medoids or K-means", call. = FALSE)
-
+        if ((nrow(data) > 3000) &
+            (input$classif_type > 2)) {
+            message(
+                "[WARNING] With more than 3000 rows to analyse, classification method must be K-medoids or K-means",
+                call. = FALSE
+            )
+        }
         # Perform classification
         printProgress(VERBOSE_NIV2, "Classification")
 
@@ -120,7 +137,9 @@ tryCatch(
             getClassif(CLASSIF_TYPE, MAX_CLUSTERS, data, dis),
             .GlobalEnv
         )
-        if (VERBOSE_NIV2) cat("done.\n")
+        if (VERBOSE_NIV2) {
+            cat("done.\n")
+        }
         assign(
             "list_clus",
             getClusterPerPart(MAX_CLUSTERS + 1, classif),
@@ -142,10 +161,17 @@ tryCatch(
         printProgress(VERBOSE_NIV2, "PCA")
         assign(
             "pca",
-            dudi.pca(data, scannf = F, scale = input$scale, nf = 4),
+            dudi.pca(
+                data,
+                scannf = F,
+                scale = input$scale,
+                nf = 4
+            ),
             .GlobalEnv
         )
-        if (VERBOSE_NIV2) cat("done.\n")
+        if (VERBOSE_NIV2) {
+            cat("done.\n")
+        }
 
         assign(
             "sil",
@@ -164,7 +190,13 @@ tryCatch(
     })
 
     setClusters <- reactive({
-        refr <- c(refresh$classif_type, input$advanced, input$nb_clusters, input$scale, input$transpose)
+        refr <- c(
+            refresh$classif_type,
+            input$advanced,
+            input$nb_clusters,
+            input$scale,
+            input$transpose
+        )
 
         if (NB_CLUSTERS > 0) {
             assign(
@@ -203,7 +235,9 @@ tryCatch(
 
         # errors
         if (optimal_nb_clusters == MAX_CLUSTERS) {
-            message("\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found.")
+            message(
+                "\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found."
+            )
         }
         if (min(table(clusters)) == 1) {
             message("\n[WARNING] A cluster with an only singleton biased the silhouette score.")
@@ -223,35 +257,54 @@ tryCatch(
         ###### plot funcs #####
         assign(
             "plotPCA",
-            function() plotPca(pca, data, clusters, AXIS1, AXIS2),
+            function() {
+                plotPca(pca, data, clusters, AXIS1, AXIS2)
+            },
             .GlobalEnv
         )
         assign(
             "plotBest",
-            function() plotSilhouettePerPart(mean_silhouette),
+            function() {
+                plotSilhouettePerPart(mean_silhouette)
+            },
             .GlobalEnv
         )
         assign(
             "plotSil",
-            function() plotSilhouette(sil_k),
+            function() {
+                plotSilhouette(sil_k)
+            },
             .GlobalEnv
         )
         assign(
             "plotDend",
-            function() plotDendrogram(CLASSIF_TYPE, optimal_nb_clusters, classif, data, MAX_CLUSTERS, clusters),
+            function() {
+                plotDendrogram(
+                    CLASSIF_TYPE,
+                    optimal_nb_clusters,
+                    classif,
+                    data,
+                    MAX_CLUSTERS,
+                    clusters
+                )
+            },
             .GlobalEnv
         )
 
         if (CLASSIF_TYPE <= 2 | isTRUE(ADVANCED)) {
             assign(
                 "plotHeatmap",
-                function() heatMap(data, dis, sil_k),
+                function() {
+                    heatMap(data, dis, sil_k)
+                },
                 .GlobalEnv
             )
         } else {
             assign(
                 "plotHeatmap",
-                function() heatMap(data, dis, c = classif, cl = clusters),
+                function() {
+                    heatMap(data, dis, c = classif, cl = clusters)
+                },
                 .GlobalEnv
             )
         }
@@ -260,7 +313,9 @@ tryCatch(
         if (isTRUE(ADVANCED)) {
             assign(
                 "plotFus",
-                function() plotFusionLevels(MAX_CLUSTERS, classif),
+                function() {
+                    plotFusionLevels(MAX_CLUSTERS, classif)
+                },
                 .GlobalEnv
             )
             assign(
@@ -268,7 +323,9 @@ tryCatch(
                 function() {
                     printProgress(VERBOSE_NIV2, "Cophenetic calculation")
                     plotCohenetic(dis, classif)
-                    if (VERBOSE_NIV2) cat("done.\n")
+                    if (VERBOSE_NIV2) {
+                        cat("done.\n")
+                    }
                 },
                 .GlobalEnv
             )
@@ -297,7 +354,9 @@ tryCatch(
             )
             assign(
                 "plotElb",
-                function() plotElbow(between),
+                function() {
+                    plotElbow(between)
+                },
                 .GlobalEnv
             )
             assign(
@@ -326,12 +385,20 @@ tryCatch(
         )
         assign(
             "discr",
-            getDiscriminantVariables(CLASSIF_TYPE, optimal_nb_clusters, clusters, data, input$max_biomark),
+            getDiscriminantVariables(
+                CLASSIF_TYPE,
+                optimal_nb_clusters,
+                clusters,
+                data,
+                input$max_biomark
+            ),
             .GlobalEnv
         )
         assign(
             "ctr_clus_plot",
-            function() plotDiscriminantVariables(discr),
+            function() {
+                plotDiscriminantVariables(discr)
+            },
             .GlobalEnv
         )
         assign(
@@ -346,7 +413,14 @@ tryCatch(
     # check that the maximum_number of clusters fixed is not greater than the number of row of the datafile
     checkMaxCluster <- function() {
         if (MAX_CLUSTERS > (nrow(data) - 1)) {
-            message(paste("[WARNING] Max number of clusters must be lower (and not equal) to the number of line of the dataset (", nrow(data), ")", sep = ""))
+            message(
+                paste(
+                    "[WARNING] Max number of clusters must be lower (and not equal) to the number of line of the dataset (",
+                    nrow(data),
+                    ")",
+                    sep = ""
+                )
+            )
             return(F)
         } else {
             return(T)
@@ -419,7 +493,9 @@ tryCatch(
     setDistance <- reactive({
         printProgress(VERBOSE_NIV2, "Distance calculation")
         refresh$dis <- getDistance(refresh$data, as.integer(input$dist_type))
-        if (VERBOSE_NIV2) cat("done.\n")
+        if (VERBOSE_NIV2) {
+            cat("done.\n")
+        }
 
         setClassif()
     })
@@ -433,7 +509,13 @@ tryCatch(
     #          EVENTS
     ###################################
 
-    observeEvent(c(input$infile, input$header, input$sep, input$scale, input$transpose), {
+    observeEvent(c(
+        input$infile,
+        input$header,
+        input$sep,
+        input$scale,
+        input$transpose
+    ), {
         assign(
             "HEAD",
             input$header,
@@ -474,7 +556,12 @@ tryCatch(
         if (!is.null(input$infile)) {
             if (isTRUE(input$advanced)) {
                 if (refresh$classif_type > 2) {
-                    cat(paste("\nAGGLOMERATIVE COEFFICIENT: ", round(getCoefAggl(classif), 3), "\n", sep = ""))
+                    cat(paste(
+                        "\nAGGLOMERATIVE COEFFICIENT: ",
+                        round(getCoefAggl(classif), 3),
+                        "\n",
+                        sep = ""
+                    ))
                 }
 
                 if (nrow(data) < (NB_ROW_MAX / 2)) {
@@ -485,7 +572,9 @@ tryCatch(
                         getGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP),
                         .GlobalEnv
                     )
-                    if (VERBOSE_NIV2) cat("done.\n")
+                    if (VERBOSE_NIV2) {
+                        cat("done.\n")
+                    }
                 } else {
                     assign(
                         "gap",
@@ -507,7 +596,6 @@ tryCatch(
 
     # hide either input options or tabs
     observe({
-
         # set an id in tabsetPanel (here "navbar") and for each tabs
 
         # default behaviour
@@ -529,9 +617,23 @@ tryCatch(
         toggle(condition = input$advanced, selector = "#navbar li a[data-value=gap]")
         toggle(condition = input$advanced, selector = "#navbar li a[data-value=gap2]")
         toggle(condition = input$advanced, selector = "#navbar li a[data-value=within]")
-        toggle(condition = (input$advanced & as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=fusion]")
-        toggle(condition = (input$advanced & as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=coph]")
-        toggle(condition = (as.integer(getClassifValue(input$classif_type) > 2)), selector = "#navbar li a[data-value=dendr]")
+        toggle(
+            condition = (input$advanced &
+                as.integer(
+                    getClassifValue(input$classif_type) > 2
+                )),
+            selector = "#navbar li a[data-value=fusion]"
+        )
+        toggle(
+            condition = (input$advanced &
+                as.integer(
+                    getClassifValue(input$classif_type) > 2
+                )),
+            selector = "#navbar li a[data-value=coph]"
+        )
+        toggle(condition = (as.integer(
+            getClassifValue(input$classif_type) > 2
+        )), selector = "#navbar li a[data-value=dendr]")
 
         # }
     })
@@ -578,7 +680,10 @@ tryCatch(
             {
                 setVariables()
                 if (checkMaxCluster()) {
-                    observeEvent(input$summary_save, writeTsv("summary", "summary.tsv", v = F))
+                    observeEvent(
+                        input$summary_save,
+                        writeTsv("summary", "summary.tsv", v = F)
+                    )
                     summary
                 }
             },
@@ -592,7 +697,10 @@ tryCatch(
             {
                 setVariables()
                 if (checkMaxCluster()) {
-                    observeEvent(input$best_save, savePlot("best_clustering", plotBest()))
+                    observeEvent(
+                        input$best_save,
+                        savePlot("best_clustering", plotBest())
+                    )
                     plotBest()
                 }
             },
@@ -695,7 +803,10 @@ tryCatch(
                 setVariables()
                 if (CLASSIF_TYPE > 2) {
                     if (checkMaxCluster()) {
-                        observeEvent(input$dendr_save, savePlot("dendrogram", plotDend()))
+                        observeEvent(
+                            input$dendr_save,
+                            savePlot("dendrogram", plotDend())
+                        )
                         plotDend()
                     }
                 }
@@ -776,7 +887,10 @@ tryCatch(
                     setVariables()
                     if (isTRUE(input$advanced)) {
                         if (checkMaxCluster()) {
-                            observeEvent(input$within_save, writeTsv("within_k", "within_k.tsv", v = F))
+                            observeEvent(
+                                input$within_save,
+                                writeTsv("within_k", "within_k.tsv", v = F)
+                            )
                             within_k
                         }
                     }
@@ -800,7 +914,10 @@ tryCatch(
             {
                 setVariables()
                 if (checkMaxCluster()) {
-                    observeEvent(input$ctr_clus_plot_save, savePlot("discr_var", ctr_clus_plot()))
+                    observeEvent(
+                        input$ctr_clus_plot_save,
+                        savePlot("discr_var", ctr_clus_plot())
+                    )
                     ctr_clus_plot()
                 }
             },
@@ -814,7 +931,10 @@ tryCatch(
             {
                 setVariables()
                 if (checkMaxCluster()) {
-                    observeEvent(input$ctr_clus_save, writeTsv("ctr_clus", "ctr_clus.tsv", v = F))
+                    observeEvent(
+                        input$ctr_clus_save,
+                        writeTsv("ctr_clus", "ctr_clus.tsv", v = F)
+                    )
                     ctr_clus
                 }
             },
@@ -828,7 +948,10 @@ tryCatch(
             {
                 setVariables()
                 if (checkMaxCluster()) {
-                    observeEvent(input$ctr_part_save, writeTsv("ctr_part", "ctr_part.tsv", v = F))
+                    observeEvent(
+                        input$ctr_part_save,
+                        writeTsv("ctr_part", "ctr_part.tsv", v = F)
+                    )
                     ctr_part
                 }
             },
@@ -842,7 +965,10 @@ tryCatch(
             {
                 setVariables()
                 if (checkMaxCluster()) {
-                    observeEvent(input$centroids_save, writeTsv("centroids_save", "centroids.tsv", v = F))
+                    observeEvent(
+                        input$centroids_save,
+                        writeTsv("centroids_save", "centroids.tsv", v = F)
+                    )
                     aggregate(data, list(clusters), mean)
                 }
             },
