@@ -1,7 +1,19 @@
-options(shiny.maxRequestSize = 30 * 1024^2)
-source("fingerprint_clustering.R")
-source("plot.R")
-classif_methods <- list("K-menoids" = 1, "K-means" = 2, "Ward" = 3, "Complete links" = 4, "Single links" = 5, "UPGMA" = 6, "WPGMA" = 7, "WPGMC" = 8, "UPGMC" = 9)
+#' The application server-side
+#'
+#' @param input,output,session Internal parameters for {shiny}.
+#' @noRd
+app_server <- function(input, output, session) {
+    options(shiny.maxRequestSize = 30 * 1024^2)
+    # Global variables settings
+    NB_BOOTSTRAP <- 500 # should be comprise between 100 and 1000
+    TEXT <- T # print values on graph (for optimum partition and heatmap)
+    NB_ROW_MAX <- 200 # max row to have pdf, otherwise, some plots are in png
+    DIM_PNG <- 2000
+    VERBOSE_NIV2 <- F
+    VERBOSE <- F
+    MAX_CHAR_LEN <- 25 # maximum length of individual s names
+    PNG <- F
+    classif_methods <- list("K-menoids" = 1, "K-means" = 2, "Ward" = 3, "Complete links" = 4, "Single links" = 5, "UPGMA" = 6, "WPGMA" = 7, "WPGMC" = 8, "UPGMC" = 9)
 
 tryCatch(
     {
@@ -9,32 +21,34 @@ tryCatch(
     },
     warning = function(w) {
         data <- NULL
-        message("Default file \"matrix.txt\" is not in the folder. Please, load another one.")
-    },
-    error = function(e) {
-    }
-)
+        warning = function(w) {
+            data <- NULL
+            message("Default file \"matrix.txt\" is not in the folder. Please, load another one.")
+        },
+        error = function(e) {
+            data <- NULL
+        }
+    )
 
-loadData <- function(f, s = "\t", h = F) {
-    # !file.exists(
-    if (!is.null(f)) {
-        if (grepl("xlsx?", f)) {
-              data <- openxlsx::read.xlsx(f, rowNames = TRUE)
-          } else {
-              data <- read.table(f,
-                  header = h,
-                  sep = s,
-                  dec = ".",
-                  row.names = 1
-              )
-          }
-        # data = preProcessData(data)
-        # substr(rownames(data), 1, MAX_CHAR_LEN) -> rownames(data)
+    loadData <- function(f, s = "\t", h = F) {
+        # !file.exists(
+        if (!is.null(f)) {
+            if (grepl("xlsx?", f)) {
+                data <- openxlsx::read.xlsx(f, rowNames = TRUE)
+            } else {
+                data <- read.table(f,
+                    header = h,
+                    sep = s,
+                    dec = ".",
+                    row.names = 1
+                )
+            }
+            # data = preProcessData(data)
+            # substr(rownames(data), 1, MAX_CHAR_LEN) -> rownames(data)
+        }
+        return(data)
     }
-    return(data)
-}
 
-server <- function(input, output, session) {
     refresh <- reactiveValues()
     refresh$classif_type <- ""
     getClassifValue <- function(key) unlist(classif_methods[key])
