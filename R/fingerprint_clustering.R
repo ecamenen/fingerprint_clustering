@@ -107,41 +107,41 @@ renameRowname <- function(d) {
 
     # names.row = as.character(d[,1])
     names.row <- rownames(d)
-    d <- d[, - 1]
+    d <- d[, -1]
     names.row <- renameRownameDoublets(names.row)
 
-    tryCatch({
-
-        substr(names.row, 1, MAX_CHAR_LEN) -> rownames(d)
-        return(d)
-
-    }, warning = function(w) {
-        names.row <- renameRownameDoublets(substr(names.row, 1, MAX_CHAR_LEN))
-        names.row -> rownames(d)
-        return(d)
-
-    }, error = function(e) {
-        return(d)
-    })
+    tryCatch(
+        {
+            substr(names.row, 1, MAX_CHAR_LEN) -> rownames(d)
+            return(d)
+        },
+        warning = function(w) {
+            names.row <- renameRownameDoublets(substr(names.row, 1, MAX_CHAR_LEN))
+            names.row -> rownames(d)
+            return(d)
+        },
+        error = function(e) {
+            return(d)
+        }
+    )
 }
 
 # Discard row from a reaction dataset that have the same conditions in each columns
 # x: dataframe
 discardRowCondDoublets <- function(x) {
-
     row_doublets <- list()
     j <- 0
 
     for (i in 1:nrow(x)) {
         # uniq remove doublets in a vector, so return 1 only if there is only 1
-        if((length(unique(as.integer(x[i, ]))) == 1)) {
+        if ((length(unique(as.integer(x[i, ]))) == 1)) {
             # print(row.names(x[i,]))
             j <- j + 1
             row_doublets[[j]] <- i
         }
     }
 
-    if(length(row_doublets) != 0) {
+    if (length(row_doublets) != 0) {
         removed_reacs <- row.names(x[unlist(row_doublets), ])
         removed_conds <- x[unlist(row_doublets), 1]
         removed <- cbind(removed_reacs, removed_conds)
@@ -150,27 +150,32 @@ discardRowCondDoublets <- function(x) {
         writeTsv("removed", v = F)
     }
 
-    if(length(row_doublets) > 0)
-        return(x[- unlist(row_doublets), ])
-    else
-        return(x)
+    if (length(row_doublets) > 0) {
+          return(x[-unlist(row_doublets), ])
+      } else {
+          return(x)
+      }
 }
 
 # rename row and avoid doublets errors
 renameRowname <- function(d) {
     names.row <- as.character(d[, 1])
-    d <- d[, - 1]
+    d <- d[, -1]
     names.row <- renameRownameDoublets(names.row)
-    tryCatch({
-        substr(names.row, 1, 25) -> rownames(d)
-        return(d)
-    }, warning = function(w) {
-        names.row <- renameRownameDoublets(substr(names.row, 1, 25))
-        names.row -> rownames(d)
-        return(d)
-    }, error = function(e) {
-        return(d)
-    })
+    tryCatch(
+        {
+            substr(names.row, 1, 25) -> rownames(d)
+            return(d)
+        },
+        warning = function(w) {
+            names.row <- renameRownameDoublets(substr(names.row, 1, 25))
+            names.row -> rownames(d)
+            return(d)
+        },
+        error = function(e) {
+            return(d)
+        }
+    )
 }
 
 # Discard row from a reaction dataset that have the same conditions in each columns
@@ -180,13 +185,13 @@ discardRowCondDoublets <- function(x) {
     j <- 0
     for (i in 1:nrow(x)) {
         # uniq remove doublets in a vector, so return 1 only if there is only 1
-        if((length(unique(as.integer(x[i, ]))) == 1)) {
+        if ((length(unique(as.integer(x[i, ]))) == 1)) {
             # print(row.names(x[i,]))
             j <- j + 1
             row_doublets[[j]] <- i
         }
     }
-    if(length(row_doublets) != 0) {
+    if (length(row_doublets) != 0) {
         removed_reacs <- row.names(x[unlist(row_doublets), ])
         removed_conds <- x[unlist(row_doublets), 1]
         removed <- cbind(removed_reacs, removed_conds)
@@ -194,8 +199,11 @@ discardRowCondDoublets <- function(x) {
         assign("removed", removed, .GlobalEnv)
         writeTsv("removed", v = F)
     }
-    if(length(row_doublets) > 0) return(x[- unlist(row_doublets), ])
-    else return(x)
+    if (length(row_doublets) > 0) {
+        return(x[-unlist(row_doublets), ])
+    } else {
+        return(x)
+    }
 }
 
 # Inputs: x : a matrix
@@ -203,22 +211,26 @@ discardRowCondDoublets <- function(x) {
 # Prints the matrix, save the matrix
 writeTsv <- function(x, f = NULL, cl = F, v = T) {
     # print on stdout
-    if(isTRUE(v)) cat(paste("\n", gsub("_", " ", toupper(x)), ":\n", sep = ""))
+    if (isTRUE(v)) cat(paste("\n", gsub("_", " ", toupper(x)), ":\n", sep = ""))
     # disabling warning
-    options(warn = - 1)
+    options(warn = -1)
     # get variable
     tab <- get(x)
-    if(!isTRUE(cl)) output <- as.matrix(rbind(c("", colnames(tab)), cbind(rownames(tab), tab)))
-    else output <- tab
+    if (!isTRUE(cl)) {
+        output <- as.matrix(rbind(c("", colnames(tab)), cbind(rownames(tab), tab)))
+    } else {
+        output <- tab
+    }
     # discard empty rows
     output <- output[rowSums(is.na(output)) != ncol(output), ]
     # TODOD:
     # output = output[,colSums(is.na(output)) != nrow(output)]
     output[is.na(output)] <- ""
-    colnames(output) <- rep("", ncol(output)); rownames(output) <- rep("", nrow(output))
-    if(isTRUE(v)) {
-        if(!isTRUE(cl)) {
-            printed <- round(apply(output[- 1, - 1], 2, as.numeric), 2)
+    colnames(output) <- rep("", ncol(output))
+    rownames(output) <- rep("", nrow(output))
+    if (isTRUE(v)) {
+        if (!isTRUE(cl)) {
+            printed <- round(apply(output[-1, -1], 2, as.numeric), 2)
             rownames(printed) <- rownames(tab)
             colnames(printed) <- colnames(tab)
         } else {
@@ -226,7 +238,7 @@ writeTsv <- function(x, f = NULL, cl = F, v = T) {
         }
         print(printed, quote = F)
     }
-    if(is.null(f)) f <- paste(x, ".tsv", sep = "")
+    if (is.null(f)) f <- paste(x, ".tsv", sep = "")
     write(t(output), f, ncolumns = ncol(output), sep = "\t")
     options(warn = 0)
 }
@@ -661,10 +673,13 @@ plotSilhouette <- function(sil_k) {
 getGapPerPart <- function(n, d, c, B = 500, v = F) {
     # FUN mus have only two args in this order and return a list with an object cluster
 
-    if(isTRUE(v)) cat("\nGAP STATISTICS:\n")
-    if(classif$method == "kmeans" & (n > 10 | nrow(d) >= 100)) plural <- c("few ", "s")
-    else plural <- c("", "")
-    if(classif$method == "kmeans" | nrow(d) >= 100) cat(paste("It could take a ", plural[1], "minute", plural[2], "...\n", sep = ""))
+    if (isTRUE(v)) cat("\nGAP STATISTICS:\n")
+    if (classif$method == "kmeans" & (n > 10 | nrow(d) >= 100)) {
+        plural <- c("few ", "s")
+    } else {
+        plural <- c("", "")
+    }
+    if (classif$method == "kmeans" | nrow(d) >= 100) cat(paste("It could take a ", plural[1], "minute", plural[2], "...\n", sep = ""))
 
     gapFun <- function(x, k) list(cluster = getClusters(k, c))
     clusGap(d, FUN = gapFun, K.max = n, verbose = F, B = B)
@@ -713,8 +728,8 @@ printSummary <- function(between, diff, sil, adv, gap = NULL) {
     # TODO: no n = nrow(data)
     summary <- cbind(between, diff, 100 - between, sil)
     names <- c("Between-inertia (%)", "Between-differences (%)", "Within-inertia (%)", "Silhouette index")
-    if(!is.null(gap)) {
-        summary <- cbind(summary, gap$Tab[, "gap"][- 1], gap$Tab[, "SE.sim"][- 1])
+    if (!is.null(gap)) {
+        summary <- cbind(summary, gap$Tab[, "gap"][-1], gap$Tab[, "SE.sim"][-1])
         names <- c(names, "Gap", "Gap SE")
     }
     rownames(summary) <- seq(2, (length(between) + 1))
@@ -764,11 +779,10 @@ getOrderedClusterSize <- function(cl) {
 # c: CAH
 # c: clusters from CAH
 heatMap <- function(df, d, s = NULL, c = NULL, cl = NULL) {
-
     printProgress(VERBOSE_NIV2, "Heatmap calculation")
     text <- isTRUE(isTRUE(TEXT) & (nrow(data) < 100))
 
-    if(!is.null(s)) {
+    if (!is.null(s)) {
         order <- attr(s, "iOrd")
         cl_sizes <- summary(s)$clus.size
         title <- "silhouette\'s scores"
@@ -786,24 +800,34 @@ heatMap <- function(df, d, s = NULL, c = NULL, cl = NULL) {
     # if(tri == TRUE) matrix[!lower.tri(matrix)] = NA
     # image(1:ncol(matrix), 1:ncol(matrix), t(matrix), axes=F, xlab="", ylab="")
 
-    options(warn = - 1)
-    if(nrow(df) > NB_ROW_MAX) labels <- order
+    options(warn = -1)
+    if (nrow(df) > NB_ROW_MAX) labels <- order
     # png(opt$output4,DIM_PNG, DIM_PNG)
-    if(PNG) {
-        cex.main <- 5; cex.legend <- 3; cex.lab <- 2; y_top <- 12; x_lab <- 0.6; lwd.rect <- 6
+    if (PNG) {
+        cex.main <- 5
+        cex.legend <- 3
+        cex.lab <- 2
+        y_top <- 12
+        x_lab <- 0.6
+        lwd.rect <- 6
     } else {
         # pdf(opt$output4)
-        cex.main <- 1.5; cex.legend <- 0.85; cex.lab <- 0.7; y_top <- 8; x_lab <- 0.5; lwd.rect <- 3
+        cex.main <- 1.5
+        cex.legend <- 0.85
+        cex.lab <- 0.7
+        y_top <- 8
+        x_lab <- 0.5
+        lwd.rect <- 3
     }
 
     par(fig = c(0, 0.9, 0, 1), new = TRUE)
     par(mar = c(1, 8, y_top, 1))
     plotcolors(dmat.color(matrix, colors = heat.colors(1000), byrank = FALSE), ptype = "image", na.color = "red", rlabels = FALSE, clabels = FALSE, border = 0)
     mtext(paste("Distance matrix ordered by", title), 3, line = 6, font = 4, cex = cex.main)
-    text(- 0.5, 0:(ncol(matrix) - 1) + 1, rev(labels), xpd = NA, adj = 1, cex = 0.7)
+    text(-0.5, 0:(ncol(matrix) - 1) + 1, rev(labels), xpd = NA, adj = 1, cex = 0.7)
     text(0.5:(ncol(matrix) - 0.5), ncol(matrix) + 1, substr(labels, 0, 20), xpd = NA, cex = 0.7, srt = 65, pos = 4)
     plotRect(cl_sizes, colors, lwd.rect)
-    if(isTRUE(text)) text(expand.grid(1:ncol(matrix), ncol(matrix):1), sprintf("%d", matrix), cex = 0.4)
+    if (isTRUE(text)) text(expand.grid(1:ncol(matrix), ncol(matrix):1), sprintf("%d", matrix), cex = 0.4)
 
     par(fig = c(0.85, 1, 0.3, 0.8), new = TRUE)
     par(mar = c(5, 0, 4, 0) + 0.1)
@@ -814,7 +838,7 @@ heatMap <- function(df, d, s = NULL, c = NULL, cl = NULL) {
     text(x = x_lab, y = seq(0, 1, l = 3), labels = round(seq(max(matrix), 2, l = 3)), cex = cex.lab, pos = 4)
 
     options(warn = 0)
-    if(VERBOSE_NIV2) cat("done.\n")
+    if (VERBOSE_NIV2) cat("done.\n")
     # suprLog = dev.off()
 }
 
@@ -825,15 +849,16 @@ heatMap <- function(df, d, s = NULL, c = NULL, cl = NULL) {
 # Inputs:
 # k: number of clusters
 plotDendrogram <- function(t, k, c, d, n, cl) {
-
-    if(nrow(d) > NB_ROW_MAX) {
+    if (nrow(d) > NB_ROW_MAX) {
         c$labels <- 1:nrow(d)
         cex <- 0.4
-    } else cex <- 0.8
+    } else {
+        cex <- 0.8
+    }
     # pdf(opt$output7)
     setGraphicBasic()
     par(mar = c(2, 5, 5, 1))
-    plot(c, hang = - 1, ylim = c(0, max(c$height)), xlim = c(0, length(c$labels)), sub = "", cex = cex, font = 3, ylab = "Cophenetic distance", main = "Dendrogram", axes = F)
+    plot(c, hang = -1, ylim = c(0, max(c$height)), xlim = c(0, length(c$labels)), sub = "", cex = cex, font = 3, ylab = "Cophenetic distance", main = "Dendrogram", axes = F)
     plotAxis(2, 0, max(c$height))
     abline(h = rev(c$height)[1:n], col = "gray", lty = 2, lwd = 1)
     # projection of the clusters
