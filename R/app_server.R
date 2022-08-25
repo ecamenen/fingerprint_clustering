@@ -6,13 +6,13 @@ app_server <- function(input, output, session) {
     options(shiny.maxRequestSize = 30 * 1024^2)
     # Global variables settings
     NB_BOOTSTRAP <- 500 # should be comprise between 100 and 1000
-    TEXT <- T # print values on graph (for optimum partition and heatmap)
+    TEXT <- TRUE # print values on graph (for optimum partition and heatmap)
     NB_ROW_MAX <- 200 # max row to have pdf, otherwise, some plots are in png
     DIM_PNG <- 2000
-    VERBOSE_NIV2 <- F
-    VERBOSE <- F
+    VERBOSE_NIV2 <- FALSE
+    VERBOSE <- FALSE
     MAX_CHAR_LEN <- 25 # maximum length of individual s names
-    PNG <- F
+    PNG <- FALSE
     classif_methods <- list(
         "K-menoids" = 1,
         "K-means" = 2,
@@ -38,7 +38,7 @@ app_server <- function(input, output, session) {
         }
     )
 
-    loadData <- function(f, s = "\t", h = F) {
+    loadData <- function(f, s = "\t", h = FALSE) {
         # !file.exists(
         if (!is.null(f)) {
             if (grepl("xlsx?", f)) {
@@ -160,7 +160,7 @@ app_server <- function(input, output, session) {
             "pca",
             dudi.pca(
                 vars$data,
-                scannf = F,
+                scannf = FALSE,
                 scale = input$scale,
                 nf = 4
             ),
@@ -240,7 +240,7 @@ app_server <- function(input, output, session) {
             message("\n[WARNING] A cluster with an only singleton biased the silhouette score.")
         }
 
-        writeClusters("clusters.tsv", v = F)
+        writeClusters("clusters.tsv", v = FALSE)
     })
 
     setPrintFuncs <- function() {
@@ -330,7 +330,7 @@ app_server <- function(input, output, session) {
                 "plotGap",
                 function() {
                     if (nrow(vars$data) < (NB_ROW_MAX / 2)) {
-                        plotGapPerPart(gap, MAX_CLUSTERS, v = F)
+                        plotGapPerPart(gap, MAX_CLUSTERS, v = FALSE)
                         # plotGapPerPart2(gap, MAX_CLUSTERS)
                     } else {
                         message("\n[WARNING] Dataset too big to calculate a gap statistics.")
@@ -403,7 +403,7 @@ app_server <- function(input, output, session) {
             100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, vars$data),
             .GlobalEnv
         )
-        writeTsv("discr", "discr_var.tsv", v = F)
+        writeTsv("discr", "discr_var.tsv", v = FALSE)
     }
 
     # post-process for data
@@ -418,9 +418,9 @@ app_server <- function(input, output, session) {
                     sep = ""
                 )
             )
-            return(F)
+            return(FALSE)
         } else {
-            return(T)
+            return(TRUE)
         }
     }
 
@@ -434,12 +434,12 @@ app_server <- function(input, output, session) {
     }
 
     savePng <- function(f, func) {
-        assign("PNG", T, .GlobalEnv)
+        assign("PNG", TRUE, .GlobalEnv)
         f <- paste(f, ".png", sep = "")
         png(f, DIM_PNG, DIM_PNG)
         func
         suprLog <- dev.off()
-        assign("PNG", F, .GlobalEnv)
+        assign("PNG", FALSE, .GlobalEnv)
     }
 
     setData <- reactive({
@@ -449,13 +449,13 @@ app_server <- function(input, output, session) {
                 if (input$infile$size > 3000000) {
                     assign(
                         "VERBOSE_NIV2",
-                        T,
+                        TRUE,
                         .GlobalEnv
                     )
                 } else {
                     assign(
                         "VERBOSE_NIV2",
-                        F,
+                        FALSE,
                         .GlobalEnv
                     )
                 }
@@ -465,7 +465,7 @@ app_server <- function(input, output, session) {
                 if (input$scale) {
                     refresh$data <- scale(refresh$data)
                 } else {
-                    refresh$data <- scale(refresh$data, scale = F)
+                    refresh$data <- scale(refresh$data, scale = FALSE)
                 }
 
                 if (input$transpose) {
@@ -640,7 +640,7 @@ app_server <- function(input, output, session) {
         if (is.data.frame(vars$data)) {
             setVariables()
             setPrintFuncs()
-            writeTsv("summary_table", "summary.tsv", v = F)
+            writeTsv("summary_table", "summary.tsv", v = FALSE)
 
             savePlot("best_clustering", plotBest())
             savePlot("silhouette", plotSil())
@@ -660,9 +660,9 @@ app_server <- function(input, output, session) {
                 # if (nrow(vars$data) < (NB_ROW_MAX/2)){
                 savePlot("gap", plotGap())
                 # }
-                writeTsv("ctr_clus", "ctr_clus.tsv", v = F)
-                writeTsv("ctr_part", "ctr_part.tsv", v = F)
-                writeTsv("within_k", "within_k.tsv", v = F)
+                writeTsv("ctr_clus", "ctr_clus.tsv", v = FALSE)
+                writeTsv("ctr_part", "ctr_part.tsv", v = FALSE)
+                writeTsv("within_k", "within_k.tsv", v = FALSE)
             }
         }
     })
@@ -679,7 +679,7 @@ app_server <- function(input, output, session) {
                 if (checkMaxCluster()) {
                     observeEvent(
                         input$summary_save,
-                        writeTsv("summary_table", "summary.tsv", v = F)
+                        writeTsv("summary_table", "summary.tsv", v = FALSE)
                     )
                     summary_table
                 }
@@ -886,7 +886,7 @@ app_server <- function(input, output, session) {
                         if (checkMaxCluster()) {
                             observeEvent(
                                 input$within_save,
-                                writeTsv("within_k", "within_k.tsv", v = F)
+                                writeTsv("within_k", "within_k.tsv", v = FALSE)
                             )
                             within_k
                         }
@@ -896,9 +896,9 @@ app_server <- function(input, output, session) {
                 }
             )
         },
-        rownames = T,
-        hover = T,
-        striped = T,
+        rownames = TRUE,
+        hover = TRUE,
+        striped = TRUE,
         digits = 2,
         width = "100cm",
         align = "c",
@@ -930,7 +930,7 @@ app_server <- function(input, output, session) {
                 if (checkMaxCluster()) {
                     observeEvent(
                         input$ctr_clus_save,
-                        writeTsv("ctr_clus", "ctr_clus.tsv", v = F)
+                        writeTsv("ctr_clus", "ctr_clus.tsv", v = FALSE)
                     )
                     ctr_clus
                 }
@@ -947,7 +947,7 @@ app_server <- function(input, output, session) {
                 if (checkMaxCluster()) {
                     observeEvent(
                         input$ctr_part_save,
-                        writeTsv("ctr_part", "ctr_part.tsv", v = F)
+                        writeTsv("ctr_part", "ctr_part.tsv", v = FALSE)
                     )
                     ctr_part
                 }
@@ -964,7 +964,7 @@ app_server <- function(input, output, session) {
                 if (checkMaxCluster()) {
                     observeEvent(
                         input$centroids_save,
-                        writeTsv("centroids_save", "centroids.tsv", v = F)
+                        writeTsv("centroids_save", "centroids.tsv", v = FALSE)
                     )
                     aggregate(vars$data, list(clusters), mean)
                 }

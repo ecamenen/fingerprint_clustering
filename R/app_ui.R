@@ -109,7 +109,7 @@ app_ui <- function(request) {
                     ),
                     checkboxInput("advanced",
                         "Advanced mode",
-                        value = F
+                        value = FALSE
                     ),
                     sliderInput(
                         "nb_clusters",

@@ -9,13 +9,13 @@ set.seed(as.numeric(format(Sys.time(), "%OS2")) * 100 * Sys.getpid())
 
 # Global variables settings
 NB_BOOTSTRAP <- 500 # should be comprise between 100 and 1000
-TEXT <- T # print values on graph (for optimum partition and heatmap)
+TEXT <- TRUE # print values on graph (for optimum partition and heatmap)
 NB_ROW_MAX <- 200 # max row to have pdf, otherwise, some plots are in png
 DIM_PNG <- 2000
-VERBOSE_NIV2 <- F
-VERBOSE <- F
+VERBOSE_NIV2 <- FALSE
+VERBOSE <- FALSE
 MAX_CHAR_LEN <- 25 # maximum length of individual s names
-PNG <- F
+PNG <- FALSE
 
 # Loading data
 # dec=".")
@@ -73,7 +73,7 @@ preProcessData <- function(d) {
     REMOVE_DOUBLETS <- (nrow(d) > NB_ROW_MAX)
     d <- renameRowname(d)
     # remove columns containing characters
-    # if(nrow(d) > NB_ROW_MAX) VERBOSE_NIV2 = T
+    # if(nrow(d) > NB_ROW_MAX) VERBOSE_NIV2 = TRUE
     # get only columns with numeric values
     d <- d[, unlist(sapply(1:ncol(d), function(i) is.numeric(d[, i])))]
 
@@ -150,7 +150,7 @@ discardRowCondDoublets <- function(x) {
         removed <- cbind(removed_reacs, removed_conds)
         colnames(removed) <- c("condition", "")
         assign("removed", removed, .GlobalEnv)
-        writeTsv("removed", v = F)
+        writeTsv("removed", v = FALSE)
     }
 
     if (length(row_doublets) > 0) {
@@ -200,7 +200,7 @@ discardRowCondDoublets <- function(x) {
         removed <- cbind(removed_reacs, removed_conds)
         colnames(removed) <- c("condition", "")
         assign("removed", removed, .GlobalEnv)
-        writeTsv("removed", v = F)
+        writeTsv("removed", v = FALSE)
     }
     if (length(row_doublets) > 0) {
         return(x[-unlist(row_doublets), ])
@@ -212,7 +212,7 @@ discardRowCondDoublets <- function(x) {
 # Inputs: x : a matrix
 # filename of the saved file
 # Prints the matrix, save the matrix
-writeTsv <- function(x, f = NULL, cl = F, v = T) {
+writeTsv <- function(x, f = NULL, cl = FALSE, v = TRUE) {
     # print on stdout
     if (isTRUE(v)) {
         cat(paste("\n", gsub("_", " ", toupper(x)), ":\n", sep = ""))
@@ -241,7 +241,7 @@ writeTsv <- function(x, f = NULL, cl = F, v = T) {
         } else {
             printed <- output
         }
-        print(printed, quote = F)
+        print(printed, quote = FALSE)
     }
     if (is.null(f)) {
         f <- paste(x, ".tsv", sep = "")
@@ -428,11 +428,11 @@ isSymmetric <- function(d) {
             isCommutativity <- unique(d[lower.tri(d)] == t(d)[lower.tri(d)])
 
             if (length(isCommutativity) == 1 & isTRUE(isCommutativity)) {
-                return(T)
+                return(TRUE)
             }
         }
     }
-    return(F)
+    return(FALSE)
 }
 
 ################################
@@ -460,7 +460,7 @@ getCAH <- function(t, df, d) {
 # Selects best algo based on cophenetic calculation
 # df: data
 # d: distance matrix
-selectBestCAH <- function(df, d, v = F) {
+selectBestCAH <- function(df, d, v = FALSE) {
     temp <- 0
     for (i in 3:9) {
         cah <- getCAH(df, i)
@@ -507,7 +507,7 @@ getCoefAggl <- function(c) {
 # Ouput: Non-hierarchical classification
 getCNH <- function(t, df, d, k) {
     if (t == 1) {
-        return(pam(d, k, diss = T))
+        return(pam(d, k, diss = TRUE))
     } else if (t == 2) {
         checkEuclidean(d)
         return(kmeans(df, centers = k, nstart = 100))
@@ -568,7 +568,7 @@ writeClusters <- function(f, v = FALSE) {
     cluster <- cbind(sil_k[, 1], sil_k[, 3], pca$li[attr(sil_k, "iOrd"), c(1, 2)])
     colnames(cluster) <- c("Cluster", "Silhouette", "Axis1", "Axis2")
     assign("cluster", cluster, .GlobalEnv)
-    writeTsv("cluster", f, cl = F, v = v)
+    writeTsv("cluster", f, cl = FALSE, v = v)
 }
 
 ############################################################
@@ -612,7 +612,7 @@ plotCohenetic <- function(d, cah) {
         coph_matrix,
         pch = 19,
         col = alpha("red", 0.2),
-        axes = F,
+        axes = FALSE,
         xlim = c(0, max(d)),
         xlab = "",
         ylab = "",
@@ -664,12 +664,12 @@ getClusterCentroids <- function(d, cl) {
 }
 
 # Difference between each case of a vector
-getBetweenDifferences = function(between){
+getBetweenDifferences <- function(between) {
     # apply produce a list, unlist convert in vector
-    diff = unlist(sapply(1:length(between), function(i) between[i] - between[i - 1]))
-    return (as.vector(cbind(between[1], t(diff))))
+    diff <- unlist(sapply(1:length(between), function(i) between[i] - between[i - 1]))
+    return(as.vector(cbind(between[1], t(diff))))
     #-n-1 to remove the last NA value (pairwise comparison)
-    #between[1] to get the difference with 1 cluster
+    # between[1] to get the difference with 1 cluster
 }
 
 getWithin <- function(d, cl, k) {
@@ -711,7 +711,7 @@ plotBetweenDiff <- function(between_diff) {
         xlab = "Nb. of clusters",
         ylab = "Between-cluster variation (%)",
         col = "grey",
-        axes = F
+        axes = FALSE
     )
     plotBestClustering(
         "Largest between differences method",
@@ -741,7 +741,7 @@ plotFusionLevels <- function(n, c) {
         xlab = "Nb. of clusters",
         ylab = "Cophenetic distance",
         col = "grey",
-        axes = F
+        axes = FALSE
     )
     plotBestClustering(
         "Fusion level method",
@@ -774,7 +774,7 @@ plotElbow <- function(x) {
         xlab = "Nb. of clusters",
         ylab = "Relative within inertia (%)",
         col = "grey",
-        axes = F
+        axes = FALSE
     )
     plotBestClustering(
         "Elbow method",
@@ -830,7 +830,7 @@ plotSilhouettePerPart <- function(mean_silhouette, sil = sil) {
         col = "grey",
         xlab = "Nb. of clusters",
         ylab = "Average silhouette width",
-        axes = F
+        axes = FALSE
     )
     plotBestClustering(
         "Silhouette method",
@@ -859,7 +859,7 @@ plotSilhouette <- function(sil_k) {
         col = colorClusters(sil_k[, 1]),
         nmax.lab = 100,
         do.n.k = FALSE,
-        axes = F
+        axes = FALSE
     )
     mtext(
         paste("Average silhouette width:", round(summary(sil_k)$avg.width, 3)),
@@ -876,7 +876,7 @@ plotSilhouette <- function(sil_k) {
 ###################################
 
 # B: nb of NB_BOOTSTRAP
-getGapPerPart <- function(n, d, c, B = 500, v = F) {
+getGapPerPart <- function(n, d, c, B = 500, v = FALSE) {
     # FUN mus have only two args in this order and return a list with an object cluster
 
     if (isTRUE(v)) {
@@ -893,7 +893,7 @@ getGapPerPart <- function(n, d, c, B = 500, v = F) {
     }
 
     gapFun <- function(x, k) list(cluster = getClusters(k, c))
-    clusGap(d, FUN = gapFun, K.max = n, verbose = F, B = B)
+    clusGap(d, FUNcluster = gapFun, K.max = n, verbose = FALSE, B = B)
 }
 
 # g: gap object
@@ -903,7 +903,7 @@ getGapBest <- function(g, M = "Tibs2001SEmax") {
 
 # Plot the gap statistics width for all clustering possible
 # TODO: HERE
-plotGapPerPart <- function(g, n, v = T) {
+plotGapPerPart <- function(g, n, v = TRUE) {
     setGraphic()
     # savePdf("gap_statistics.pdf")
     optimal_nb_clusters <- getGapBest(g)
@@ -928,7 +928,7 @@ plotGapPerPart <- function(g, n, v = T) {
         xlab = "Nb. of clusters",
         ylab = expression(Gap[k]),
         main = "",
-        axes = F
+        axes = FALSE
     )
     plotBestClustering(
         "Gap statistics method",
@@ -957,7 +957,7 @@ plotGapPerPart2 <- function(g, n) {
         type = "n",
         xlab = "Nb. of clusters",
         ylab = "log(within-inertia)",
-        axes = F
+        axes = FALSE
     )
     title(
         main = "Optimal number of clusters",
@@ -1080,7 +1080,7 @@ heatMap <- function(df, d, s = NULL, c = NULL, cl = NULL) {
     matrix <- matrix[order, order]
     rownames(matrix) <- rownames(df)[order] -> labels
     # if(tri == TRUE) matrix[!lower.tri(matrix)] = NA
-    # image(1:ncol(matrix), 1:ncol(matrix), t(matrix), axes=F, xlab="", ylab="")
+    # image(1:ncol(matrix), 1:ncol(matrix), t(matrix), axes=FALSE, xlab="", ylab="")
 
     options(warn = -1)
     if (nrow(df) > NB_ROW_MAX) {
@@ -1112,7 +1112,7 @@ heatMap <- function(df, d, s = NULL, c = NULL, cl = NULL) {
         na.color = "red",
         rlabels = FALSE,
         clabels = FALSE,
-        border = 0
+        border.color = 0
     )
     mtext(
         paste("Distance matrix ordered by", title),
@@ -1150,7 +1150,7 @@ heatMap <- function(df, d, s = NULL, c = NULL, cl = NULL) {
         c(0, 1),
         c(0, 1),
         type = "n",
-        axes = F,
+        axes = FALSE,
         xlab = "",
         ylab = "",
         main = ""
@@ -1203,7 +1203,7 @@ plotDendrogram <- function(t, k, c, d, n, cl) {
         font = 3,
         ylab = "Cophenetic distance",
         main = "Dendrogram",
-        axes = F
+        axes = FALSE
     )
     plotAxis(2, 0, max(c$height))
     abline(h = rev(c$height)[1:n], col = "gray", lty = 2, lwd = 1)
@@ -1267,13 +1267,13 @@ plotPca <- function(pca, d, cl, axis1 = 1, axis2 = 2) {
 
     title <- paste("Cumulated inertia:", round((pca$eig[axis1] + pca$eig[axis2]) / sum(pca$eig), 4) * 100, "%")
     s.class(
-        addaxes = F,
+        addaxes = FALSE,
         cbind(pca$li[, axis1], pca$li[, axis2]),
         ylim = c(min(pca$li[, axis2]) + min(pca$li[, axis2]) / 4, max(pca$li[, axis2]) + max(pca$li[, axis2]) / 2),
         xlim = c(min(pca$li[, axis1]), max(pca$li[, axis1])),
         csub = 1.5,
         as.factor(cl),
-        grid = F,
+        grid = FALSE,
         col = colPers(k),
         clabel = clabel,
         cstar = cstar,
@@ -1292,7 +1292,7 @@ plotPca <- function(pca, d, cl, axis1 = 1, axis2 = 2) {
     # colnames(pca_coord) = c("Chemicals", "Axis 1", "Axis 2")
 
     if (isTRUE(ADVANCED)) {
-        par(fig = c(0.8, 1, 0.82, 1), new = T)
+        par(fig = c(0.8, 1, 0.82, 1), new = TRUE)
         plotInertiaPca(pca, d, pca$nf)
     }
     # suprLog = dev.off()
@@ -1326,7 +1326,7 @@ plotInertiaPca <- function(pca, d, nf = 4) {
         ylim = c(0, max(inertia + 7)),
         col = "grey75",
         font = 2,
-        axes = F,
+        axes = FALSE,
         xlab = "",
         ylab = ""
     )
@@ -1339,7 +1339,7 @@ plotInertiaPca <- function(pca, d, nf = 4) {
     text(1:nf, inertia[1:nf] + 5, inertia[1:nf], cex = r_main_text)
     par(new = TRUE)
     par(mar = c(0, 0, 0, 0))
-    plot(0:1, 0:1, axes = F, type = "n")
+    plot(0:1, 0:1, axes = FALSE, type = "n")
     rect(0, 0.1, 0.9, 0.9, border = "grey65")
 }
 
@@ -1398,7 +1398,7 @@ getCtrVar <- function(t, k, cl, d) {
     return(ctr)
 }
 
-getCtrVar2 <- function(t, k, cl, d, scale = T) {
+getCtrVar2 <- function(t, k, cl, d, scale = TRUE) {
     ctr <- getCtrVar(t, k, cl, d)
 
     if (isTRUE(scale)) {
