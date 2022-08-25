@@ -14,26 +14,27 @@ app_server <- function(input, output, session) {
     MAX_CHAR_LEN <- 25 # maximum length of individual s names
     PNG <- F
     classif_methods <- list(
-      "K-menoids" = 1,
-      "K-means" = 2,
-      "Ward" = 3,
-      "Complete links" = 4,
-      "Single links" = 5,
-      "UPGMA" = 6,
-      "WPGMA" = 7,
-      "WPGMC" = 8,
-      "UPGMC" = 9
+        "K-menoids" = 1,
+        "K-means" = 2,
+        "Ward" = 3,
+        "Complete links" = 4,
+        "Single links" = 5,
+        "UPGMA" = 6,
+        "WPGMA" = 7,
+        "WPGMC" = 8,
+        "UPGMC" = 9
     )
+    vars <- reactiveValues(data = NULL)
     tryCatch(
-      {
-        data <- loadData("matrix.txt")
-      },
+        {
+            vars$data <- loadData("inst/extdata/matrix.txt")
+        },
         warning = function(w) {
-            data <- NULL
+            vars$data <- NULL
             message("Default file \"matrix.txt\" is not in the folder. Please, load another one.")
         },
         error = function(e) {
-            data <- NULL
+            vars$data <- NULL
         }
     )
 
@@ -51,8 +52,8 @@ app_server <- function(input, output, session) {
                     row.names = 1
                 )
             }
-            # data = preProcessData(data)
-            # substr(rownames(data), 1, MAX_CHAR_LEN) -> rownames(data)
+            # vars$data = preProcessData(vars$data)
+            # substr(rownames(vars$data), 1, MAX_CHAR_LEN) -> rownames(vars$data)
         }
         return(data)
     }
@@ -70,11 +71,7 @@ app_server <- function(input, output, session) {
     setVariables <- reactive({
         refresh2 <- c(refresh$classif_type, input$max_biomark)
 
-        assign(
-            "data",
-            refresh$data,
-            .GlobalEnv
-        )
+        vars$data <- refresh$data
 
         assign(
             "dis",
@@ -122,7 +119,7 @@ app_server <- function(input, output, session) {
         setVariables()
         req(input$infile)
 
-        if ((nrow(data) > 3000) &
+        if ((nrow(vars$data) > 3000) &
             (input$classif_type > 2)) {
             message(
                 "[WARNING] With more than 3000 rows to analyse, classification method must be K-medoids or K-means",
@@ -134,7 +131,7 @@ app_server <- function(input, output, session) {
 
         assign(
             "classif",
-            getClassif(CLASSIF_TYPE, MAX_CLUSTERS, data, dis),
+            getClassif(CLASSIF_TYPE, MAX_CLUSTERS, vars$data, dis),
             .GlobalEnv
         )
         if (VERBOSE_NIV2) {
@@ -149,7 +146,7 @@ app_server <- function(input, output, session) {
         # inertia
         assign(
             "between",
-            getRelativeBetweenPerPart(MAX_CLUSTERS, data, list_clus),
+            getRelativeBetweenPerPart(MAX_CLUSTERS, vars$data, list_clus),
             .GlobalEnv
         )
         assign(
@@ -162,7 +159,7 @@ app_server <- function(input, output, session) {
         assign(
             "pca",
             dudi.pca(
-                data,
+                vars$data,
                 scannf = F,
                 scale = input$scale,
                 nf = 4
@@ -175,7 +172,7 @@ app_server <- function(input, output, session) {
 
         assign(
             "sil",
-            getSilhouettePerPart(data, list_clus, dis),
+            getSilhouettePerPart(vars$data, list_clus, dis),
             .GlobalEnv
         )
         assign(
@@ -258,7 +255,7 @@ app_server <- function(input, output, session) {
         assign(
             "plotPCA",
             function() {
-                plotPca(pca, data, clusters, AXIS1, AXIS2)
+                plotPca(pca, vars$data, clusters, AXIS1, AXIS2)
             },
             .GlobalEnv
         )
@@ -283,7 +280,7 @@ app_server <- function(input, output, session) {
                     CLASSIF_TYPE,
                     optimal_nb_clusters,
                     classif,
-                    data,
+                    vars$data,
                     MAX_CLUSTERS,
                     clusters
                 )
@@ -295,7 +292,7 @@ app_server <- function(input, output, session) {
             assign(
                 "plotHeatmap",
                 function() {
-                    heatMap(data, dis, sil_k)
+                    heatMap(vars$data, dis, sil_k)
                 },
                 .GlobalEnv
             )
@@ -303,7 +300,7 @@ app_server <- function(input, output, session) {
             assign(
                 "plotHeatmap",
                 function() {
-                    heatMap(data, dis, c = classif, cl = clusters)
+                    heatMap(vars$data, dis, c = classif, cl = clusters)
                 },
                 .GlobalEnv
             )
@@ -332,7 +329,7 @@ app_server <- function(input, output, session) {
             assign(
                 "plotGap",
                 function() {
-                    if (nrow(data) < (NB_ROW_MAX / 2)) {
+                    if (nrow(vars$data) < (NB_ROW_MAX / 2)) {
                         plotGapPerPart(gap, MAX_CLUSTERS, v = F)
                         # plotGapPerPart2(gap, MAX_CLUSTERS)
                     } else {
@@ -344,7 +341,7 @@ app_server <- function(input, output, session) {
             assign(
                 "plotGap2",
                 function() {
-                    if (nrow(data) < (NB_ROW_MAX / 2)) {
+                    if (nrow(vars$data) < (NB_ROW_MAX / 2)) {
                         plotGapPerPart2(gap, MAX_CLUSTERS)
                     } else {
                         message("\n[WARNING] Dataset too big to calculate a gap statistics.")
@@ -361,7 +358,7 @@ app_server <- function(input, output, session) {
             )
             assign(
                 "within_k",
-                getRelativeWithinPerCluster(list_clus, data),
+                getRelativeWithinPerCluster(list_clus, vars$data),
                 .GlobalEnv
             )
         }
@@ -375,12 +372,12 @@ app_server <- function(input, output, session) {
         )
         assign(
             "ctr_part",
-            100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data),
+            100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, vars$data),
             .GlobalEnv
         )
         assign(
             "centroids",
-            getDistPerVariable(data, clusters),
+            getDistPerVariable(vars$data, clusters),
             .GlobalEnv
         )
         assign(
@@ -389,7 +386,7 @@ app_server <- function(input, output, session) {
                 CLASSIF_TYPE,
                 optimal_nb_clusters,
                 clusters,
-                data,
+                vars$data,
                 input$max_biomark
             ),
             .GlobalEnv
@@ -403,7 +400,7 @@ app_server <- function(input, output, session) {
         )
         assign(
             "ctr_clus",
-            100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, data),
+            100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, vars$data),
             .GlobalEnv
         )
         writeTsv("discr", "discr_var.tsv", v = F)
@@ -412,11 +409,11 @@ app_server <- function(input, output, session) {
     # post-process for data
     # check that the maximum_number of clusters fixed is not greater than the number of row of the datafile
     checkMaxCluster <- function() {
-        if (MAX_CLUSTERS > (nrow(data) - 1)) {
+        if (MAX_CLUSTERS > (nrow(vars$data) - 1)) {
             message(
                 paste(
                     "[WARNING] Max number of clusters must be lower (and not equal) to the number of line of the dataset (",
-                    nrow(data),
+                    nrow(vars$data),
                     ")",
                     sep = ""
                 )
@@ -564,12 +561,12 @@ app_server <- function(input, output, session) {
                     ))
                 }
 
-                if (nrow(data) < (NB_ROW_MAX / 2)) {
+                if (nrow(vars$data) < (NB_ROW_MAX / 2)) {
                     printProgress(VERBOSE_NIV2, "Gap statistics calculation")
 
                     assign(
                         "gap",
-                        getGapPerPart(MAX_CLUSTERS, data, classif, NB_BOOTSTRAP),
+                        getGapPerPart(MAX_CLUSTERS, vars$data, classif, NB_BOOTSTRAP),
                         .GlobalEnv
                     )
                     if (VERBOSE_NIV2) {
@@ -640,7 +637,7 @@ app_server <- function(input, output, session) {
 
     # function save_all
     observeEvent(input$save_all, {
-        if (is.data.frame(data)) {
+        if (is.data.frame(vars$data)) {
             setVariables()
             setPrintFuncs()
             writeTsv("summary", "summary.tsv", v = F)
@@ -660,7 +657,7 @@ app_server <- function(input, output, session) {
                     savePlot("fusion", plotFus())
                 }
                 savePlot("elbow", plotElb())
-                # if (nrow(data) < (NB_ROW_MAX/2)){
+                # if (nrow(vars$data) < (NB_ROW_MAX/2)){
                 savePlot("gap", plotGap())
                 # }
                 writeTsv("ctr_clus", "ctr_clus.tsv", v = F)
@@ -739,7 +736,7 @@ app_server <- function(input, output, session) {
                         .GlobalEnv
                     )
                     observeEvent(input$pca_save, {
-                        if (nrow(as.matrix(data)) > NB_ROW_MAX) {
+                        if (nrow(as.matrix(vars$data)) > NB_ROW_MAX) {
                             savePng("pca", plotPCA())
                         } else {
                             savePlot("pca", plotPCA())
@@ -761,7 +758,7 @@ app_server <- function(input, output, session) {
                     par(mar = c(0, 0, 0, 0))
                     plot(0:1, 0:1, axes = F, type = "n") # delete sil plot
                     observeEvent(input$heatmap_save, {
-                        if (nrow(as.matrix(data)) > NB_ROW_MAX) {
+                        if (nrow(as.matrix(vars$data)) > NB_ROW_MAX) {
                             savePng("heatmap", plotHeatmap())
                         } else {
                             savePlot("heatmap", plotHeatmap())
@@ -782,7 +779,7 @@ app_server <- function(input, output, session) {
                 if (isTRUE(input$advanced) & CLASSIF_TYPE > 2) {
                     if (checkMaxCluster()) {
                         observeEvent(input$coph_save, {
-                            if (nrow(as.matrix(data)) > NB_ROW_MAX) {
+                            if (nrow(as.matrix(vars$data)) > NB_ROW_MAX) {
                                 savePng("cohenetic", plotCoph())
                             } else {
                                 savePlot("cohenetic", plotCoph())
@@ -969,7 +966,7 @@ app_server <- function(input, output, session) {
                         input$centroids_save,
                         writeTsv("centroids_save", "centroids.tsv", v = F)
                     )
-                    aggregate(data, list(clusters), mean)
+                    aggregate(vars$data, list(clusters), mean)
                 }
             },
             error = function(e) {
