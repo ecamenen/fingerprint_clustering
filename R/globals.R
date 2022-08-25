@@ -10,6 +10,7 @@ utils::globalVariables(
         "ctr_clus",
         "ctr_clus_plot",
         "ctr_part",
+        "diff_between",
         "dis",
         "discr",
         "gap",
@@ -32,6 +33,9 @@ utils::globalVariables(
         "plotPCA",
         "plotSil",
         "sil_k",
+        "sil_per_part",
+        "summary_table",
+        "Tab",
         "within_k"
     )
 )

@@ -1,12 +1,12 @@
 # Global variables settings
 NB_BOOTSTRAP <- 500 # should be comprise between 100 and 1000
-TEXT <- T # print values on graph (for optimum partition and heatmap)
+TEXT <- TRUE # print values on graph (for optimum partition and heatmap)
 NB_ROW_MAX <- 200 # max row to have pdf, otherwise, some plots are in png
 DIM_PNG <- 2000
-VERBOSE_NIV2 <- F
-VERBOSE <- F
+VERBOSE_NIV2 <- FALSE
+VERBOSE <- FALSE
 MAX_CHAR_LEN <- 25 # maximum length of individual s names
-PNG <- F
+PNG <- FALSE
 
 getArgs <- function() {
     option_list <- list(
@@ -146,9 +146,9 @@ getArgs <- function() {
         )
     )
     # if -h, avoid exit with error
-    args <- commandArgs(trailingOnly = T)
+    args <- commandArgs(trailingOnly = TRUE)
     if ("-h" %in% args) {
-        q("no", status = 0, runLast = F)
+        q("no", status = 0, runLast = FALSE)
     }
     return(OptionParser(option_list = option_list))
 }
@@ -252,7 +252,8 @@ MAX_CLUSTERS <- opt$maxClusters
 CLASSIF_TYPE <- opt$classifType
 ADVANCED <- "advanced" %in% names(opt)
 NB_AXIS <- opt$nbAxis
-REMOVE_DOUBLETS <- T # Discard line containing the same information on all columns from analysis
+# Discard line containing the same information on all columns from analysis
+REMOVE_DOUBLETS <- TRUE
 HEAD <- !("header" %in% names(opt))
 # if (!is.null(opt$workdir)) setwd(opt$workdir)
 if (isTRUE(VERBOSE_NIV2)) {
@@ -292,7 +293,13 @@ optimal_nb_clusters <- 2
 clusters <- list_clus[[optimal_nb_clusters - 1]]
 
 NB_BIOMARK <- 20
-discr <- getDiscriminantVariables(CLASSIF_TYPE, optimal_nb_clusters, clusters, data, NB_BIOMARK)
+discr <- getDiscriminantVariables(
+    CLASSIF_TYPE,
+    optimal_nb_clusters,
+    clusters,
+    data,
+    NB_BIOMARK
+)
 plotDiscriminantVariables(discr)
 
 
@@ -319,7 +326,12 @@ plotDiscriminantVariables <- function(t, n, cl, d, m) {
 
 
 
-discriminant_power <- 100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, data)
+discriminant_power <- getPdisPerPartition(
+    CLASSIF_TYPE,
+    MAX_CLUSTERS,
+    list_clus,
+    data
+) * 100
 
 # Silhouette analysis
 sil <- getSilhouettePerPart(data, list_clus, dis)

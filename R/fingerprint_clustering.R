@@ -291,14 +291,14 @@ plotAxis <- function(side, min, max, interval = 1, lwd = 3) {
 
 plotBestClustering <- function(
     sub_title,
-     values,
-     values_type,
-     optimal_nb_clusters,
-     interval = 1,
-     min_x = 2,
-     best = NULL,
-     val2 = NULL) {
-  
+    values,
+    values_type,
+    optimal_nb_clusters,
+    interval = 1,
+    min_x = 2,
+    best = NULL,
+    val2 = NULL) {
+
     plotAxis(1, 2, MAX_CLUSTERS)
 
     if (interval >= 1) {
