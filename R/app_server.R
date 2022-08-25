@@ -150,7 +150,7 @@ app_server <- function(input, output, session) {
             .GlobalEnv
         )
         assign(
-            "diff",
+            "diff_between",
             getBetweenDifferences(between),
             .GlobalEnv
         )
@@ -171,13 +171,13 @@ app_server <- function(input, output, session) {
         }
 
         assign(
-            "sil",
+            "sil_per_part",
             getSilhouettePerPart(vars$data, list_clus, dis),
             .GlobalEnv
         )
         assign(
             "mean_silhouette",
-            getMeanSilhouettePerPart(sil),
+            getMeanSilhouettePerPart(sil_per_part),
             .GlobalEnv
         )
 
@@ -226,7 +226,7 @@ app_server <- function(input, output, session) {
 
         assign(
             "sil_k",
-            sil[[optimal_nb_clusters - 1]],
+            sil_per_part[[optimal_nb_clusters - 1]],
             .GlobalEnv
         )
 
@@ -262,7 +262,7 @@ app_server <- function(input, output, session) {
         assign(
             "plotBest",
             function() {
-                plotSilhouettePerPart(mean_silhouette)
+                plotSilhouettePerPart(mean_silhouette, sil_per_part)
             },
             .GlobalEnv
         )
@@ -366,8 +366,8 @@ app_server <- function(input, output, session) {
         ##### print table func #####
 
         assign(
-            "summary",
-            printSummary(between, diff, mean_silhouette, ADVANCED, gap),
+            "summary_table",
+            printSummary(between, diff_between, mean_silhouette, ADVANCED, gap),
             .GlobalEnv
         )
         assign(
@@ -640,7 +640,7 @@ app_server <- function(input, output, session) {
         if (is.data.frame(vars$data)) {
             setVariables()
             setPrintFuncs()
-            writeTsv("summary", "summary.tsv", v = F)
+            writeTsv("summary_table", "summary.tsv", v = F)
 
             savePlot("best_clustering", plotBest())
             savePlot("silhouette", plotSil())
@@ -679,9 +679,9 @@ app_server <- function(input, output, session) {
                 if (checkMaxCluster()) {
                     observeEvent(
                         input$summary_save,
-                        writeTsv("summary", "summary.tsv", v = F)
+                        writeTsv("summary_table", "summary.tsv", v = F)
                     )
-                    summary
+                    summary_table
                 }
             },
             error = function(e) {

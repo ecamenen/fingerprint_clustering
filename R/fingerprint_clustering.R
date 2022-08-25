@@ -220,7 +220,7 @@ writeTsv <- function(x, f = NULL, cl = F, v = T) {
     # disabling warning
     options(warn = -1)
     # get variable
-    tab <- get(x)
+    tab <- base::get(x)
     if (!isTRUE(cl)) {
         output <- as.matrix(rbind(c("", colnames(tab)), cbind(rownames(tab), tab)))
     } else {
@@ -664,12 +664,12 @@ getClusterCentroids <- function(d, cl) {
 }
 
 # Difference between each case of a vector
-getBetweenDifferences <- function(between) {
+getBetweenDifferences = function(between){
     # apply produce a list, unlist convert in vector
-    diff <- unlist(sapply(1:length(between), function(i) between[i] - between[i - 1]))
-    return(as.vector(cbind(between[1], t(diff))))
+    diff = unlist(sapply(1:length(between), function(i) between[i] - between[i - 1]))
+    return (as.vector(cbind(between[1], t(diff))))
     #-n-1 to remove the last NA value (pairwise comparison)
-    # between[1] to get the difference with 1 cluster
+    #between[1] to get the difference with 1 cluster
 }
 
 getWithin <- function(d, cl, k) {
@@ -814,7 +814,7 @@ getMeanSilhouettePerPart <- function(sils) {
 
 # Plot the best average silhouette width for all clustering possible
 # mean_sils: vector of silhouette average width
-plotSilhouettePerPart <- function(mean_silhouette) {
+plotSilhouettePerPart <- function(mean_silhouette, sil = sil) {
     if (isTRUE(VERBOSE)) {
         cat("\nSILHOUETTE:\n")
     }
