@@ -8,6 +8,33 @@ VERBOSE <- FALSE
 MAX_CHAR_LEN <- 25 # maximum length of individual s names
 PNG <- FALSE
 
+library("optparse")
+library("autoCluster")
+source("R/fingerprint_clustering.R")
+source("R/plot.R")
+
+#' Load libraries
+#'
+#' Load libraries
+#'
+#' @param librairies A list of libraries
+#'
+#' @export
+load_libraries <- function(librairies) {
+  for (l in librairies) {
+    suppressPackageStartupMessages(
+      library(
+        l,
+        character.only = TRUE,
+        warn.conflicts = FALSE,
+        quietly = TRUE,
+        verbose = FALSE
+      )
+    )
+  }
+}
+load_libraries(pkgload::pkg_desc()$get_deps()[, 2])
+
 getArgs <- function() {
     option_list <- list(
         make_option(
@@ -302,30 +329,6 @@ discr <- getDiscriminantVariables(
 )
 plotDiscriminantVariables(discr)
 
-
-plotDiscriminantVariables <- function(t, n, cl, d, m) {
-    if (m > ncol(d)) {
-        m <- ncol(d)
-    }
-
-    ctr <- 100 * getCtrVar(t, n, cl, d)
-    max_ctr <- apply(ctr, 2, sum)
-    # which_max_ctr= apply(ctr, 2, which.max)
-    max_ctr <- max_ctr[order(max_ctr, decreasing = TRUE)]
-    df <- data.frame(max_ctr,
-        color = as.character(max_ctr),
-        order = length(max_ctr):1
-    )[0:(m), ]
-    color2 <- as.factor(max_ctr)
-    levels(color2) <- hue_pal()(length(max_ctr))
-    p <- ggplot(df, aes(order, df[, 1], fill = color))
-
-    plotHistogram(p, df, "Main discriminant variables")
-}
-
-
-
-
 discriminant_power <- getPdisPerPartition(
     CLASSIF_TYPE,
     MAX_CLUSTERS,
@@ -336,4 +339,4 @@ discriminant_power <- getPdisPerPartition(
 # Silhouette analysis
 sil <- getSilhouettePerPart(data, list_clus, dis)
 mean_silhouette <- getMeanSilhouettePerPart(sil)
-plotSilhouettePerPart(mean_silhouette)
+plotSilhouettePerPart(mean_silhouette, sil)
