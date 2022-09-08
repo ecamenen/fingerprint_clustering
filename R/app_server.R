@@ -40,7 +40,9 @@ app_server <- function(input, output, session) {
         sils = NULL,
         mean_sils = NULL,
         optimal_k = NULL,
-        gap = NULL
+        gap = NULL,
+        sil_k = NULL,
+        advanced = NULL
     )
     tryCatch(
         {
@@ -114,11 +116,15 @@ app_server <- function(input, output, session) {
         # Perform classification
         printProgress(VERBOSE_NIV2, "Classification")
 
-        vars$classif <- getClassif(vars$classif_type, vars$max_clusters, vars$data, vars$dis)
+        assign(
+          "classif",
+          getClassif(vars$classif_type, vars$max_clusters, vars$data, vars$dis),
+          .GlobalEnv
+        )
         if (VERBOSE_NIV2) {
             cat("done.\n")
         }
-        vars$clusters <- getClusterPerPart(vars$max_clusters + 1, vars$classif)
+        vars$clusters <- getClusterPerPart(vars$max_clusters + 1, classif)
 
         # inertia
         vars$between <- getRelativeBetweenPerPart(vars$max_clusters, vars$data, vars$clusters)
@@ -169,11 +175,7 @@ app_server <- function(input, output, session) {
           vars$gap <- NULL
         }
 
-        assign(
-            "sil_k",
-            vars$sils[[vars$optimal_k - 1]],
-            .GlobalEnv
-        )
+        vars$sil_k <- vars$sils[[vars$optimal_k - 1]]
 
         # errors
         if (vars$optimal_k == vars$max_clusters) {
@@ -185,22 +187,18 @@ app_server <- function(input, output, session) {
             message("\n[WARNING] A cluster with an only singleton biased the silhouette score.")
         }
 
-        writeClusters("clusters.tsv", v = FALSE)
+        writeClusters("clusters.tsv", vars$sil_k, v = FALSE)
     })
 
     setPrintFuncs <- function() {
-        assign(
-            "ADVANCED",
-            input$advanced,
-            .GlobalEnv
-        )
+        vars$advanced <- input$advanced
         refr <- c(input$nb_clusters, input$max_biomark)
 
         ###### plot funcs #####
         assign(
             "plotPCA",
             function() {
-                plotPca(pca, vars$data, vars$cl_k, vars$axis1, vars$axis2)
+                plotPca(pca, vars$data, vars$cl_k, vars$axis1, vars$axis2, vars$advanced)
             },
             .GlobalEnv
         )
@@ -214,7 +212,7 @@ app_server <- function(input, output, session) {
         assign(
             "plotSil",
             function() {
-                plotSilhouette(sil_k)
+                plotSilhouette(vars$sil_k)
             },
             .GlobalEnv
         )
@@ -224,7 +222,7 @@ app_server <- function(input, output, session) {
                 plotDendrogram(
                     vars$classif_type,
                     vars$optimal_k,
-                    vars$classif,
+                    classif,
                     vars$data,
                     vars$max_clusters,
                     vars$cl_k
@@ -233,11 +231,11 @@ app_server <- function(input, output, session) {
             .GlobalEnv
         )
 
-        if (vars$classif_type <= 2 | isTRUE(ADVANCED)) {
+        if (vars$classif_type <= 2 | isTRUE(vars$advanced)) {
             assign(
                 "plotHeatmap",
                 function() {
-                    heatMap(vars$data, vars$dis, sil_k)
+                    heatMap(vars$data, vars$dis, vars$sil_k)
                 },
                 .GlobalEnv
             )
@@ -245,18 +243,18 @@ app_server <- function(input, output, session) {
             assign(
                 "plotHeatmap",
                 function() {
-                    heatMap(vars$data, vars$dis, c = vars$classif, cl = vars$cl_k)
+                    heatMap(vars$data, vars$dis, c = classif, cl = vars$cl_k)
                 },
                 .GlobalEnv
             )
         }
 
         ##### advanced #####
-        if (isTRUE(ADVANCED)) {
+        if (isTRUE(vars$advanced)) {
             assign(
                 "plotFus",
                 function() {
-                    plotFusionLevels(vars$max_clusters, vars$classif)
+                    plotFusionLevels(vars$max_clusters, classif)
                 },
                 .GlobalEnv
             )
@@ -264,7 +262,7 @@ app_server <- function(input, output, session) {
                 "plotCoph",
                 function() {
                     printProgress(VERBOSE_NIV2, "Cophenetic calculation")
-                    plotCohenetic(vars$dis, vars$classif)
+                    plotCohenetic(vars$dis, classif)
                     if (VERBOSE_NIV2) {
                         cat("done.\n")
                     }
@@ -312,7 +310,7 @@ app_server <- function(input, output, session) {
 
         assign(
             "summary_table",
-            printSummary(vars$between, vars$diff_between, vars$mean_sils, ADVANCED, vars$gap),
+            printSummary(vars$between, vars$diff_between, vars$mean_sils, vars$advanced, vars$gap),
             .GlobalEnv
         )
         assign(
@@ -500,7 +498,7 @@ app_server <- function(input, output, session) {
                 if (refresh$classif_type > 2) {
                     cat(paste(
                         "\nAGGLOMERATIVE COEFFICIENT: ",
-                        round(getCoefAggl(vars$classif), 3),
+                        round(getCoefAggl(classif), 3),
                         "\n",
                         sep = ""
                     ))
@@ -509,7 +507,7 @@ app_server <- function(input, output, session) {
                 if (nrow(vars$data) < (NB_ROW_MAX / 2)) {
                     printProgress(VERBOSE_NIV2, "Gap statistics calculation")
 
-                    vars$gap <- getGapPerPart(vars$max_clusters, vars$data, vars$classif, NB_BOOTSTRAP)
+                    vars$gap <- getGapPerPart(vars$max_clusters, vars$data, classif, NB_BOOTSTRAP)
                     if (VERBOSE_NIV2) {
                         cat("done.\n")
                     }

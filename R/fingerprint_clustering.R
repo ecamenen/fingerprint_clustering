@@ -564,7 +564,7 @@ colorClusters <- function(cl) {
 # cl: clusters
 # f : filename
 # r: ordered alphabetically
-writeClusters <- function(f, v = FALSE) {
+writeClusters <- function(f, sil_k, v = FALSE) {
     cluster <- cbind(sil_k[, 1], sil_k[, 3], pca$li[attr(sil_k, "iOrd"), c(1, 2)])
     colnames(cluster) <- c("Cluster", "Silhouette", "Axis1", "Axis2")
     assign("cluster", cluster, .GlobalEnv)
@@ -1233,7 +1233,7 @@ orderColors <- function(c, cl) {
 ################################
 
 # nf: number of factorial axis
-plotPca <- function(pca, d, cl, axis1 = 1, axis2 = 2) {
+plotPca <- function(pca, d, cl, axis1 = 1, axis2 = 2, advanced = FALSE) {
     k <- length(levels(as.factor(cl)))
 
     if (nrow(d) > NB_ROW_MAX) {
@@ -1291,7 +1291,7 @@ plotPca <- function(pca, d, cl, axis1 = 1, axis2 = 2) {
     )
     # colnames(pca_coord) = c("Chemicals", "Axis 1", "Axis 2")
 
-    if (isTRUE(ADVANCED)) {
+    if (isTRUE(advanced)) {
         par(fig = c(0.8, 1, 0.82, 1), new = TRUE)
         plotInertiaPca(pca, d, pca$nf)
     }
