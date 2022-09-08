@@ -30,7 +30,15 @@ app_server <- function(input, output, session) {
         max_clusters = NULL,
         classif_type = NULL,
         nb_clusters = NULL,
-        advanced = NULL
+        advanced = NULL,
+        axis1 = NULL,
+        axis2 = NULL,
+        classif = NULL,
+        clusters = NULL,
+        cl_k = NULL,
+        between = NULL,
+        sils = NULL,
+        mean_sils = NULL
     )
     tryCatch(
         {
@@ -84,16 +92,8 @@ app_server <- function(input, output, session) {
         vars$classif_type <- refresh$classif_type
         vars$nb_clusters <- input$nb_clusters
         vars$advanced <- input$advanced
-        assign(
-            "AXIS1",
-            input$axis1,
-            .GlobalEnv
-        )
-        assign(
-            "AXIS2",
-            input$axis2,
-            .GlobalEnv
-        )
+        vars$axis1 <- input$axis1
+        vars$axis2 <- input$axis2
     })
 
     # Each shiny server functions run in local environment
@@ -112,31 +112,15 @@ app_server <- function(input, output, session) {
         # Perform classification
         printProgress(VERBOSE_NIV2, "Classification")
 
-        assign(
-            "classif",
-            getClassif(vars$classif_type, vars$max_clusters, vars$data, vars$dis),
-            .GlobalEnv
-        )
+        vars$classif <- getClassif(vars$classif_type, vars$max_clusters, vars$data, vars$dis)
         if (VERBOSE_NIV2) {
             cat("done.\n")
         }
-        assign(
-            "list_clus",
-            getClusterPerPart(vars$max_clusters + 1, classif),
-            .GlobalEnv
-        )
+        vars$clusters <- getClusterPerPart(vars$max_clusters + 1, vars$classif)
 
         # inertia
-        assign(
-            "between",
-            getRelativeBetweenPerPart(vars$max_clusters, vars$data, list_clus),
-            .GlobalEnv
-        )
-        assign(
-            "diff_between",
-            getBetweenDifferences(between),
-            .GlobalEnv
-        )
+        vars$between <- getRelativeBetweenPerPart(vars$max_clusters, vars$data, vars$clusters)
+        vars$diff_between <- getBetweenDifferences(vars$between)
 
         printProgress(VERBOSE_NIV2, "PCA")
         assign(
@@ -153,16 +137,8 @@ app_server <- function(input, output, session) {
             cat("done.\n")
         }
 
-        assign(
-            "sil_per_part",
-            getSilhouettePerPart(vars$data, list_clus, vars$dis),
-            .GlobalEnv
-        )
-        assign(
-            "mean_silhouette",
-            getMeanSilhouettePerPart(sil_per_part),
-            .GlobalEnv
-        )
+        vars$sils <- getSilhouettePerPart(vars$data, vars$clusters, vars$dis)
+        vars$mean_sils <- getMeanSilhouettePerPart(vars$sils)
 
         setClusters()
 
@@ -187,17 +163,13 @@ app_server <- function(input, output, session) {
         } else {
             assign(
                 "optimal_nb_clusters",
-                which.max(mean_silhouette) + 1,
+                which.max(vars$mean_sils) + 1,
                 .GlobalEnv
             )
         }
 
         # cl_temp, because writeTsv(clusters) recreate a different object named clusters
-        assign(
-            "clusters",
-            list_clus[[optimal_nb_clusters - 1]],
-            .GlobalEnv
-        )
+        vars$cl_k <- vars$clusters[[optimal_nb_clusters - 1]]
 
         if (!input$advanced) {
             assign(
@@ -209,7 +181,7 @@ app_server <- function(input, output, session) {
 
         assign(
             "sil_k",
-            sil_per_part[[optimal_nb_clusters - 1]],
+            vars$sils[[optimal_nb_clusters - 1]],
             .GlobalEnv
         )
 
@@ -219,7 +191,7 @@ app_server <- function(input, output, session) {
                 "\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found."
             )
         }
-        if (min(table(clusters)) == 1) {
+        if (min(table(vars$cl_k)) == 1) {
             message("\n[WARNING] A cluster with an only singleton biased the silhouette score.")
         }
 
@@ -238,14 +210,14 @@ app_server <- function(input, output, session) {
         assign(
             "plotPCA",
             function() {
-                plotPca(pca, vars$data, clusters, AXIS1, AXIS2)
+                plotPca(pca, vars$data, vars$cl_k, vars$axis1, vars$axis2)
             },
             .GlobalEnv
         )
         assign(
             "plotBest",
             function() {
-                plotSilhouettePerPart(mean_silhouette, sil_per_part)
+                plotSilhouettePerPart(vars$mean_sils, vars$sils)
             },
             .GlobalEnv
         )
@@ -262,10 +234,10 @@ app_server <- function(input, output, session) {
                 plotDendrogram(
                     vars$classif_type,
                     optimal_nb_clusters,
-                    classif,
+                    vars$classif,
                     vars$data,
                     vars$max_clusters,
-                    clusters
+                    vars$cl_k
                 )
             },
             .GlobalEnv
@@ -283,7 +255,7 @@ app_server <- function(input, output, session) {
             assign(
                 "plotHeatmap",
                 function() {
-                    heatMap(vars$data, vars$dis, c = classif, cl = clusters)
+                    heatMap(vars$data, vars$dis, c = vars$classif, cl = vars$cl_k)
                 },
                 .GlobalEnv
             )
@@ -294,7 +266,7 @@ app_server <- function(input, output, session) {
             assign(
                 "plotFus",
                 function() {
-                    plotFusionLevels(vars$max_clusters, classif)
+                    plotFusionLevels(vars$max_clusters, vars$classif)
                 },
                 .GlobalEnv
             )
@@ -302,7 +274,7 @@ app_server <- function(input, output, session) {
                 "plotCoph",
                 function() {
                     printProgress(VERBOSE_NIV2, "Cophenetic calculation")
-                    plotCohenetic(vars$dis, classif)
+                    plotCohenetic(vars$dis, vars$classif)
                     if (VERBOSE_NIV2) {
                         cat("done.\n")
                     }
@@ -335,13 +307,13 @@ app_server <- function(input, output, session) {
             assign(
                 "plotElb",
                 function() {
-                    plotElbow(between)
+                    plotElbow(vars$between)
                 },
                 .GlobalEnv
             )
             assign(
                 "within_k",
-                getRelativeWithinPerCluster(list_clus, vars$data),
+                getRelativeWithinPerCluster(vars$clusters, vars$data),
                 .GlobalEnv
             )
         }
@@ -350,17 +322,17 @@ app_server <- function(input, output, session) {
 
         assign(
             "summary_table",
-            printSummary(between, diff_between, mean_silhouette, ADVANCED, gap),
+            printSummary(vars$between, vars$diff_between, vars$mean_sils, ADVANCED, gap),
             .GlobalEnv
         )
         assign(
             "ctr_part",
-            100 * getPdisPerPartition(vars$classif_type, vars$max_clusters, list_clus, vars$data),
+            100 * getPdisPerPartition(vars$classif_type, vars$max_clusters, vars$clusters, vars$data),
             .GlobalEnv
         )
         assign(
             "centroids",
-            getDistPerVariable(vars$data, clusters),
+            getDistPerVariable(vars$data, vars$cl_k),
             .GlobalEnv
         )
         assign(
@@ -368,7 +340,7 @@ app_server <- function(input, output, session) {
             getDiscriminantVariables(
                 vars$classif_type,
                 optimal_nb_clusters,
-                clusters,
+                vars$cl_k,
                 vars$data,
                 input$max_biomark
             ),
@@ -383,7 +355,7 @@ app_server <- function(input, output, session) {
         )
         assign(
             "ctr_clus",
-            100 * getCtrVar(vars$classif_type, optimal_nb_clusters, clusters, vars$data),
+            100 * getCtrVar(vars$classif_type, optimal_nb_clusters, vars$cl_k, vars$data),
             .GlobalEnv
         )
         writeTsv("discr", "discr_var.tsv", v = FALSE)
@@ -538,7 +510,7 @@ app_server <- function(input, output, session) {
                 if (refresh$classif_type > 2) {
                     cat(paste(
                         "\nAGGLOMERATIVE COEFFICIENT: ",
-                        round(getCoefAggl(classif), 3),
+                        round(getCoefAggl(vars$classif), 3),
                         "\n",
                         sep = ""
                     ))
@@ -549,7 +521,7 @@ app_server <- function(input, output, session) {
 
                     assign(
                         "gap",
-                        getGapPerPart(vars$max_clusters, vars$data, classif, NB_BOOTSTRAP),
+                        getGapPerPart(vars$max_clusters, vars$data, vars$classif, NB_BOOTSTRAP),
                         .GlobalEnv
                     )
                     if (VERBOSE_NIV2) {
@@ -708,16 +680,8 @@ app_server <- function(input, output, session) {
         #     {
         setVariables()
         if (checkMaxCluster()) {
-            assign(
-                "AXIS1",
-                input$axis1,
-                .GlobalEnv
-            )
-            assign(
-                "AXIS2",
-                input$axis2,
-                .GlobalEnv
-            )
+          vars$axis1 <- input$axis1
+          vars$axis2 <- input$axis2
             observeEvent(input$pca_save, {
                 if (nrow(as.matrix(vars$data)) > NB_ROW_MAX) {
                     savePng("pca", plotPCA())
@@ -949,7 +913,7 @@ app_server <- function(input, output, session) {
                         input$centroids_save,
                         writeTsv("centroids_save", "centroids.tsv", v = FALSE)
                     )
-                    aggregate(vars$data, list(clusters), mean)
+                    aggregate(vars$data, list(vars$cl_k), mean)
                 }
             },
             error = function(e) {

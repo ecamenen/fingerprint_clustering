@@ -1216,7 +1216,7 @@ plotDendrogram <- function(t, k, c, d, n, cl) {
 orderColors <- function(c, cl) {
     col_in <- colorClusters(cl)[c$order]
     j <- 1
-    col_ordered <- rep(NA, length(table(clusters)))
+    col_ordered <- rep(NA, length(table(cl)))
     col_ordered[1] <- col_in[1]
     for (i in 2:length(col_in)) {
         if (col_in[i] != col_in[i - 1]) {
