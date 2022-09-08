@@ -38,7 +38,9 @@ app_server <- function(input, output, session) {
         cl_k = NULL,
         between = NULL,
         sils = NULL,
-        mean_sils = NULL
+        mean_sils = NULL,
+        optimal_k = NULL,
+        gap = NULL
     )
     tryCatch(
         {
@@ -155,38 +157,26 @@ app_server <- function(input, output, session) {
         )
 
         if (vars$nb_clusters > 0) {
-            assign(
-                "optimal_nb_clusters",
-                input$nb_clusters,
-                .GlobalEnv
-            )
+          vars$optimal_k <- input$nb_clusters
         } else {
-            assign(
-                "optimal_nb_clusters",
-                which.max(vars$mean_sils) + 1,
-                .GlobalEnv
-            )
+          vars$optimal_k <- which.max(vars$mean_sils) + 1
         }
 
         # cl_temp, because writeTsv(clusters) recreate a different object named clusters
-        vars$cl_k <- vars$clusters[[optimal_nb_clusters - 1]]
+        vars$cl_k <- vars$clusters[[vars$optimal_k - 1]]
 
         if (!input$advanced) {
-            assign(
-                "gap",
-                NULL,
-                .GlobalEnv
-            )
+          vars$gap <- NULL
         }
 
         assign(
             "sil_k",
-            vars$sils[[optimal_nb_clusters - 1]],
+            vars$sils[[vars$optimal_k - 1]],
             .GlobalEnv
         )
 
         # errors
-        if (optimal_nb_clusters == vars$max_clusters) {
+        if (vars$optimal_k == vars$max_clusters) {
             message(
                 "\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found."
             )
@@ -233,7 +223,7 @@ app_server <- function(input, output, session) {
             function() {
                 plotDendrogram(
                     vars$classif_type,
-                    optimal_nb_clusters,
+                    vars$optimal_k,
                     vars$classif,
                     vars$data,
                     vars$max_clusters,
@@ -285,7 +275,7 @@ app_server <- function(input, output, session) {
                 "plotGap",
                 function() {
                     if (nrow(vars$data) < (NB_ROW_MAX / 2)) {
-                        plotGapPerPart(gap, vars$max_clusters, v = FALSE)
+                        plotGapPerPart(vars$gap, vars$max_clusters, v = FALSE)
                         # plotGapPerPart2(gap, vars$max_clusters)
                     } else {
                         message("\n[WARNING] Dataset too big to calculate a gap statistics.")
@@ -297,7 +287,7 @@ app_server <- function(input, output, session) {
                 "plotGap2",
                 function() {
                     if (nrow(vars$data) < (NB_ROW_MAX / 2)) {
-                        plotGapPerPart2(gap, vars$max_clusters)
+                        plotGapPerPart2(vars$gap, vars$max_clusters)
                     } else {
                         message("\n[WARNING] Dataset too big to calculate a gap statistics.")
                     }
@@ -322,7 +312,7 @@ app_server <- function(input, output, session) {
 
         assign(
             "summary_table",
-            printSummary(vars$between, vars$diff_between, vars$mean_sils, ADVANCED, gap),
+            printSummary(vars$between, vars$diff_between, vars$mean_sils, ADVANCED, vars$gap),
             .GlobalEnv
         )
         assign(
@@ -339,7 +329,7 @@ app_server <- function(input, output, session) {
             "discr",
             getDiscriminantVariables(
                 vars$classif_type,
-                optimal_nb_clusters,
+                vars$optimal_k,
                 vars$cl_k,
                 vars$data,
                 input$max_biomark
@@ -355,7 +345,7 @@ app_server <- function(input, output, session) {
         )
         assign(
             "ctr_clus",
-            100 * getCtrVar(vars$classif_type, optimal_nb_clusters, vars$cl_k, vars$data),
+            100 * getCtrVar(vars$classif_type, vars$optimal_k, vars$cl_k, vars$data),
             .GlobalEnv
         )
         writeTsv("discr", "discr_var.tsv", v = FALSE)
@@ -519,29 +509,17 @@ app_server <- function(input, output, session) {
                 if (nrow(vars$data) < (NB_ROW_MAX / 2)) {
                     printProgress(VERBOSE_NIV2, "Gap statistics calculation")
 
-                    assign(
-                        "gap",
-                        getGapPerPart(vars$max_clusters, vars$data, vars$classif, NB_BOOTSTRAP),
-                        .GlobalEnv
-                    )
+                    vars$gap <- getGapPerPart(vars$max_clusters, vars$data, vars$classif, NB_BOOTSTRAP)
                     if (VERBOSE_NIV2) {
                         cat("done.\n")
                     }
                 } else {
-                    assign(
-                        "gap",
-                        NULL,
-                        .GlobalEnv
-                    )
+                    vars$gap <- NULL
                     message("\n[WARNING] Dataset too big to calculate a gap statistics.")
                 }
                 setPrintFuncs()
             } else {
-                assign(
-                    "gap",
-                    NULL,
-                    .GlobalEnv
-                )
+              vars$gap <- NULL
             }
         }
     })
