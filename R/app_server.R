@@ -27,7 +27,10 @@ app_server <- function(input, output, session) {
     vars <- reactiveValues(
         data = NULL,
         dis = NULL,
-        max_clusters = NULL
+        max_clusters = NULL,
+        classif_type = NULL,
+        nb_clusters = NULL,
+        advanced = NULL
     )
     tryCatch(
         {
@@ -78,23 +81,9 @@ app_server <- function(input, output, session) {
         vars$data <- refresh$data
         vars$dis<- refresh$dis
         vars$max_clusters <- refresh$max
-        assign(
-            "CLASSIF_TYPE",
-            refresh$classif_type,
-            .GlobalEnv
-        )
-
-        assign(
-            "NB_CLUSTERS",
-            input$nb_clusters,
-            .GlobalEnv
-        )
-        assign(
-            "ADVANCED",
-            input$advanced,
-            .GlobalEnv
-        )
-
+        vars$classif_type <- refresh$classif_type
+        vars$nb_clusters <- input$nb_clusters
+        vars$advanced <- input$advanced
         assign(
             "AXIS1",
             input$axis1,
@@ -125,7 +114,7 @@ app_server <- function(input, output, session) {
 
         assign(
             "classif",
-            getClassif(CLASSIF_TYPE, vars$max_clusters, vars$data, vars$dis),
+            getClassif(vars$classif_type, vars$max_clusters, vars$data, vars$dis),
             .GlobalEnv
         )
         if (VERBOSE_NIV2) {
@@ -189,7 +178,7 @@ app_server <- function(input, output, session) {
             input$transpose
         )
 
-        if (NB_CLUSTERS > 0) {
+        if (vars$nb_clusters > 0) {
             assign(
                 "optimal_nb_clusters",
                 input$nb_clusters,
@@ -271,7 +260,7 @@ app_server <- function(input, output, session) {
             "plotDend",
             function() {
                 plotDendrogram(
-                    CLASSIF_TYPE,
+                    vars$classif_type,
                     optimal_nb_clusters,
                     classif,
                     vars$data,
@@ -282,7 +271,7 @@ app_server <- function(input, output, session) {
             .GlobalEnv
         )
 
-        if (CLASSIF_TYPE <= 2 | isTRUE(ADVANCED)) {
+        if (vars$classif_type <= 2 | isTRUE(ADVANCED)) {
             assign(
                 "plotHeatmap",
                 function() {
@@ -366,7 +355,7 @@ app_server <- function(input, output, session) {
         )
         assign(
             "ctr_part",
-            100 * getPdisPerPartition(CLASSIF_TYPE, vars$max_clusters, list_clus, vars$data),
+            100 * getPdisPerPartition(vars$classif_type, vars$max_clusters, list_clus, vars$data),
             .GlobalEnv
         )
         assign(
@@ -377,7 +366,7 @@ app_server <- function(input, output, session) {
         assign(
             "discr",
             getDiscriminantVariables(
-                CLASSIF_TYPE,
+                vars$classif_type,
                 optimal_nb_clusters,
                 clusters,
                 vars$data,
@@ -394,7 +383,7 @@ app_server <- function(input, output, session) {
         )
         assign(
             "ctr_clus",
-            100 * getCtrVar(CLASSIF_TYPE, optimal_nb_clusters, clusters, vars$data),
+            100 * getCtrVar(vars$classif_type, optimal_nb_clusters, clusters, vars$data),
             .GlobalEnv
         )
         writeTsv("discr", "discr_var.tsv", v = FALSE)
@@ -770,7 +759,7 @@ app_server <- function(input, output, session) {
         # tryCatch(
         #     {
         setVariables()
-        if (isTRUE(input$advanced) & CLASSIF_TYPE > 2) {
+        if (isTRUE(input$advanced) & vars$classif_type > 2) {
             if (checkMaxCluster()) {
                 observeEvent(input$coph_save, {
                     if (nrow(as.matrix(vars$data)) > NB_ROW_MAX) {
@@ -792,7 +781,7 @@ app_server <- function(input, output, session) {
         # tryCatch(
         #     {
         setVariables()
-        if (CLASSIF_TYPE > 2) {
+        if (vars$classif_type > 2) {
             if (checkMaxCluster()) {
                 observeEvent(
                     input$dendr_save,
@@ -811,7 +800,7 @@ app_server <- function(input, output, session) {
         tryCatch(
             {
                 setVariables()
-                if (isTRUE(input$advanced) & CLASSIF_TYPE > 2) {
+                if (isTRUE(input$advanced) & vars$classif_type > 2) {
                     if (checkMaxCluster()) {
                         observeEvent(input$fusion_save, savePlot("fusion", plotFus()))
                         plotFus()
