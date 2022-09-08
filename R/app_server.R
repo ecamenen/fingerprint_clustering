@@ -24,7 +24,11 @@ app_server <- function(input, output, session) {
         "WPGMC" = 8,
         "UPGMC" = 9
     )
-    vars <- reactiveValues(data = NULL)
+    vars <- reactiveValues(
+        data = NULL,
+        dis = NULL,
+        max_clusters = NULL
+    )
     tryCatch(
         {
             vars$data <- loadData("inst/extdata/matrix.txt")
@@ -72,18 +76,8 @@ app_server <- function(input, output, session) {
         refresh2 <- c(refresh$classif_type, input$max_biomark)
 
         vars$data <- refresh$data
-
-        assign(
-            "dis",
-            refresh$dis,
-            .GlobalEnv
-        )
-
-        assign(
-            "MAX_CLUSTERS",
-            refresh$max,
-            .GlobalEnv
-        )
+        vars$dis<- refresh$dis
+        vars$max_clusters <- refresh$max
         assign(
             "CLASSIF_TYPE",
             refresh$classif_type,
@@ -131,7 +125,7 @@ app_server <- function(input, output, session) {
 
         assign(
             "classif",
-            getClassif(CLASSIF_TYPE, MAX_CLUSTERS, vars$data, dis),
+            getClassif(CLASSIF_TYPE, vars$max_clusters, vars$data, vars$dis),
             .GlobalEnv
         )
         if (VERBOSE_NIV2) {
@@ -139,14 +133,14 @@ app_server <- function(input, output, session) {
         }
         assign(
             "list_clus",
-            getClusterPerPart(MAX_CLUSTERS + 1, classif),
+            getClusterPerPart(vars$max_clusters + 1, classif),
             .GlobalEnv
         )
 
         # inertia
         assign(
             "between",
-            getRelativeBetweenPerPart(MAX_CLUSTERS, vars$data, list_clus),
+            getRelativeBetweenPerPart(vars$max_clusters, vars$data, list_clus),
             .GlobalEnv
         )
         assign(
@@ -172,7 +166,7 @@ app_server <- function(input, output, session) {
 
         assign(
             "sil_per_part",
-            getSilhouettePerPart(vars$data, list_clus, dis),
+            getSilhouettePerPart(vars$data, list_clus, vars$dis),
             .GlobalEnv
         )
         assign(
@@ -231,7 +225,7 @@ app_server <- function(input, output, session) {
         )
 
         # errors
-        if (optimal_nb_clusters == MAX_CLUSTERS) {
+        if (optimal_nb_clusters == vars$max_clusters) {
             message(
                 "\n[WARNING] The optimal number of clusters equals the maximum number of clusters. \nNo cluster structure has been found."
             )
@@ -281,7 +275,7 @@ app_server <- function(input, output, session) {
                     optimal_nb_clusters,
                     classif,
                     vars$data,
-                    MAX_CLUSTERS,
+                    vars$max_clusters,
                     clusters
                 )
             },
@@ -292,7 +286,7 @@ app_server <- function(input, output, session) {
             assign(
                 "plotHeatmap",
                 function() {
-                    heatMap(vars$data, dis, sil_k)
+                    heatMap(vars$data, vars$dis, sil_k)
                 },
                 .GlobalEnv
             )
@@ -300,7 +294,7 @@ app_server <- function(input, output, session) {
             assign(
                 "plotHeatmap",
                 function() {
-                    heatMap(vars$data, dis, c = classif, cl = clusters)
+                    heatMap(vars$data, vars$dis, c = classif, cl = clusters)
                 },
                 .GlobalEnv
             )
@@ -311,7 +305,7 @@ app_server <- function(input, output, session) {
             assign(
                 "plotFus",
                 function() {
-                    plotFusionLevels(MAX_CLUSTERS, classif)
+                    plotFusionLevels(vars$max_clusters, classif)
                 },
                 .GlobalEnv
             )
@@ -319,7 +313,7 @@ app_server <- function(input, output, session) {
                 "plotCoph",
                 function() {
                     printProgress(VERBOSE_NIV2, "Cophenetic calculation")
-                    plotCohenetic(dis, classif)
+                    plotCohenetic(vars$dis, classif)
                     if (VERBOSE_NIV2) {
                         cat("done.\n")
                     }
@@ -330,8 +324,8 @@ app_server <- function(input, output, session) {
                 "plotGap",
                 function() {
                     if (nrow(vars$data) < (NB_ROW_MAX / 2)) {
-                        plotGapPerPart(gap, MAX_CLUSTERS, v = FALSE)
-                        # plotGapPerPart2(gap, MAX_CLUSTERS)
+                        plotGapPerPart(gap, vars$max_clusters, v = FALSE)
+                        # plotGapPerPart2(gap, vars$max_clusters)
                     } else {
                         message("\n[WARNING] Dataset too big to calculate a gap statistics.")
                     }
@@ -342,7 +336,7 @@ app_server <- function(input, output, session) {
                 "plotGap2",
                 function() {
                     if (nrow(vars$data) < (NB_ROW_MAX / 2)) {
-                        plotGapPerPart2(gap, MAX_CLUSTERS)
+                        plotGapPerPart2(gap, vars$max_clusters)
                     } else {
                         message("\n[WARNING] Dataset too big to calculate a gap statistics.")
                     }
@@ -372,7 +366,7 @@ app_server <- function(input, output, session) {
         )
         assign(
             "ctr_part",
-            100 * getPdisPerPartition(CLASSIF_TYPE, MAX_CLUSTERS, list_clus, vars$data),
+            100 * getPdisPerPartition(CLASSIF_TYPE, vars$max_clusters, list_clus, vars$data),
             .GlobalEnv
         )
         assign(
@@ -409,7 +403,7 @@ app_server <- function(input, output, session) {
     # post-process for data
     # check that the maximum_number of clusters fixed is not greater than the number of row of the datafile
     checkMaxCluster <- function() {
-        if (MAX_CLUSTERS > (nrow(vars$data) - 1)) {
+        if (vars$max_clusters > (nrow(vars$data) - 1)) {
             message(
                 paste(
                     "[WARNING] Max number of clusters must be lower (and not equal) to the number of line of the dataset (",
@@ -566,7 +560,7 @@ app_server <- function(input, output, session) {
 
                     assign(
                         "gap",
-                        getGapPerPart(MAX_CLUSTERS, vars$data, classif, NB_BOOTSTRAP),
+                        getGapPerPart(vars$max_clusters, vars$data, classif, NB_BOOTSTRAP),
                         .GlobalEnv
                     )
                     if (VERBOSE_NIV2) {
@@ -690,127 +684,127 @@ app_server <- function(input, output, session) {
     })
 
     output$best_cluster <- renderPlot({
-        tryCatch(
-            {
-                setVariables()
-                if (checkMaxCluster()) {
-                    observeEvent(
-                        input$best_save,
-                        savePlot("best_clustering", plotBest())
-                    )
-                    plotBest()
-                }
-            },
-            error = function(e) {
-            }
-        )
+        # tryCatch(
+        # {
+        setVariables()
+        if (checkMaxCluster()) {
+            observeEvent(
+                input$best_save,
+                savePlot("best_clustering", plotBest())
+            )
+            plotBest()
+        }
+        #     },
+        #     error = function(e) {
+        #     }
+        # )
     })
 
     output$silhouette <- renderPlot({
-        tryCatch(
-            {
-                setVariables()
-                if (checkMaxCluster()) {
-                    observeEvent(input$sil_save, savePlot("silhouette", plotSil()))
-                    plotSil()
-                }
-            },
-            error = function(e) {
-            }
-        )
+        # tryCatch(
+        #     {
+        setVariables()
+        if (checkMaxCluster()) {
+            observeEvent(input$sil_save, savePlot("silhouette", plotSil()))
+            plotSil()
+        }
+        #     },
+        #     error = function(e) {
+        #     }
+        # )
     })
 
     output$pca <- renderPlot({
-        tryCatch(
-            {
-                setVariables()
-                if (checkMaxCluster()) {
-                    assign(
-                        "AXIS1",
-                        input$axis1,
-                        .GlobalEnv
-                    )
-                    assign(
-                        "AXIS2",
-                        input$axis2,
-                        .GlobalEnv
-                    )
-                    observeEvent(input$pca_save, {
-                        if (nrow(as.matrix(vars$data)) > NB_ROW_MAX) {
-                            savePng("pca", plotPCA())
-                        } else {
-                            savePlot("pca", plotPCA())
-                        }
-                    })
-                    plotPCA()
+        # tryCatch(
+        #     {
+        setVariables()
+        if (checkMaxCluster()) {
+            assign(
+                "AXIS1",
+                input$axis1,
+                .GlobalEnv
+            )
+            assign(
+                "AXIS2",
+                input$axis2,
+                .GlobalEnv
+            )
+            observeEvent(input$pca_save, {
+                if (nrow(as.matrix(vars$data)) > NB_ROW_MAX) {
+                    savePng("pca", plotPCA())
+                } else {
+                    savePlot("pca", plotPCA())
                 }
-            },
-            error = function(e) {
-            }
-        )
+            })
+            plotPCA()
+        }
+        #     },
+        #     error = function(e) {
+        #     }
+        # )
     })
 
     output$heatmap <- renderPlot({
-        tryCatch(
-            {
-                setVariables()
-                if (checkMaxCluster()) {
-                    par(mar = c(0, 0, 0, 0))
-                    plot(0:1, 0:1, axes = F, type = "n") # delete sil plot
-                    observeEvent(input$heatmap_save, {
-                        if (nrow(as.matrix(vars$data)) > NB_ROW_MAX) {
-                            savePng("heatmap", plotHeatmap())
-                        } else {
-                            savePlot("heatmap", plotHeatmap())
-                        }
-                    })
-                    plotHeatmap()
+        # tryCatch(
+        #     {
+        setVariables()
+        if (checkMaxCluster()) {
+            par(mar = c(0, 0, 0, 0))
+            plot(0:1, 0:1, axes = FALSE, type = "n") # delete sil plot
+            observeEvent(input$heatmap_save, {
+                if (nrow(as.matrix(vars$data)) > NB_ROW_MAX) {
+                    savePng("heatmap", plotHeatmap())
+                } else {
+                    savePlot("heatmap", plotHeatmap())
                 }
-            },
-            error = function(e) {
-            }
-        )
+            })
+            plotHeatmap()
+        }
+        #     },
+        #     error = function(e) {
+        #     }
+        # )
     })
 
     output$cophenetic <- renderPlot({
-        tryCatch(
-            {
-                setVariables()
-                if (isTRUE(input$advanced) & CLASSIF_TYPE > 2) {
-                    if (checkMaxCluster()) {
-                        observeEvent(input$coph_save, {
-                            if (nrow(as.matrix(vars$data)) > NB_ROW_MAX) {
-                                savePng("cohenetic", plotCoph())
-                            } else {
-                                savePlot("cohenetic", plotCoph())
-                            }
-                        })
-                        plotCoph()
+        # tryCatch(
+        #     {
+        setVariables()
+        if (isTRUE(input$advanced) & CLASSIF_TYPE > 2) {
+            if (checkMaxCluster()) {
+                observeEvent(input$coph_save, {
+                    if (nrow(as.matrix(vars$data)) > NB_ROW_MAX) {
+                        savePng("cohenetic", plotCoph())
+                    } else {
+                        savePlot("cohenetic", plotCoph())
                     }
-                }
-            },
-            error = function(e) {
+                })
+                plotCoph()
             }
-        )
+        }
+        #     },
+        #     error = function(e) {
+        #     }
+        # )
     })
 
     output$dendrogram <- renderPlot({
-        tryCatch(
-            {
-                setVariables()
-                if (CLASSIF_TYPE > 2) {
-                    if (checkMaxCluster()) {
-                        observeEvent(
-                            input$dendr_save,
-                            savePlot("dendrogram", plotDend())
-                        )
-                        plotDend()
-                    }
-                }
-            },
-            error = function(e) {
+        # tryCatch(
+        #     {
+        setVariables()
+        if (CLASSIF_TYPE > 2) {
+            if (checkMaxCluster()) {
+                observeEvent(
+                    input$dendr_save,
+                    savePlot("dendrogram", plotDend())
+                )
+                plotDend()
             }
-        )
+        }
+        #     },
+        #     error = function(e) {
+        #     }
+        # )
     })
 
     output$fusion <- renderPlot({
