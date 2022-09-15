@@ -492,7 +492,7 @@ app_server <- function(input, output, session) {
     })
 
     # events for advanced mode
-    observeEvent(input$advanced, {
+    observeEvent(c(input$advanced, input$max_clusters), {
         if (!is.null(input$infile)) {
             if (isTRUE(input$advanced)) {
                 if (refresh$classif_type > 2) {

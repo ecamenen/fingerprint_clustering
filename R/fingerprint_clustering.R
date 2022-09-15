@@ -758,7 +758,7 @@ plotElbow <- function(x) {
     if (isTRUE(VERBOSE)) {
         cat("\nELBOW:\n")
     }
-    n <- length(between) + 1
+    n <- length(x) + 1
     within <- c(100, 100 - x)
     ratio <- within[1:(n - 1)] / within[2:n]
     best <- round(min(ratio), 2)
