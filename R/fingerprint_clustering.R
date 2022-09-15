@@ -8,11 +8,9 @@
 set.seed(as.numeric(format(Sys.time(), "%OS2")) * 100 * Sys.getpid())
 
 # Global variables settings
-NB_BOOTSTRAP <- 500 # should be comprise between 100 and 1000
 TEXT <- TRUE # print values on graph (for optimum partition and heatmap)
 NB_ROW_MAX <- 200 # max row to have pdf, otherwise, some plots are in png
 DIM_PNG <- 2000
-VERBOSE <- FALSE
 MAX_CHAR_LEN <- 25 # maximum length of individual s names
 
 # Loading data
@@ -295,7 +293,8 @@ plotBestClustering <- function(
     interval = 1,
     min_x = 2,
     best = NULL,
-    val2 = NULL) {
+    val2 = NULL,
+    verbose = FALSE) {
 
     plotAxis(1, 2, MAX_CLUSTERS)
 
@@ -364,7 +363,7 @@ plotBestClustering <- function(
             col = "red"
         )
     }
-    if (isTRUE(VERBOSE)) {
+    if (isTRUE(verbose)) {
         cat(
             "Optimal number of clusters k = ",
             optimal_nb_clusters,
@@ -577,10 +576,10 @@ writeClusters <- function(f, sil_k, v = FALSE) {
 # Inputs:
 # d : distance matrix
 # cah : hierarchical classification
-plotCohenetic <- function(d, cah, is_png = FALSE) {
+plotCohenetic <- function(d, cah, is_png = FALSE, verbose = FALSE) {
     coph_matrix <- cophenetic(cah)
     cor_coph <- cor(d, coph_matrix)
-    if (isTRUE(VERBOSE)) {
+    if (isTRUE(verbose)) {
         cat(
             paste(
                 "\nCOPHENETIC:\nExplained variance (%):",
@@ -693,8 +692,8 @@ getRelativeWithinPerCluster <- function(cls, d) {
 }
 
 # Between inertia differences between a partionning and the previous
-plotBetweenDiff <- function(between_diff) {
-    if (isTRUE(VERBOSE)) {
+plotBetweenDiff <- function(between_diff, verbose = FALSE) {
+    if (isTRUE(verbose)) {
         cat("\nBETWEEN DIFFERENCES:\n")
     }
     optimal_nb_clusters <- which.max(between_diff) + 1
@@ -715,13 +714,14 @@ plotBetweenDiff <- function(between_diff) {
         "Largest between differences method",
         between_diff,
         " variation with the previous partitionning (%)",
-        optimal_nb_clusters
+        optimal_nb_clusters,
+        verbose = verbose
     )
     # suprLog = dev.off()
 }
 
-plotFusionLevels <- function(n, c) {
-    if (isTRUE(VERBOSE)) {
+plotFusionLevels <- function(n, c, verbose = FALSE) {
+    if (isTRUE(verbose)) {
         cat("\nFUSION LEVELS:\n")
     }
     fusion <- rev(c$height)
@@ -746,14 +746,15 @@ plotFusionLevels <- function(n, c) {
         fusion,
         " gain with the previous fusion level",
         optimal_nb_clusters,
-        val2 = diff
+        val2 = diff,
+        verbose = verbose
     )
     # suprLog = dev.off()
 }
 
 # x: vector of between inertia for k partitions
-plotElbow <- function(x) {
-    if (isTRUE(VERBOSE)) {
+plotElbow <- function(x, verbose = FALSE) {
+    if (isTRUE(verbose)) {
         cat("\nELBOW:\n")
     }
     n <- length(x) + 1
@@ -781,7 +782,8 @@ plotElbow <- function(x) {
         optimal_nb_clusters,
         5,
         1,
-        best
+        best,
+        verbose = verbose
     )
     # suprLog = dev.off()
 }
@@ -812,8 +814,8 @@ getMeanSilhouettePerPart <- function(sils) {
 
 # Plot the best average silhouette width for all clustering possible
 # mean_sils: vector of silhouette average width
-plotSilhouettePerPart <- function(mean_silhouette, sil = sil) {
-    if (isTRUE(VERBOSE)) {
+plotSilhouettePerPart <- function(mean_silhouette, sil = sil, verbose = FALSE) {
+    if (isTRUE(verbose)) {
         cat("\nSILHOUETTE:\n")
     }
     setGraphic()
@@ -835,7 +837,8 @@ plotSilhouettePerPart <- function(mean_silhouette, sil = sil) {
         mean_silhouette,
         "n average width",
         optimal_nb_clusters,
-        0.1
+        0.1,
+        verbose = verbose
     )
     # suprLog = dev.off()
     # return (optimal_nb_clusters)
@@ -901,7 +904,7 @@ getGapBest <- function(g, M = "Tibs2001SEmax") {
 
 # Plot the gap statistics width for all clustering possible
 # TODO: HERE
-plotGapPerPart <- function(g, n, v = TRUE) {
+plotGapPerPart <- function(g, n, verbose = FALSE) {
     setGraphic()
     # savePdf("gap_statistics.pdf")
     optimal_nb_clusters <- getGapBest(g)
@@ -935,7 +938,8 @@ plotGapPerPart <- function(g, n, v = TRUE) {
         optimal_nb_clusters,
         0.1,
         1,
-        best
+        best,
+        verbose = verbose
     )
     # cat(paste("With a corrected index, optimal number of clusters k =",getGapBest(gap,"firstSEmax"), "\n"))
     # suprLog = dev.off()

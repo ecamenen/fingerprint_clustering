@@ -1,5 +1,4 @@
 # Global variables settings
-NB_BOOTSTRAP <- 500 # should be comprise between 100 and 1000
 TEXT <- TRUE # print values on graph (for optimum partition and heatmap)
 NB_ROW_MAX <- 200 # max row to have pdf, otherwise, some plots are in png
 DIM_PNG <- 2000
@@ -339,4 +338,4 @@ discriminant_power <- getPdisPerPartition(
 # Silhouette analysis
 sil <- getSilhouettePerPart(data, list_clus, dis)
 mean_silhouette <- getMeanSilhouettePerPart(sil)
-plotSilhouettePerPart(mean_silhouette, sil)
+plotSilhouettePerPart(mean_silhouette, sil, VERBOSE)

@@ -9,7 +9,6 @@ app_server <- function(input, output, session) {
     TEXT <- TRUE # print values on graph (for optimum partition and heatmap)
     NB_ROW_MAX <- 200 # max row to have pdf, otherwise, some plots are in png
     DIM_PNG <- 2000
-    VERBOSE <- FALSE
     MAX_CHAR_LEN <- 25 # maximum length of individual s names
     classif_methods <- list(
         "K-menoids" = 1,
