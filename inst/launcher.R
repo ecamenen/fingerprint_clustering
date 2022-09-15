@@ -304,7 +304,7 @@ data <- read.table(
     dec = ".",
     row.names = 1
 )
-data <- preProcessData(data)
+data <- preProcessData(data, HEAD)
 # data=data[,1:10]
 
 

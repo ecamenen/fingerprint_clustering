@@ -9,10 +9,8 @@ app_server <- function(input, output, session) {
     TEXT <- TRUE # print values on graph (for optimum partition and heatmap)
     NB_ROW_MAX <- 200 # max row to have pdf, otherwise, some plots are in png
     DIM_PNG <- 2000
-    VERBOSE_NIV2 <- FALSE
     VERBOSE <- FALSE
     MAX_CHAR_LEN <- 25 # maximum length of individual s names
-    PNG <- FALSE
     classif_methods <- list(
         "K-menoids" = 1,
         "K-means" = 2,
@@ -42,7 +40,9 @@ app_server <- function(input, output, session) {
         optimal_k = NULL,
         gap = NULL,
         sil_k = NULL,
-        advanced = NULL
+        advanced = NULL,
+        png = FALSE,
+        verbose2 = FALSE
     )
     tryCatch(
         {
@@ -71,7 +71,7 @@ app_server <- function(input, output, session) {
                     row.names = 1
                 )
             }
-            # vars$data = preProcessData(vars$data)
+            # vars$data = preProcessData(vars$data, vars$header)
             # substr(rownames(vars$data), 1, MAX_CHAR_LEN) -> rownames(vars$data)
         }
         return(data)
@@ -114,14 +114,14 @@ app_server <- function(input, output, session) {
             )
         }
         # Perform classification
-        printProgress(VERBOSE_NIV2, "Classification")
+        printProgress(vars$verbose2, "Classification")
 
         assign(
           "classif",
           getClassif(vars$classif_type, vars$max_clusters, vars$data, vars$dis),
           .GlobalEnv
         )
-        if (VERBOSE_NIV2) {
+        if (vars$verbose2) {
             cat("done.\n")
         }
         vars$clusters <- getClusterPerPart(vars$max_clusters + 1, classif)
@@ -130,7 +130,7 @@ app_server <- function(input, output, session) {
         vars$between <- getRelativeBetweenPerPart(vars$max_clusters, vars$data, vars$clusters)
         vars$diff_between <- getBetweenDifferences(vars$between)
 
-        printProgress(VERBOSE_NIV2, "PCA")
+        printProgress(vars$verbose2, "PCA")
         assign(
             "pca",
             dudi.pca(
@@ -141,7 +141,7 @@ app_server <- function(input, output, session) {
             ),
             .GlobalEnv
         )
-        if (VERBOSE_NIV2) {
+        if (vars$verbose2) {
             cat("done.\n")
         }
 
@@ -198,7 +198,7 @@ app_server <- function(input, output, session) {
         assign(
             "plotPCA",
             function() {
-                plotPca(pca, vars$data, vars$cl_k, vars$axis1, vars$axis2, vars$advanced)
+                plotPca(pca, vars$data, vars$cl_k, vars$axis1, vars$axis2, vars$advanced, vars$png)
             },
             .GlobalEnv
         )
@@ -235,7 +235,7 @@ app_server <- function(input, output, session) {
             assign(
                 "plotHeatmap",
                 function() {
-                    heatMap(vars$data, vars$dis, vars$sil_k)
+                    heatMap(vars$data, vars$dis, vars$sil_k, is_png = vars$png, verbose = vars$verbose2)
                 },
                 .GlobalEnv
             )
@@ -243,7 +243,7 @@ app_server <- function(input, output, session) {
             assign(
                 "plotHeatmap",
                 function() {
-                    heatMap(vars$data, vars$dis, c = classif, cl = vars$cl_k)
+                    heatMap(vars$data, vars$dis, c = classif, cl = vars$cl_k, is_png = vars$png, verbose = vars$verbose2)
                 },
                 .GlobalEnv
             )
@@ -261,9 +261,9 @@ app_server <- function(input, output, session) {
             assign(
                 "plotCoph",
                 function() {
-                    printProgress(VERBOSE_NIV2, "Cophenetic calculation")
-                    plotCohenetic(vars$dis, classif)
-                    if (VERBOSE_NIV2) {
+                    printProgress(vars$verbose2, "Cophenetic calculation")
+                    plotCohenetic(vars$dis, classif, vars$png)
+                    if (vars$verbose2) {
                         cat("done.\n")
                     }
                 },
@@ -377,12 +377,12 @@ app_server <- function(input, output, session) {
     }
 
     savePng <- function(f, func) {
-        assign("PNG", TRUE, .GlobalEnv)
+        vars$png <- TRUE
         f <- paste(f, ".png", sep = "")
         png(f, DIM_PNG, DIM_PNG)
         func
         suprLog <- dev.off()
-        assign("PNG", FALSE, .GlobalEnv)
+        vars$png <- FALSE
     }
 
     setData <- reactive({
@@ -390,17 +390,9 @@ app_server <- function(input, output, session) {
         tryCatch(
             {
                 if (input$infile$size > 3000000) {
-                    assign(
-                        "VERBOSE_NIV2",
-                        TRUE,
-                        .GlobalEnv
-                    )
+                    vars$verbose2 <- TRUE
                 } else {
-                    assign(
-                        "VERBOSE_NIV2",
-                        FALSE,
-                        .GlobalEnv
-                    )
+                    vars$verbose2 <- FALSE
                 }
 
                 refresh$data <- loadData(input$infile$datapath, input$sep, input$header)
@@ -415,7 +407,7 @@ app_server <- function(input, output, session) {
                     refresh$data <- t(refresh$data)
                 }
 
-                if (VERBOSE_NIV2) {
+                if (vars$verbose2) {
                     cat("done.\n")
                 }
 
@@ -431,9 +423,9 @@ app_server <- function(input, output, session) {
     })
 
     setDistance <- reactive({
-        printProgress(VERBOSE_NIV2, "Distance calculation")
+        printProgress(vars$verbose2, "Distance calculation")
         refresh$dis <- getDistance(refresh$data, as.integer(input$dist_type))
-        if (VERBOSE_NIV2) {
+        if (vars$verbose2) {
             cat("done.\n")
         }
 
@@ -456,11 +448,7 @@ app_server <- function(input, output, session) {
         input$scale,
         input$transpose
     ), {
-        assign(
-            "HEAD",
-            input$header,
-            .GlobalEnv
-        )
+        vars$head <- input$header
         if (!is.null(input$infile)) {
             setData()
         }
@@ -505,10 +493,10 @@ app_server <- function(input, output, session) {
                 }
 
                 if (nrow(vars$data) < (NB_ROW_MAX / 2)) {
-                    printProgress(VERBOSE_NIV2, "Gap statistics calculation")
+                    printProgress(vars$verbose2, "Gap statistics calculation")
 
                     vars$gap <- getGapPerPart(vars$max_clusters, vars$data, classif, NB_BOOTSTRAP)
-                    if (VERBOSE_NIV2) {
+                    if (vars$verbose2) {
                         cat("done.\n")
                     }
                 } else {

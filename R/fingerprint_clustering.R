@@ -12,10 +12,8 @@ NB_BOOTSTRAP <- 500 # should be comprise between 100 and 1000
 TEXT <- TRUE # print values on graph (for optimum partition and heatmap)
 NB_ROW_MAX <- 200 # max row to have pdf, otherwise, some plots are in png
 DIM_PNG <- 2000
-VERBOSE_NIV2 <- FALSE
 VERBOSE <- FALSE
 MAX_CHAR_LEN <- 25 # maximum length of individual s names
-PNG <- FALSE
 
 # Loading data
 # dec=".")
@@ -62,7 +60,7 @@ getTimeElapsed <- function(start_time) {
 
 
 # rename row and avoid doublets errors
-preProcessData <- function(d) {
+preProcessData <- function(d, header = FALSE, verbose = FALSE) {
     if (ncol(d) == 1) {
         stop(paste("Check for the separator (by default, tabulation)."),
             call. = FALSE
@@ -73,16 +71,16 @@ preProcessData <- function(d) {
     REMOVE_DOUBLETS <- (nrow(d) > NB_ROW_MAX)
     d <- renameRowname(d)
     # remove columns containing characters
-    # if(nrow(d) > NB_ROW_MAX) VERBOSE_NIV2 = TRUE
+    # if(nrow(d) > NB_ROW_MAX) verbose = TRUE
     # get only columns with numeric values
     d <- d[, unlist(sapply(1:ncol(d), function(i) is.numeric(d[, i])))]
 
     if (isTRUE(REMOVE_DOUBLETS)) {
-        printProgress(VERBOSE_NIV2, "Loading data")
+        printProgress(verbose, "Loading data")
         d <- discardRowCondDoublets(d)
     }
 
-    if (isSymmetric(as.matrix(d)) & !HEAD) {
+    if (isSymmetric(as.matrix(d)) & !header) {
         colnames(d) <- rownames(d)
     }
 
@@ -579,7 +577,7 @@ writeClusters <- function(f, sil_k, v = FALSE) {
 # Inputs:
 # d : distance matrix
 # cah : hierarchical classification
-plotCohenetic <- function(d, cah) {
+plotCohenetic <- function(d, cah, is_png = FALSE) {
     coph_matrix <- cophenetic(cah)
     cor_coph <- cor(d, coph_matrix)
     if (isTRUE(VERBOSE)) {
@@ -594,7 +592,7 @@ plotCohenetic <- function(d, cah) {
         )
     }
 
-    # if(PNG ) {
+    # if(is_png) {
     #   #png(paste(opt$output8, ".png", sep=""), DIM_PNG/2, DIM_PNG/2)
     #   par(cex.lab=1.5*2, font.lab=3, font.axis=3, cex.axis=0.8*2, cex.main=2*2, cex=1, lwd=3*2)
     #   par(mar=c(5.1,5.1,5.1,2.1)+7)
@@ -1060,8 +1058,8 @@ getOrderedClusterSize <- function(cl) {
 # s: an organised silhouette object
 # c: CAH
 # c: clusters from CAH
-heatMap <- function(df, d, s = NULL, c = NULL, cl = NULL) {
-    printProgress(VERBOSE_NIV2, "Heatmap calculation")
+heatMap <- function(df, d, s = NULL, c = NULL, cl = NULL, is_png = FALSE, verbose = FALSE) {
+    printProgress(verbose, "Heatmap calculation")
     text <- isTRUE(isTRUE(TEXT) & (nrow(data) < 100))
 
     if (!is.null(s)) {
@@ -1087,7 +1085,7 @@ heatMap <- function(df, d, s = NULL, c = NULL, cl = NULL) {
         labels <- order
     }
     # png(opt$output4,DIM_PNG, DIM_PNG)
-    if (PNG) {
+    if (is_png) {
         cex.main <- 5
         cex.legend <- 3
         cex.lab <- 2
@@ -1171,7 +1169,7 @@ heatMap <- function(df, d, s = NULL, c = NULL, cl = NULL) {
     )
 
     options(warn = 0)
-    if (VERBOSE_NIV2) {
+    if (verbose) {
         cat("done.\n")
     }
     # suprLog = dev.off()
@@ -1233,7 +1231,7 @@ orderColors <- function(c, cl) {
 ################################
 
 # nf: number of factorial axis
-plotPca <- function(pca, d, cl, axis1 = 1, axis2 = 2, advanced = FALSE) {
+plotPca <- function(pca, d, cl, axis1 = 1, axis2 = 2, advanced = FALSE, is_png = FALSE) {
     k <- length(levels(as.factor(cl)))
 
     if (nrow(d) > NB_ROW_MAX) {
@@ -1250,7 +1248,7 @@ plotPca <- function(pca, d, cl, axis1 = 1, axis2 = 2, advanced = FALSE) {
         labels <- rownames(d)
     }
 
-    if (PNG) {
+    if (is_png) {
         par(mar = c(0, 0, 18, 0), lwd = 4)
         cex <- 2
         cex.main <- 6
