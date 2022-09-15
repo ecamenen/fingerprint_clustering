@@ -10,7 +10,6 @@ set.seed(as.numeric(format(Sys.time(), "%OS2")) * 100 * Sys.getpid())
 # Global variables settings
 TEXT <- TRUE # print values on graph (for optimum partition and heatmap)
 NB_ROW_MAX <- 200 # max row to have pdf, otherwise, some plots are in png
-DIM_PNG <- 2000
 MAX_CHAR_LEN <- 25 # maximum length of individual s names
 
 # Loading data

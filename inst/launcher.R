@@ -5,7 +5,6 @@ DIM_PNG <- 2000
 VERBOSE_NIV2 <- FALSE
 VERBOSE <- FALSE
 MAX_CHAR_LEN <- 25 # maximum length of individual s names
-PNG <- FALSE
 
 library("optparse")
 library("autoCluster")

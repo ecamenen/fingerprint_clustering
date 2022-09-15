@@ -1,11 +1,3 @@
-# Global settings
-MAX_CLUSTERS <- 10
-AXIS_TITLE_SIZE <- 19
-AXIS_TEXT_SIZE <- 8
-PCH_TEXT_SIZE <- 2
-AXIS_FONT <- "italic"
-COLOR_SAMPLES_DEF <- "#000099"
-
 #' Default font for plots
 theme_perso <- function() {
     theme(
@@ -57,12 +49,12 @@ plotHistogram <- function(p, df, title = "", color = "black") {
         theme(
             axis.text.y = element_text(
                 size = 12,
-                face = AXIS_FONT,
+                face = "italic",
                 color = color
             ),
             axis.text.x = element_text(
                 size = 12,
-                face = AXIS_FONT,
+                face = "italic",
                 color = "darkgrey"
             ),
             axis.line = element_blank(),
