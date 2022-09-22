@@ -41,7 +41,8 @@ app_server <- function(input, output, session) {
         sil_k = NULL,
         advanced = NULL,
         png = FALSE,
-        verbose2 = FALSE
+        verbose2 = FALSE,
+        pca = FALSE
     )
     tryCatch(
         {
@@ -126,15 +127,11 @@ app_server <- function(input, output, session) {
         vars$diff_between <- getBetweenDifferences(vars$between)
 
         printProgress(vars$verbose2, "PCA")
-        assign(
-            "pca",
-            dudi.pca(
-                vars$data,
-                scannf = FALSE,
-                scale = input$scale,
-                nf = 4
-            ),
-            .GlobalEnv
+        vars$pca <- dudi.pca(
+            vars$data,
+            scannf = FALSE,
+            scale = input$scale,
+            nf = 4
         )
         if (vars$verbose2) {
             cat("done.\n")
@@ -182,7 +179,7 @@ app_server <- function(input, output, session) {
             message("\n[WARNING] A cluster with an only singleton biased the silhouette score.")
         }
 
-        writeClusters("clusters.tsv", vars$sil_k, v = FALSE)
+        writeClusters("clusters.tsv", vars$sil_k, vars$pca, v = FALSE)
     })
 
     setPrintFuncs <- function() {
@@ -193,7 +190,7 @@ app_server <- function(input, output, session) {
         assign(
             "plotPCA",
             function() {
-                plotPca(pca, vars$data, vars$cl_k, vars$axis1, vars$axis2, vars$advanced, vars$png)
+                plotPca(vars$pca, vars$data, vars$cl_k, vars$axis1, vars$axis2, vars$advanced, vars$png)
             },
             .GlobalEnv
         )

@@ -561,7 +561,7 @@ colorClusters <- function(cl) {
 # cl: clusters
 # f : filename
 # r: ordered alphabetically
-writeClusters <- function(f, sil_k, v = FALSE) {
+writeClusters <- function(f, sil_k, pca, v = FALSE) {
     cluster <- cbind(sil_k[, 1], sil_k[, 3], pca$li[attr(sil_k, "iOrd"), c(1, 2)])
     colnames(cluster) <- c("Cluster", "Silhouette", "Axis1", "Axis2")
     assign("cluster", cluster, .GlobalEnv)
