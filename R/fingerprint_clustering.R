@@ -144,8 +144,7 @@ discardRowCondDoublets <- function(x) {
         removed_conds <- x[unlist(row_doublets), 1]
         removed <- cbind(removed_reacs, removed_conds)
         colnames(removed) <- c("condition", "")
-        assign("removed", removed, .GlobalEnv)
-        writeTsv("removed", v = FALSE)
+        writeTsv(removed, v = FALSE)
     }
 
     if (length(row_doublets) > 0) {
@@ -194,8 +193,7 @@ discardRowCondDoublets <- function(x) {
         removed_conds <- x[unlist(row_doublets), 1]
         removed <- cbind(removed_reacs, removed_conds)
         colnames(removed) <- c("condition", "")
-        assign("removed", removed, .GlobalEnv)
-        writeTsv("removed", v = FALSE)
+        writeTsv(removed, v = FALSE)
     }
     if (length(row_doublets) > 0) {
         return(x[-unlist(row_doublets), ])
@@ -215,7 +213,7 @@ writeTsv <- function(x, f = NULL, cl = FALSE, v = TRUE) {
     # disabling warning
     options(warn = -1)
     # get variable
-    tab <- base::get(x)
+    tab <- x
     if (!isTRUE(cl)) {
         output <- as.matrix(rbind(c("", colnames(tab)), cbind(rownames(tab), tab)))
     } else {
@@ -239,7 +237,7 @@ writeTsv <- function(x, f = NULL, cl = FALSE, v = TRUE) {
         print(printed, quote = FALSE)
     }
     if (is.null(f)) {
-        f <- paste(x, ".tsv", sep = "")
+        f <- paste(deparse(substitute(x)), ".tsv", sep = "")
     }
     write(t(output), f, ncolumns = ncol(output), sep = "\t")
     options(warn = 0)
@@ -564,8 +562,7 @@ colorClusters <- function(cl) {
 writeClusters <- function(f, sil_k, pca, v = FALSE) {
     cluster <- cbind(sil_k[, 1], sil_k[, 3], pca$li[attr(sil_k, "iOrd"), c(1, 2)])
     colnames(cluster) <- c("Cluster", "Silhouette", "Axis1", "Axis2")
-    assign("cluster", cluster, .GlobalEnv)
-    writeTsv("cluster", f, cl = FALSE, v = v)
+    writeTsv(cluster, f, cl = FALSE, v = v)
 }
 
 ############################################################

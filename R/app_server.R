@@ -338,7 +338,7 @@ app_server <- function(input, output, session) {
             100 * getCtrVar(vars$classif_type, vars$optimal_k, vars$cl_k, vars$data),
             .GlobalEnv
         )
-        writeTsv("discr", "discr_var.tsv", v = FALSE)
+        writeTsv(discr, "discr_var.tsv", v = FALSE)
     }
 
     # post-process for data
@@ -551,7 +551,7 @@ app_server <- function(input, output, session) {
         if (is.data.frame(vars$data)) {
             setVariables()
             setPrintFuncs()
-            writeTsv("summary_table", "summary.tsv", v = FALSE)
+            writeTsv(summary_table, "summary.tsv", v = FALSE)
 
             savePlot("best_clustering", plotBest())
             savePlot("silhouette", plotSil())
@@ -571,9 +571,9 @@ app_server <- function(input, output, session) {
                 # if (nrow(vars$data) < (NB_ROW_MAX/2)){
                 savePlot("gap", plotGap())
                 # }
-                writeTsv("ctr_clus", "ctr_clus.tsv", v = FALSE)
-                writeTsv("ctr_part", "ctr_part.tsv", v = FALSE)
-                writeTsv("within_k", "within_k.tsv", v = FALSE)
+                writeTsv(ctr_clus, "ctr_clus.tsv", v = FALSE)
+                writeTsv(ctr_part, "ctr_part.tsv", v = FALSE)
+                writeTsv(within_k, "within_k.tsv", v = FALSE)
             }
         }
     })
