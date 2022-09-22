@@ -289,13 +289,14 @@ plotBestClustering <- function(
     values,
     values_type,
     optimal_nb_clusters,
+    n,
     interval = 1,
     min_x = 2,
     best = NULL,
     val2 = NULL,
     verbose = FALSE) {
 
-    plotAxis(1, 2, MAX_CLUSTERS)
+    plotAxis(1, 2, n)
 
     if (interval >= 1) {
         axisSeq <- round(values)
@@ -355,7 +356,7 @@ plotBestClustering <- function(
     if (isTRUE(TEXT)) {
         text(
             y = values,
-            x = min_x:MAX_CLUSTERS,
+            x = min_x:n,
             labels = round(t_values, 2),
             cex = 1.2,
             pos = 4,
@@ -696,14 +697,15 @@ plotBetweenDiff <- function(between_diff, verbose = FALSE) {
         cat("\nBETWEEN DIFFERENCES:\n")
     }
     optimal_nb_clusters <- which.max(between_diff) + 1
+    n <- length(between_diff)
     # savePdf("between_differences.pdf")
     setGraphic()
     plot(
-        2:(length(between_diff) + 1),
+        2:(n + 1),
         between_diff,
         type = "b",
         ylim = c(round(min(between_diff)) - 1, round(max(between_diff)) + 1),
-        xlim = c(2, (length(between_diff) + 2)),
+        xlim = c(2, (n + 2)),
         xlab = "Nb. of clusters",
         ylab = "Between-cluster variation (%)",
         col = "grey",
@@ -714,7 +716,8 @@ plotBetweenDiff <- function(between_diff, verbose = FALSE) {
         between_diff,
         " variation with the previous partitionning (%)",
         optimal_nb_clusters,
-        verbose = verbose
+        verbose = verbose,
+        n = n
     )
     # suprLog = dev.off()
 }
@@ -746,7 +749,8 @@ plotFusionLevels <- function(n, c, verbose = FALSE) {
         " gain with the previous fusion level",
         optimal_nb_clusters,
         val2 = diff,
-        verbose = verbose
+        verbose = verbose,
+        n = n
     )
     # suprLog = dev.off()
 }
@@ -782,6 +786,7 @@ plotElbow <- function(x, verbose = FALSE) {
         5,
         1,
         best,
+        n = n,
         verbose = verbose
     )
     # suprLog = dev.off()
@@ -820,11 +825,12 @@ plotSilhouettePerPart <- function(mean_silhouette, sil = sil, verbose = FALSE) {
     setGraphic()
     # savePdf(opt$output1)
     optimal_nb_clusters <- which.max(mean_silhouette) + 1
+    n <- length(sil)
     plot(
-        2:(length(sil) + 1),
+        2:(n + 1),
         mean_silhouette,
         type = "b",
-        xlim = c(2, length(sil) + 2),
+        xlim = c(2, n + 2),
         ylim = c(0, max(mean_silhouette) + 0.1),
         col = "grey",
         xlab = "Nb. of clusters",
@@ -837,7 +843,8 @@ plotSilhouettePerPart <- function(mean_silhouette, sil = sil, verbose = FALSE) {
         "n average width",
         optimal_nb_clusters,
         0.1,
-        verbose = verbose
+        verbose = verbose,
+        n = (n + 1)
     )
     # suprLog = dev.off()
     # return (optimal_nb_clusters)
@@ -882,12 +889,12 @@ getGapPerPart <- function(n, d, c, B = 500, v = FALSE) {
     if (isTRUE(v)) {
         cat("\nGAP STATISTICS:\n")
     }
-    if (classif$method == "kmeans" & (n > 10 | nrow(d) >= 100)) {
+    if (c$method == "kmeans" & (n > 10 | nrow(d) >= 100)) {
         plural <- c("few ", "s")
     } else {
         plural <- c("", "")
     }
-    if (classif$method == "kmeans" |
+    if (c$method == "kmeans" |
         nrow(d) >= 100) {
         cat(paste("It could take a ", plural[1], "minute", plural[2], "...\n", sep = ""))
     }
@@ -938,7 +945,8 @@ plotGapPerPart <- function(g, n, verbose = FALSE) {
         0.1,
         1,
         best,
-        verbose = verbose
+        verbose = verbose,
+        n = n
     )
     # cat(paste("With a corrected index, optimal number of clusters k =",getGapBest(gap,"firstSEmax"), "\n"))
     # suprLog = dev.off()

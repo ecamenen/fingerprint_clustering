@@ -115,15 +115,11 @@ app_server <- function(input, output, session) {
         # Perform classification
         printProgress(vars$verbose2, "Classification")
 
-        assign(
-          "classif",
-          getClassif(vars$classif_type, vars$max_clusters, vars$data, vars$dis),
-          .GlobalEnv
-        )
+        vars$classif <- getClassif(vars$classif_type, vars$max_clusters, vars$data, vars$dis)
         if (vars$verbose2) {
             cat("done.\n")
         }
-        vars$clusters <- getClusterPerPart(vars$max_clusters + 1, classif)
+        vars$clusters <- getClusterPerPart(vars$max_clusters + 1, vars$classif)
 
         # inertia
         vars$between <- getRelativeBetweenPerPart(vars$max_clusters, vars$data, vars$clusters)
@@ -221,7 +217,7 @@ app_server <- function(input, output, session) {
                 plotDendrogram(
                     vars$classif_type,
                     vars$optimal_k,
-                    classif,
+                    vars$classif,
                     vars$data,
                     vars$max_clusters,
                     vars$cl_k
@@ -242,7 +238,7 @@ app_server <- function(input, output, session) {
             assign(
                 "plotHeatmap",
                 function() {
-                    heatMap(vars$data, vars$dis, c = classif, cl = vars$cl_k, is_png = vars$png, verbose = vars$verbose2)
+                    heatMap(vars$data, vars$dis, c = vars$classif, cl = vars$cl_k, is_png = vars$png, verbose = vars$verbose2)
                 },
                 .GlobalEnv
             )
@@ -253,7 +249,7 @@ app_server <- function(input, output, session) {
             assign(
                 "plotFus",
                 function() {
-                    plotFusionLevels(vars$max_clusters, classif)
+                    plotFusionLevels(vars$max_clusters, vars$classif)
                 },
                 .GlobalEnv
             )
@@ -261,7 +257,7 @@ app_server <- function(input, output, session) {
                 "plotCoph",
                 function() {
                     printProgress(vars$verbose2, "Cophenetic calculation")
-                    plotCohenetic(vars$dis, classif, vars$png)
+                    plotCohenetic(vars$dis, vars$classif, vars$png)
                     if (vars$verbose2) {
                         cat("done.\n")
                     }
@@ -485,7 +481,7 @@ app_server <- function(input, output, session) {
                 if (refresh$classif_type > 2) {
                     cat(paste(
                         "\nAGGLOMERATIVE COEFFICIENT: ",
-                        round(getCoefAggl(classif), 3),
+                        round(getCoefAggl(vars$classif), 3),
                         "\n",
                         sep = ""
                     ))
@@ -494,7 +490,7 @@ app_server <- function(input, output, session) {
                 if (nrow(vars$data) < (NB_ROW_MAX / 2)) {
                     printProgress(vars$verbose2, "Gap statistics calculation")
 
-                    vars$gap <- getGapPerPart(vars$max_clusters, vars$data, classif, NB_BOOTSTRAP)
+                    vars$gap <- getGapPerPart(vars$max_clusters, vars$data, vars$classif, NB_BOOTSTRAP)
                     if (vars$verbose2) {
                         cat("done.\n")
                     }
