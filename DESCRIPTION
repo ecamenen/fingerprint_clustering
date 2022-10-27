@@ -20,6 +20,7 @@ Imports:
     cluster,
     config,
     desc,
+    dplyr,
     gclus,
     ggplot2,
     golem,

@@ -42,7 +42,24 @@ app_server <- function(input, output, session) {
         advanced = NULL,
         png = FALSE,
         verbose2 = FALSE,
-        pca = FALSE
+        pca = FALSE,
+        plotPCA = NULL,
+        plotBest = NULL,
+        plotSil = NULL,
+        plotDend = NULL,
+        plotHeatmap = NULL,
+        plotFus = NULL,
+        plotCoph = NULL,
+        plotGap = NULL,
+        plotGap2 = NULL,
+        plotElb = NULL,
+        within_k = NULL,
+        summary_table = NULL,
+        ctr_part = NULL,
+        centroids = NULL,
+        disc = NULL,
+        ctr_clus_plot = NULL,
+        ctr_clus = NULL
     )
     tryCatch(
         {
@@ -187,31 +204,21 @@ app_server <- function(input, output, session) {
         refr <- c(input$nb_clusters, input$max_biomark)
 
         ###### plot funcs #####
-        assign(
-            "plotPCA",
-            function() {
-                plotPca(vars$pca, vars$data, vars$cl_k, vars$axis1, vars$axis2, vars$advanced, vars$png)
-            },
-            .GlobalEnv
+        vars$plotPCA <- expr(
+          plotPca(
+            vars$pca,
+            vars$data,
+            vars$cl_k,
+            vars$axis1,
+            vars$axis2,
+            vars$advanced,
+            vars$png
+          )
         )
-        assign(
-            "plotBest",
-            function() {
-                plotSilhouettePerPart(vars$mean_sils, vars$sils)
-            },
-            .GlobalEnv
-        )
-        assign(
-            "plotSil",
-            function() {
-                plotSilhouette(vars$sil_k)
-            },
-            .GlobalEnv
-        )
-        assign(
-            "plotDend",
-            function() {
-                plotDendrogram(
+        vars$plotBest <- expr(plotSilhouettePerPart(vars$mean_sils, vars$sils))
+        vars$plotSil <- expr(plotSilhouette(vars$sil_k))
+        vars$plotDend <- expr(
+          plotDendrogram(
                     vars$classif_type,
                     vars$optimal_k,
                     vars$classif,
@@ -219,125 +226,94 @@ app_server <- function(input, output, session) {
                     vars$max_clusters,
                     vars$cl_k
                 )
-            },
-            .GlobalEnv
         )
 
         if (vars$classif_type <= 2 | isTRUE(vars$advanced)) {
-            assign(
-                "plotHeatmap",
-                function() {
-                    heatMap(vars$data, vars$dis, vars$sil_k, is_png = vars$png, verbose = vars$verbose2)
-                },
-                .GlobalEnv
+            vars$plotHeatmap <- expr(
+              heatMap(
+                vars$data,
+                vars$dis,
+                vars$sil_k,
+                is_png = vars$png,
+                verbose = vars$verbose2
+              )
             )
         } else {
-            assign(
-                "plotHeatmap",
-                function() {
-                    heatMap(vars$data, vars$dis, c = vars$classif, cl = vars$cl_k, is_png = vars$png, verbose = vars$verbose2)
-                },
-                .GlobalEnv
+            vars$plotHeatmap <- expr(
+              heatMap(
+                vars$data,
+                vars$dis,
+                c = vars$classif,
+                cl = vars$cl_k,
+                is_png = vars$png,
+                verbose = vars$verbose2
+              )
             )
         }
 
         ##### advanced #####
         if (isTRUE(vars$advanced)) {
-            assign(
-                "plotFus",
-                function() {
-                    plotFusionLevels(vars$max_clusters, vars$classif)
-                },
-                .GlobalEnv
+            vars$plotFus <- expr(plotFusionLevels(vars$max_clusters, vars$classif))
+            vars$plotCoph <- expr({
+                printProgress(vars$verbose2, "Cophenetic calculation")
+                plotCohenetic(vars$dis, vars$classif, vars$png)
+                if (vars$verbose2) {
+                    cat("done.\n")
+                }
+            })
+            vars$plotGap <- expr({
+                  if (nrow(vars$data) < (NB_ROW_MAX / 2)) {
+                      plotGapPerPart(vars$gap, vars$max_clusters, v = FALSE)
+                      # plotGapPerPart2(gap, vars$max_clusters)
+                  } else {
+                      message("\n[WARNING] Dataset too big to calculate a gap statistics.")
+                  }
+              }
             )
-            assign(
-                "plotCoph",
-                function() {
-                    printProgress(vars$verbose2, "Cophenetic calculation")
-                    plotCohenetic(vars$dis, vars$classif, vars$png)
-                    if (vars$verbose2) {
-                        cat("done.\n")
-                    }
-                },
-                .GlobalEnv
+            vars$plotGap2 <- expr({
+                  if (nrow(vars$data) < (NB_ROW_MAX / 2)) {
+                      plotGapPerPart2(vars$gap, vars$max_clusters)
+                  } else {
+                      message("\n[WARNING] Dataset too big to calculate a gap statistics.")
+                  }
+              }
             )
-            assign(
-                "plotGap",
-                function() {
-                    if (nrow(vars$data) < (NB_ROW_MAX / 2)) {
-                        plotGapPerPart(vars$gap, vars$max_clusters, v = FALSE)
-                        # plotGapPerPart2(gap, vars$max_clusters)
-                    } else {
-                        message("\n[WARNING] Dataset too big to calculate a gap statistics.")
-                    }
-                },
-                .GlobalEnv
-            )
-            assign(
-                "plotGap2",
-                function() {
-                    if (nrow(vars$data) < (NB_ROW_MAX / 2)) {
-                        plotGapPerPart2(vars$gap, vars$max_clusters)
-                    } else {
-                        message("\n[WARNING] Dataset too big to calculate a gap statistics.")
-                    }
-                },
-                .GlobalEnv
-            )
-            assign(
-                "plotElb",
-                function() {
-                    plotElbow(vars$between)
-                },
-                .GlobalEnv
-            )
-            assign(
-                "within_k",
-                getRelativeWithinPerCluster(vars$clusters, vars$data),
-                .GlobalEnv
-            )
+            vars$plotElb <- expr(plotElbow(vars$between))
+            vars$within_k <- expr(getRelativeWithinPerCluster(vars$clusters, vars$data))
         }
 
         ##### print table func #####
 
-        assign(
-            "summary_table",
-            printSummary(vars$between, vars$diff_between, vars$mean_sils, vars$advanced, vars$gap),
-            .GlobalEnv
+        vars$summary_table <- expr(
+          printSummary(
+            vars$between,
+            vars$diff_between,
+            vars$mean_sils,
+            vars$advanced,
+            vars$gap
+            )
         )
-        assign(
-            "ctr_part",
-            100 * getPdisPerPartition(vars$classif_type, vars$max_clusters, vars$clusters, vars$data),
-            .GlobalEnv
+        vars$ctr_part <- expr(
+          100 * 
+            getPdisPerPartition(
+              vars$classif_type,
+              vars$max_clusters,
+              vars$clusters,
+              vars$data
+              )
         )
-        assign(
-            "centroids",
-            getDistPerVariable(vars$data, vars$cl_k),
-            .GlobalEnv
-        )
-        assign(
-            "discr",
-            getDiscriminantVariables(
+        vars$centroids <- expr(getDistPerVariable(vars$data, vars$cl_k))
+        vars$disc <- expr(
+          getDiscriminantVariables(
                 vars$classif_type,
                 vars$optimal_k,
                 vars$cl_k,
                 vars$data,
                 input$max_biomark
-            ),
-            .GlobalEnv
+            )
         )
-        assign(
-            "ctr_clus_plot",
-            function() {
-                plotDiscriminantVariables(discr)
-            },
-            .GlobalEnv
-        )
-        assign(
-            "ctr_clus",
-            100 * getCtrVar(vars$classif_type, vars$optimal_k, vars$cl_k, vars$data),
-            .GlobalEnv
-        )
+        vars$ctr_clus_plot <- expr(plotDiscriminantVariables(discr))
+        vars$ctr_clus <- expr(100 * getCtrVar(vars$classif_type, vars$optimal_k, vars$cl_k, vars$data))
         writeTsv(discr, "discr_var.tsv", v = FALSE)
     }
 
@@ -553,27 +529,27 @@ app_server <- function(input, output, session) {
             setPrintFuncs()
             writeTsv(summary_table, "summary.tsv", v = FALSE)
 
-            savePlot("best_clustering", plotBest())
-            savePlot("silhouette", plotSil())
-            savePlot("pca", plotPCA())
-            savePlot("heatmap", plotHeatmap())
+            savePlot("best_clustering", eval(vars$plotBest))
+            savePlot("silhouette", eval(vars$plotSil))
+            savePlot("pca", eval(vars$plotPCA))
+            savePlot("heatmap", eval(vars$plotHeatmap))
 
             if (as.integer(getClassifValue(input$classif_type) > 2)) {
-                savePlot("dendrogram", plotDend())
+                savePlot("dendrogram", eval(vars$plotDend))
             }
 
             if (isTRUE(input$advanced)) {
                 if (as.integer(getClassifValue(input$classif_type) > 2)) {
-                    savePlot("cohenetic", plotCoph())
-                    savePlot("fusion", plotFus())
+                    savePlot("cohenetic", eval(vars$plotCoph))
+                    savePlot("fusion", eval(vars$plotFus))
                 }
-                savePlot("elbow", plotElb())
+                savePlot("elbow", eval(vars$plotElb))
                 # if (nrow(vars$data) < (NB_ROW_MAX/2)){
-                savePlot("gap", plotGap())
+                savePlot("gap", eval(vars$plotGap))
                 # }
-                writeTsv(ctr_clus, "ctr_clus.tsv", v = FALSE)
-                writeTsv(ctr_part, "ctr_part.tsv", v = FALSE)
-                writeTsv(within_k, "within_k.tsv", v = FALSE)
+                writeTsv(eval(vars$ctr_clus), "ctr_clus.tsv", v = FALSE)
+                writeTsv(eval(vars$ctr_part), "ctr_part.tsv", v = FALSE)
+                writeTsv(eval(vars$within_k), "within_k.tsv", v = FALSE)
             }
         }
     })
@@ -592,7 +568,7 @@ app_server <- function(input, output, session) {
                         input$summary_save,
                         writeTsv("summary_table", "summary.tsv", v = FALSE)
                     )
-                    summary_table
+                  eval(vars$summary_table)
                 }
             },
             error = function(e) {
@@ -607,9 +583,9 @@ app_server <- function(input, output, session) {
         if (checkMaxCluster()) {
             observeEvent(
                 input$best_save,
-                savePlot("best_clustering", plotBest())
+                savePlot("best_clustering", eval(vars$plotBest))
             )
-            plotBest()
+          eval(vars$plotBest)
         }
         #     },
         #     error = function(e) {
@@ -622,8 +598,8 @@ app_server <- function(input, output, session) {
         #     {
         setVariables()
         if (checkMaxCluster()) {
-            observeEvent(input$sil_save, savePlot("silhouette", plotSil()))
-            plotSil()
+            observeEvent(input$sil_save, savePlot("silhouette", eval(vars$plotSil)))
+          eval(vars$plotSil)
         }
         #     },
         #     error = function(e) {
@@ -640,12 +616,12 @@ app_server <- function(input, output, session) {
           vars$axis2 <- input$axis2
             observeEvent(input$pca_save, {
                 if (nrow(as.matrix(vars$data)) > NB_ROW_MAX) {
-                    savePng("pca", plotPCA())
+                    savePng("pca", eval(vars$plotPCA))
                 } else {
-                    savePlot("pca", plotPCA())
+                    savePlot("pca", eval(vars$plotPCA))
                 }
             })
-            plotPCA()
+            eval(vars$plotPCA)
         }
         #     },
         #     error = function(e) {
@@ -662,12 +638,12 @@ app_server <- function(input, output, session) {
             plot(0:1, 0:1, axes = FALSE, type = "n") # delete sil plot
             observeEvent(input$heatmap_save, {
                 if (nrow(as.matrix(vars$data)) > NB_ROW_MAX) {
-                    savePng("heatmap", plotHeatmap())
+                    savePng("heatmap", eval(vars$plotHeatmap))
                 } else {
-                    savePlot("heatmap", plotHeatmap())
+                    savePlot("heatmap", eval(vars$plotHeatmap))
                 }
             })
-            plotHeatmap()
+            eval(vars$plotHeatmap)
         }
         #     },
         #     error = function(e) {
@@ -683,12 +659,12 @@ app_server <- function(input, output, session) {
             if (checkMaxCluster()) {
                 observeEvent(input$coph_save, {
                     if (nrow(as.matrix(vars$data)) > NB_ROW_MAX) {
-                        savePng("cohenetic", plotCoph())
+                        savePng("cohenetic", eval(vars$plotCoph))
                     } else {
-                        savePlot("cohenetic", plotCoph())
+                        savePlot("cohenetic", eval(vars$plotCoph))
                     }
                 })
-                plotCoph()
+              eval(vars$plotCoph)
             }
         }
         #     },
@@ -705,9 +681,9 @@ app_server <- function(input, output, session) {
             if (checkMaxCluster()) {
                 observeEvent(
                     input$dendr_save,
-                    savePlot("dendrogram", plotDend())
+                    savePlot("dendrogram", eval(vars$plotDend))
                 )
-                plotDend()
+              eval(vars$plotDend)
             }
         }
         #     },
@@ -722,8 +698,8 @@ app_server <- function(input, output, session) {
                 setVariables()
                 if (isTRUE(input$advanced) & vars$classif_type > 2) {
                     if (checkMaxCluster()) {
-                        observeEvent(input$fusion_save, savePlot("fusion", plotFus()))
-                        plotFus()
+                        observeEvent(input$fusion_save, savePlot("fusion", eval(vars$plotFus)))
+                      eval(vars$plotFus)
                     }
                 }
             },
@@ -738,8 +714,8 @@ app_server <- function(input, output, session) {
                 setVariables()
                 if (isTRUE(input$advanced)) {
                     if (checkMaxCluster()) {
-                        observeEvent(input$gap_save, savePlot("gap", plotGap()))
-                        plotGap()
+                        observeEvent(input$gap_save, savePlot("gap", eval(vars$plotGap)))
+                      eval(vars$plotGap)
                     }
                 }
             },
@@ -754,8 +730,8 @@ app_server <- function(input, output, session) {
                 setVariables()
                 if (isTRUE(input$advanced)) {
                     if (checkMaxCluster()) {
-                        observeEvent(input$gap2_save, savePlot("gap", plotGap2()))
-                        plotGap2()
+                        observeEvent(input$gap2_save, savePlot("gap", eval(vars$plotGap2)))
+                      eval(vars$plotGap2)
                     }
                 }
             },
@@ -770,8 +746,8 @@ app_server <- function(input, output, session) {
                 setVariables()
                 if (isTRUE(input$advanced)) {
                     if (checkMaxCluster()) {
-                        observeEvent(input$elbow_save, savePlot("elbow", plotElb()))
-                        plotElb()
+                        observeEvent(input$elbow_save, savePlot("elbow", eval(vars$plotElb)))
+                      eval(vars$plotElb)
                     }
                 }
             },
@@ -791,7 +767,7 @@ app_server <- function(input, output, session) {
                                 input$within_save,
                                 writeTsv("within_k", "within_k.tsv", v = FALSE)
                             )
-                            within_k
+                          eval(vars$within_k)
                         }
                     }
                 },
@@ -816,9 +792,9 @@ app_server <- function(input, output, session) {
                 if (checkMaxCluster()) {
                     observeEvent(
                         input$ctr_clus_plot_save,
-                        savePlot("discr_var", ctr_clus_plot())
+                        savePlot("discr_var", eval(vars$ctr_clus_plot))
                     )
-                    ctr_clus_plot()
+                eval(vars$ctr_clus_plot)
                 }
             },
             error = function(e) {
@@ -835,7 +811,7 @@ app_server <- function(input, output, session) {
                         input$ctr_clus_save,
                         writeTsv("ctr_clus", "ctr_clus.tsv", v = FALSE)
                     )
-                    ctr_clus
+                  eval(vars$ctr_clus)
                 }
             },
             error = function(e) {
@@ -852,7 +828,7 @@ app_server <- function(input, output, session) {
                         input$ctr_part_save,
                         writeTsv("ctr_part", "ctr_part.tsv", v = FALSE)
                     )
-                    ctr_part
+                  eval(vars$ctr_part)
                 }
             },
             error = function(e) {
@@ -877,3 +853,5 @@ app_server <- function(input, output, session) {
         )
     })
 }
+
+# Not dynamic on plotGap(2) and ctr_clus_plot
